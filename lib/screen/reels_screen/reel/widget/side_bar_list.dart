@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
+import 'package:shortzz/common/widget/live_ring_avatar.dart';
 import 'package:shortzz/common/widget/gradient_icon.dart';
 import 'package:shortzz/model/post_story/music/music_model.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
@@ -40,12 +41,15 @@ class SideBarList extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Column(
           children: [
-            CustomImage(
-              image: reel.user?.profilePhoto?.addBaseURL(),
-              fullName: reel.user?.fullname?.addBaseURL(),
-              size: const Size(40, 40),
-              strokeWidth: 1.5,
-              onTap: () => controller.onUserTap(reel.user),
+            LiveRingAvatar(
+              userId: reel.user?.id,
+              child: CustomImage(
+                image: reel.user?.profilePhoto?.addBaseURL(),
+                fullName: reel.user?.fullname,
+                size: const Size(40, 40),
+                strokeWidth: 1.5,
+                onTap: () => controller.onUserTap(reel.user),
+              ),
             ),
             const SizedBox(height: 7.5),
             IconWithLabel(

@@ -8,6 +8,7 @@ import 'package:shortzz/common/service/utils/params.dart';
 import 'package:shortzz/model/general/file_path_model.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/screen/camera_screen/camera_types.dart';
+import 'package:shortzz/screen/comment_sheet/helper/comment_helper.dart';
 import 'package:shortzz/screen/create_feed_screen/create_feed_screen.dart';
 import 'package:shortzz/screen/dashboard_screen/dashboard_screen_controller.dart';
 import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
@@ -22,8 +23,30 @@ class VideoUploadController extends GetxController {
       onAddPost;
 
   // Controllers and observables
-  final TextEditingController captionController =
-      TextEditingController();
+  /// Caption field with @mention / #hashtag detection (same helper as the
+  /// feed composer) so typing "@" shows user suggestions.
+  final CommentHelper commentHelper = CommentHelper();
+
+  TextEditingController get captionController =>
+      commentHelper.detectableTextController;
+
+  /// IDs of the users mentioned in the caption (resolved from the
+  /// suggestion list the user picked from).
+  List<int> get mentionedUserIds {
+    final text = captionController.text;
+    final names = RegExp(r'@([A-Za-z0-9_.]+)')
+        .allMatches(text)
+        .map((m) => m.group(1)!.toLowerCase())
+        .toSet();
+    final ids = <int>[];
+    for (final user in commentHelper.allMentionUsers) {
+      final username = (user.username ?? '').toLowerCase();
+      if (names.contains(username) && user.id != null) {
+        ids.add(user.id!.toInt());
+      }
+    }
+    return ids;
+  }
   final RxBool isUploading = false.obs;
   final RxDouble uploadProgress = 0.0.obs;
   final RxString uploadStatus = 'Ready to upload'.obs;
@@ -150,6 +173,8 @@ class VideoUploadController extends GetxController {
         Params.canComment: canComment.value
             ? 1
             : 0, // 🔧 FIX: Add missing can_comment field
+        if (mentionedUserIds.isNotEmpty)
+          Params.mentionedUserIds: mentionedUserIds.join(','),
       };
 
       // 🔍 DEBUG: Print exact parameters being sent

@@ -2,8 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
+import 'package:detectable_text_field/detectable_text_field.dart';
+import 'package:shortzz/common/widget/loader_widget.dart';
+import 'package:shortzz/common/widget/user_list.dart';
+import 'package:shortzz/languages/languages_keys.dart';
+import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/screen/create_feed_screen/create_feed_screen.dart';
+import 'package:shortzz/screen/create_feed_screen/create_feed_screen_controller.dart';
 import 'package:shortzz/screen/video_upload_screen/video_upload_controller.dart';
 
 /// 🎬 VideoUploadScreen - Dedicated screen for uploading processed videos with edits
@@ -288,8 +294,12 @@ class _VideoUploadScreenState
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: controller.captionController,
+            DetectableTextField(
+              controller: controller.commentHelper.detectableTextController,
+              focusNode: controller.commentHelper.detectableTextFocusNode,
+              onChanged: controller.commentHelper.onChanged,
+              keyboardType: TextInputType.twitter,
+              textInputAction: TextInputAction.newline,
               maxLines: 3,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
@@ -318,6 +328,7 @@ class _VideoUploadScreenState
                 fillColor: Colors.grey[900],
               ),
             ),
+            _buildMentionSuggestions(),
 
             const SizedBox(height: 16),
 
@@ -423,6 +434,49 @@ class _VideoUploadScreenState
         );
       },
     );
+  }
+
+  /// User suggestions shown while typing "@name" in the caption.
+  Widget _buildMentionSuggestions() {
+    final helper = controller.commentHelper;
+    return Obx(() {
+      if (!helper.isMentionUserView.value) return const SizedBox.shrink();
+      final List<User> users = helper.searchUsers;
+      return Container(
+        margin: const EdgeInsets.only(top: 6),
+        constraints: const BoxConstraints(maxHeight: 170),
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[700]!),
+        ),
+        child: helper.isLoading.value
+            ? const SizedBox(height: 60, child: LoaderWidget())
+            : users.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(LKey.mentionSomeone.tr,
+                        style: TextStyle(color: Colors.grey[400])),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    itemCount: users.length,
+                    itemBuilder: (context, index) {
+                      final user = users[index];
+                      return UserCard(
+                        onTap: () => helper.appendDetection(
+                            user, DetectType.atSign,
+                            type: 1),
+                        fullName: user.fullname,
+                        profilePhoto: user.profilePhoto,
+                        userName: user.username,
+                        isVerified: user.isVerify ?? 0,
+                      );
+                    },
+                  ),
+      );
+    });
   }
 
   String _formatDuration(Duration duration) {

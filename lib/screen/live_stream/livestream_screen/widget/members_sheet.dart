@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/list_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
 import 'package:shortzz/common/widget/bottom_sheet_top_view.dart';
 import 'package:shortzz/common/widget/custom_divider.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
@@ -21,10 +20,19 @@ import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
+/// Host tabs: Requests (viewers asking to join), Invited (viewers the host
+/// invited + viewers that can still be invited), Co-hosts (on screen now).
+/// The old "Audience" tab was removed; the viewer list lives behind the eye
+/// icon in the top bar.
 class MembersSheet extends StatefulWidget {
   final bool isHost;
+  final int initialTab;
 
-  const MembersSheet({super.key, required this.isHost});
+  static const int tabRequests = 0;
+  static const int tabInvited = 1;
+  static const int tabCoHosts = 2;
+
+  const MembersSheet({super.key, required this.isHost, this.initialTab = 0});
 
   @override
   State<MembersSheet> createState() => _MembersSheetState();
@@ -32,14 +40,30 @@ class MembersSheet extends StatefulWidget {
 
 class _MembersSheetState extends State<MembersSheet> {
   final controller = Get.find<LivestreamScreenController>();
-  final PageController pageController = PageController(initialPage: 0);
-  final RxInt selectedTab = 0.obs;
+  late final PageController pageController =
+      PageController(initialPage: widget.initialTab);
+  late final RxInt selectedTab = widget.initialTab.obs;
+  final RxString query = ''.obs;
 
   void onSelectedTab(int index) {
     selectedTab.value = index;
     pageController.animateToPage(index,
         duration: const Duration(milliseconds: 250), curve: Curves.linear);
   }
+
+  List<LivestreamUserState> _filter(List<LivestreamUserState> source) {
+    final q = query.value.trim();
+    if (q.isEmpty) return source;
+    return source.search(q, (p0) {
+      return p0.getUser(controller.firestoreController.users)?.username ?? '';
+    }, (p1) {
+      return p1.getUser(controller.firestoreController.users)?.fullname ?? '';
+    });
+  }
+
+  AppUser? _userOf(LivestreamUserState state) => controller
+      .firestoreController.users
+      .firstWhereOrNull((element) => element.userId == state.userId);
 
   @override
   Widget build(BuildContext context) {
@@ -52,195 +76,170 @@ class _MembersSheetState extends State<MembersSheet> {
               top: SmoothRadius(cornerRadius: 30, cornerSmoothing: 1)),
         ),
       ),
-      child: Obx(() {
-        return Column(
-          children: [
-            BottomSheetTopView(
-                title: LKey.members.tr, sideBtnVisibility: false),
-            if (widget.isHost)
-              CustomTabSwitcher(
+      child: Column(
+        children: [
+          BottomSheetTopView(
+              title: widget.isHost ? LKey.guests.tr : LKey.members.tr,
+              sideBtnVisibility: false),
+          if (widget.isHost)
+            Obx(() {
+              final pending = controller.requestList.length;
+              return CustomTabSwitcher(
                 items: [
-                  LKey.requests.tr,
-                  LKey.audience.tr,
+                  pending > 0
+                      ? '${LKey.requests.tr} ($pending)'
+                      : LKey.requests.tr,
                   LKey.invited.tr,
-                  LKey.coHosts.tr
+                  LKey.coHosts.tr,
                 ],
                 onTap: onSelectedTab,
                 selectedIndex: selectedTab,
                 margin: const EdgeInsets.symmetric(horizontal: 10),
                 backgroundColor: bgLightGrey(context),
                 selectedFontColor: themeAccentSolid(context),
-              ),
-            Obx(
-              () => (selectedTab.value == 2 || selectedTab.value == 3)
-                  ? const SizedBox()
-                  : CustomSearchTextField(
-                      backgroundColor: bgLightGrey(context),
-                      onChanged: (value) {
-                        DebounceAction.shared.call(() {
-                          List<LivestreamUserState> itemList = [];
-                          itemList =
-                              controller.liveUsersStates.search(value, (p0) {
-                            AppUser? data = p0
-                                .getUser(controller.firestoreController.users);
-                            return data?.username ?? '';
-                          }, (p1) {
-                            AppUser? data = p1
-                                .getUser(controller.firestoreController.users);
-                            return data?.fullname ?? '';
-                          });
-                          if (widget.isHost) {
-                            if (selectedTab.value == 0) {
-                              controller.requestList.value = itemList
-                                  .where((element) =>
-                                      element.type ==
-                                      LivestreamUserType.requested)
-                                  .toList();
-                            } else if (selectedTab.value == 1) {
-                              controller.audienceList.value = itemList
-                                  .where((element) =>
-                                      element.type != LivestreamUserType.host &&
-                                      element.type != LivestreamUserType.left)
-                                  .toList();
-                            }
-                          } else {
-                            controller.audienceMemberList.value = itemList
-                                .where((element) =>
-                                    element.type != LivestreamUserType.left)
-                                .toList();
-                          }
-                        }, milliseconds: 500);
-                      },
-                    ),
-            ),
-            Expanded(
-              child: !widget.isHost
-                  ? NoDataView(
-                      showShow: controller.audienceMemberList.isEmpty,
-                      title: LKey.userListEmptyTitle.tr,
-                      description: LKey.userListEmptyDescription.tr,
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: controller.audienceMemberList.length,
-                        itemBuilder: (context, index) {
-                          final state = controller.audienceMemberList[index];
-                          final user = controller.firestoreController.users
-                              .firstWhereOrNull(
-                                  (element) => element.userId == state.userId);
-                          final bool isInvited =
-                              state.type == LivestreamUserType.invited;
-                          return MemberProfileCard(
-                              user: user,
-                              widget:
-                                  _buildActionWidget(state, user, isInvited));
-                        },
-                      ),
-                    )
-                  : PageView(
-                      controller: pageController,
-                      onPageChanged: (value) {
-                        selectedTab.value = value;
-                      },
-                      children: [
-                        NoDataView(
-                          showShow: controller.requestList.isEmpty,
-                          title: LKey.requestTitle.tr,
-                          description: LKey.requestDescription.tr,
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: controller.requestList.length,
-                            itemBuilder: (context, index) {
-                              final state = controller.requestList[index];
-                              final user = controller.firestoreController.users
-                                  .firstWhereOrNull((element) =>
-                                      element.userId == state.userId);
-                              final bool isInvited =
-                                  state.type == LivestreamUserType.invited;
-                              return MemberProfileCard(
-                                user: user,
-                                widget:
-                                    _buildActionWidget(state, user, isInvited),
-                              );
-                            },
-                          ),
-                        ),
-                        NoDataView(
-                          showShow: controller.audienceList.isEmpty,
-                          title: LKey.audienceListEmptyTitle.tr,
-                          description: LKey.audienceListEmptyDescription.tr,
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: controller.audienceList.length,
-                            itemBuilder: (context, index) {
-                              final state = controller.audienceList[index];
-                              final user = controller.firestoreController.users
-                                  .firstWhereOrNull((element) =>
-                                      element.userId == state.userId);
-                              final bool isInvited =
-                                  state.type == LivestreamUserType.invited;
-                              return MemberProfileCard(
-                                user: user,
-                                widget:
-                                    _buildActionWidget(state, user, isInvited),
-                              );
-                            },
-                          ),
-                        ),
-                        NoDataView(
-                          showShow: controller.invitedList.isEmpty,
-                          title: LKey.invitedListEmptyTitle.tr,
-                          description: LKey.invitedListEmptyDescription.tr,
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: controller.invitedList.length,
-                            itemBuilder: (context, index) {
-                              final state = controller.invitedList[index];
-                              final user = controller.firestoreController.users
-                                  .firstWhereOrNull((element) =>
-                                      element.userId == state.userId);
-                              final bool isInvited =
-                                  state.type == LivestreamUserType.invited;
-                              return MemberProfileCard(
-                                user: user,
-                                widget:
-                                    _buildActionWidget(state, user, isInvited),
-                              );
-                            },
-                          ),
-                        ),
-                        NoDataView(
-                          showShow: controller.coHostList.isEmpty,
-                          title: LKey.coHostListEmptyTitle.tr,
-                          description: LKey.coHostListEmptyDescription.tr,
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: controller.coHostList.length,
-                            itemBuilder: (context, index) {
-                              final state = controller.coHostList[index];
-                              final user = controller.firestoreController.users
-                                  .firstWhereOrNull((element) =>
-                                      element.userId == state.userId);
-                              final bool isInvited =
-                                  state.type == LivestreamUserType.invited;
-                              return MemberProfileCard(
-                                user: user,
-                                widget:
-                                    _buildActionWidget(state, user, isInvited),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ],
-        );
-      }),
+              );
+            }),
+          Obx(
+            () => selectedTab.value == MembersSheet.tabCoHosts
+                ? const SizedBox()
+                : CustomSearchTextField(
+                    backgroundColor: bgLightGrey(context),
+                    onChanged: (value) => query.value = value,
+                  ),
+          ),
+          Expanded(
+            child: !widget.isHost ? _buildAudienceList() : _buildHostPages(),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildActionWidget(
-      LivestreamUserState state, AppUser? user, bool isInvited) {
+  Widget _buildAudienceList() {
+    return Obx(() {
+      final items = _filter(controller.audienceMemberList);
+      return NoDataView(
+        showShow: items.isEmpty,
+        title: LKey.userListEmptyTitle.tr,
+        description: LKey.userListEmptyDescription.tr,
+        child: ListView.builder(
+          padding: EdgeInsets.zero,
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final state = items[index];
+            return MemberProfileCard(
+                user: _userOf(state), widget: const SizedBox());
+          },
+        ),
+      );
+    });
+  }
+
+  Widget _buildHostPages() {
+    return PageView(
+      controller: pageController,
+      onPageChanged: (value) => selectedTab.value = value,
+      children: [
+        _buildRequestsPage(),
+        _buildInvitedPage(),
+        _buildCoHostsPage(),
+      ],
+    );
+  }
+
+  Widget _buildRequestsPage() {
+    return Obx(() {
+      final items = _filter(controller.requestList);
+      return NoDataView(
+        showShow: items.isEmpty,
+        title: LKey.requestTitle.tr,
+        description: LKey.requestDescription.tr,
+        child: ListView.builder(
+          padding: EdgeInsets.zero,
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final state = items[index];
+            final user = _userOf(state);
+            return MemberProfileCard(
+              user: user,
+              widget: _buildActionWidget(state, user),
+            );
+          },
+        ),
+      );
+    });
+  }
+
+  /// Invited viewers on top, then every other viewer with an Invite button so
+  /// the host can collect guests from this one place.
+  Widget _buildInvitedPage() {
+    return Obx(() {
+      final invited = _filter(controller.invitedList);
+      final invitable = _filter(controller.audienceList);
+      if (invited.isEmpty && invitable.isEmpty) {
+        return NoDataView(
+          showShow: true,
+          title: LKey.invitedListEmptyTitle.tr,
+          description: LKey.invitedListEmptyDescription.tr,
+          child: const SizedBox(),
+        );
+      }
+      return ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          if (invited.isNotEmpty) ...[
+            _SectionLabel(LKey.invited.tr),
+            for (final state in invited)
+              MemberProfileCard(
+                user: _userOf(state),
+                widget: _buildActionWidget(state, _userOf(state)),
+              ),
+          ],
+          _SectionLabel(LKey.inviteViewers.tr),
+          if (invitable.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                LKey.noViewersToInvite.tr,
+                textAlign: TextAlign.center,
+                style: TextStyleCustom.outFitLight300(
+                    color: textLightGrey(context), fontSize: 14),
+              ),
+            ),
+          for (final state in invitable)
+            MemberProfileCard(
+              user: _userOf(state),
+              widget: _buildActionWidget(state, _userOf(state)),
+            ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildCoHostsPage() {
+    return Obx(() {
+      final items = controller.coHostList;
+      return NoDataView(
+        showShow: items.isEmpty,
+        title: LKey.coHostListEmptyTitle.tr,
+        description: LKey.coHostListEmptyDescription.tr,
+        child: ListView.builder(
+          padding: EdgeInsets.zero,
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final state = items[index];
+            final user = _userOf(state);
+            return MemberProfileCard(
+              user: user,
+              widget: _buildActionWidget(state, user),
+            );
+          },
+        ),
+      );
+    });
+  }
+
+  Widget _buildActionWidget(LivestreamUserState state, AppUser? user) {
     if (!widget.isHost) return const SizedBox();
     switch (state.type) {
       case LivestreamUserType.requested:
@@ -258,14 +257,13 @@ class _MembersSheetState extends State<MembersSheet> {
         );
       case LivestreamUserType.audience:
         return TextBorderButton(
-          text: isInvited ? LKey.invited.tr : LKey.invite.tr,
-          textOpacity: isInvited ? .2 : 1,
-          onTap: () => controller.onInvite(user, isInvited: isInvited),
+          text: LKey.invite.tr,
+          onTap: () => controller.onInvite(user, isInvited: false),
         );
       case LivestreamUserType.invited:
         return TextBorderButton(
           text: LKey.cancel.tr,
-          onTap: () => controller.onInvite(user, isInvited: isInvited),
+          onTap: () => controller.onInvite(user, isInvited: true),
         );
       case LivestreamUserType.coHost:
         return Row(
@@ -295,6 +293,25 @@ class _MembersSheetState extends State<MembersSheet> {
       color: color,
       onTap: onTap,
       padding: 5,
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(15, 12, 15, 4),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyleCustom.outFitMedium500(
+                color: textLightGrey(context), fontSize: 12)
+            .copyWith(letterSpacing: 1.5),
+      ),
     );
   }
 }

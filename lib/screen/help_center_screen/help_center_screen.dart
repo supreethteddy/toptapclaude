@@ -126,31 +126,27 @@ class HelpCenterScreen extends StatelessWidget {
                     onTap: () => controller.sendEmail(),
                   ),
                   
-                  SettingIconTextWithArrow(
-                    icon: AssetRes.icMessage,
-                    title: "Call Support",
-                    onTap: () => controller.callSupport(),
-                  ),
+                  if (controller.hasPhoneSupport)
+                    SettingIconTextWithArrow(
+                      icon: AssetRes.icMessage,
+                      title: "Call Support",
+                      onTap: () => controller.callSupport(),
+                    ),
                   
                   // Community Section
                   SettingLabel(title: "COMMUNITY"),
-                  
-                  SettingIconTextWithArrow(
-                    icon: AssetRes.icChat,
-                    title: "Community Forum",
-                    onTap: () => controller.openForum(),
-                  ),
-                  
+
+                  if (controller.hasCommunity)
+                    SettingIconTextWithArrow(
+                      icon: AssetRes.icChat,
+                      title: "Community Forum",
+                      onTap: () => controller.openForum(),
+                    ),
+
                   SettingIconTextWithArrow(
                     icon: AssetRes.ichelpicon,
                     title: "FAQ",
                     onTap: () => controller.openFAQ(),
-                  ),
-                  
-                  SettingIconTextWithArrow(
-                    icon: AssetRes.icVideo,
-                    title: "Video Tutorials",
-                    onTap: () => controller.openTutorials(),
                   ),
                 ],
               ),

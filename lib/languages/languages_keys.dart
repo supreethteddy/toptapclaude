@@ -223,6 +223,38 @@ class LKey {
   static const String accept = "Accept";
   static const String host = "Host";
   static const String guest = "Guest";
+  static const String guests = "Guests";
+  static const String requested = "Requested";
+  static const String gifts = "Gifts";
+  static const String close = "Close";
+  static const String pk = "PK";
+  static const String startPk = "Start PK";
+  static const String pkNeedsGuest =
+      "Add a guest first. PK starts once a co-host is on screen.";
+  static const String joinAsGuest = "Join as guest";
+  static const String inviteViewers = "Viewers you can invite";
+  static const String noViewersToInvite = "No viewers to invite yet";
+  static const String dailyRanking = "Daily Ranking";
+  static const String today = "Today";
+  static const String yourRankToday = "Your rank today";
+  static const String notRankedYet = "Not ranked yet — receive a gift to enter today's ranking";
+  static const String noRankingYetTitle = "No ranking yet";
+  static const String noRankingYetDescription =
+      "Hosts appear here as soon as they receive gifts today.";
+  static const String liveChatSupport = "Live Chat Support";
+  static const String sendEmail = "Send Email";
+  static const String callSupport = "Call Support";
+  static const String communityForum = "Community Forum";
+  static const String supportChatUnavailable =
+      "Support chat is not available right now. Please email us instead.";
+  static const String phoneSupportUnavailable =
+      "Phone support is not available yet. Please email us instead.";
+  static const String noEmailAppFound =
+      "No email app was found. The support email address has been copied.";
+  static const String gifsUnavailableTitle = "GIFs are not available";
+  static const String gifsUnavailableDescription =
+      "A GIPHY API key has not been configured in the admin panel yet.";
+  static const String mentionSomeone = "Mention someone";
   static const String victory = "Victory";
   static const String defeat = "Defeat";
   static const String streamedFor = "Streamed For";

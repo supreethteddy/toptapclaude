@@ -2,6 +2,7 @@ import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
+import 'package:shortzz/common/utils/language_flags.dart';
 import 'package:shortzz/common/widget/custom_app_bar.dart';
 import 'package:shortzz/common/widget/text_button_custom.dart';
 import 'package:shortzz/common/widget/theme_blur_bg.dart';
@@ -246,6 +247,12 @@ class SelectLanguageScreen extends StatelessWidget {
                                       ),
                                       contentPadding:
                                           EdgeInsets.zero,
+                                      secondary: Text(
+                                        LanguageFlags.flagFor(
+                                            language),
+                                        style: const TextStyle(
+                                            fontSize: 26),
+                                      ),
                                       title: Text(
                                         language.localizedTitle ??
                                             '',

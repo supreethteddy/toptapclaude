@@ -32,6 +32,9 @@ import 'package:shortzz/screen/live_stream/live_stream_end_screen/widget/livestr
 import 'package:shortzz/screen/live_stream/livestream_screen/audience/widget/live_stream_join_sheet.dart';
 import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream_search_screen.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/host/widget/live_stream_host_top_view.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/live_ranking_controller.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking_sheet.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/report_sheet/report_sheet.dart';
 import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/asset_res.dart';
@@ -97,6 +100,11 @@ class LivestreamScreenController extends BaseController {
 
   Widget? hostPreview;
 
+  /// Daily ranking (coins received today) for the host of this LIVE.
+  LiveRankingController? rankingController;
+
+  String get _rankingTag => 'rank_${liveData.value.roomID}';
+
   LivestreamScreenController(this.liveData, this.isHost, {this.hostPreview});
 
   int totalBattleSecond = 0;
@@ -149,6 +157,10 @@ class LivestreamScreenController extends BaseController {
     listenUserState();
     fetchLiveStreamComments();
     initAudioPlayer();
+    rankingController = Get.put(
+      LiveRankingController(liveData.value.hostId ?? -1),
+      tag: _rankingTag,
+    );
     WakelockPlus.enable();
   }
 
@@ -170,7 +182,38 @@ class LivestreamScreenController extends BaseController {
     if (!isHost) {
       unawaited(_leaveAudience());
     }
+    if (Get.isRegistered<LiveRankingController>(tag: _rankingTag)) {
+      Get.delete<LiveRankingController>(tag: _rankingTag);
+    }
+    rankingController = null;
     super.onClose();
+  }
+
+  void openRankingSheet() {
+    final ranking = rankingController;
+    if (ranking == null) return;
+    HapticManager.shared.light();
+    Get.bottomSheet(
+      LiveRankingSheet(controller: ranking),
+      isScrollControlled: true,
+    );
+  }
+
+  /// Audience list (eye icon) for everyone.
+  void openAudienceSheet() {
+    Get.bottomSheet(
+      const MembersSheet(isHost: false),
+      isScrollControlled: true,
+    );
+  }
+
+  /// Opens the guests sheet (Requests / Invited / Co-hosts) for the host.
+  void openMembersSheet({int initialTab = MembersSheet.tabRequests}) {
+    HapticManager.shared.light();
+    Get.bottomSheet(
+      MembersSheet(isHost: true, initialTab: initialTab),
+      isScrollControlled: true,
+    );
   }
 
   Future<void> initVideoPlayer() async {
@@ -1108,6 +1151,12 @@ class LivestreamScreenController extends BaseController {
           currentBattleCoin: type == GiftType.battle ? coinPrice : null,
           liveCoin: type == GiftType.livestream ? coinPrice : null,
         );
+        // Daily ranking: every coin received in a LIVE counts for the receiver.
+        unawaited(LiveRankingController.recordGift(
+          hostId: user?.userId,
+          coins: coinPrice,
+          host: user,
+        ));
         if (type == GiftType.livestream &&
             user?.userId == liveData.value.hostId &&
             liveData.value.hasLiveGoal == true &&
@@ -1565,8 +1614,12 @@ class LivestreamScreenController extends BaseController {
   }
 
   void startBattle() {
+    if (liveData.value.type == LivestreamType.battle ||
+        liveData.value.battleType != BattleType.initiate) {
+      return;
+    }
     if (!canStartBattle) {
-      showSnackBar('Add an active co-host before starting a battle.');
+      showSnackBar(LKey.pkNeedsGuest.tr);
       return;
     }
     updateLiveStreamData(

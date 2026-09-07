@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/widget/black_gradient_shadow.dart';
+import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
@@ -11,6 +13,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_text_field.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/livestream_exist_message_bar.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
+import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 
 class LiveStreamBottomView extends StatelessWidget {
@@ -122,7 +125,11 @@ class LiveStreamBottomView extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          if (isVisible) _buildHostButton(context),
+          // Likes received (moved here from the host name row, L-03).
+          if (isVisible) _buildLikesReceived(context, stream),
+          if (isVisible) const SizedBox(width: 6),
+          if (isVisible && !isAudience) _buildHostButton(context),
+          if (isVisible && isAudience) _buildGuestRequestButton(context, stream),
           Expanded(
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 200),
@@ -203,6 +210,80 @@ class LiveStreamBottomView extends StatelessWidget {
     });
   }
 
+  Widget _buildLikesReceived(BuildContext context, Livestream stream) {
+    final likes = stream.likeCount ?? 0;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.favorite, color: ColorRes.likeRed, size: 15),
+          const SizedBox(width: 4),
+          Text(
+            likes.numberFormat,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Audience: "join as guest" request (client item L-13). Hidden while a
+  /// PK battle runs, when the host restricted joining, or once we are already
+  /// a co-host.
+  Widget _buildGuestRequestButton(BuildContext context, Livestream stream) {
+    final isBattleOn = stream.type == LivestreamType.battle;
+    final isCoHost = (stream.coHostIds ?? []).contains(controller.myUserId);
+    if (isBattleOn || stream.isRestrictToJoin != 0 || isCoHost) {
+      return const SizedBox.shrink();
+    }
+    final myState = controller.liveUsersStates
+        .firstWhereOrNull((e) => e.userId == controller.myUserId);
+    final requested = myState?.type == LivestreamUserType.requested;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: () => controller.onVideoRequestSend(stream),
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: requested
+                ? Colors.white.withOpacity(0.25)
+                : Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(AssetRes.icVideoRequest,
+                  height: 16, width: 16, color: Colors.white),
+              const SizedBox(width: 4),
+              Text(
+                requested ? LKey.requested.tr : LKey.guest.tr,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHostControls() {
     return Obx(() {
       int? userId = controller.myUser.value?.id;
@@ -252,6 +333,12 @@ class LiveStreamBottomView extends StatelessWidget {
               onPressed: () => controller.toggleVideo(isVideoOn),
             ),
             if (state?.type == LivestreamUserType.host)
+              _GuestsButton(controller: controller),
+            if (state?.type == LivestreamUserType.host &&
+                stream.type != LivestreamType.battle &&
+                stream.battleType == BattleType.initiate)
+              _PkButton(controller: controller),
+            if (state?.type == LivestreamUserType.host)
               IconButton(
                 tooltip: 'About Me',
                 icon: const Icon(
@@ -281,27 +368,42 @@ class LiveStreamBottomView extends StatelessWidget {
 
   Widget _buildHostButton(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Get.bottomSheet(
-          const MembersSheet(isHost: true),
-          isScrollControlled: true,
+      onTap: () => controller.openMembersSheet(),
+      child: Obx(() {
+        final pending = controller.requestList.length;
+        return Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.people, color: Colors.white, size: 18),
+              if (pending > 0) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  decoration: BoxDecoration(
+                    color: ColorRes.likeRed,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$pending',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ],
+          ),
         );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.white.withOpacity(0.3)),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.people, color: Colors.white, size: 20),
-            SizedBox(width: 6),
-          ],
-        ),
-      ),
+      }),
     );
   }
 
@@ -534,5 +636,102 @@ class LiveStreamBottomView extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+
+/// Guest requests / invites entry point (client items L-01, L-13).
+class _GuestsButton extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const _GuestsButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final pending = controller.requestList.length;
+      return IconButton(
+        tooltip: LKey.guests.tr,
+        onPressed: () => controller.openMembersSheet(
+          initialTab: MembersSheet.tabRequests,
+        ),
+        icon: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Icon(Icons.person_add_alt_1, color: Colors.white),
+            if (pending > 0)
+              Positioned(
+                right: -6,
+                top: -6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: ColorRes.likeRed,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$pending',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+/// PK battle entry point (client item L-12). Always visible for the host;
+/// explains what is missing when no guest is on screen yet.
+class _PkButton extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const _PkButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final ready = controller.canStartBattle;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: GestureDetector(
+          onTap: controller.startBattle,
+          child: Container(
+            height: 30,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              gradient: ready
+                  ? const LinearGradient(
+                      colors: [Color(0xFFFF3D6E), Color(0xFF7C4DFF)])
+                  : null,
+              color: ready ? null : Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.white.withOpacity(0.35)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(AssetRes.icBattleVs,
+                    height: 14, width: 14, color: Colors.white),
+                const SizedBox(width: 4),
+                Text(
+                  LKey.pk.tr,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 }

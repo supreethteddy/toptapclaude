@@ -17,6 +17,7 @@ import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/screen/auth_screen/login_screen.dart';
 import 'package:shortzz/screen/dashboard_screen/dashboard_screen.dart';
 import 'package:shortzz/screen/edit_profile_screen/edit_profile_screen.dart';
+import 'package:shortzz/common/controller/live_status_controller.dart';
 import 'package:shortzz/screen/gif_sheet/gif_sheet_controller.dart';
 import 'package:shortzz/screen/select_language_screen/select_language_screen.dart';
 
@@ -29,6 +30,9 @@ class SplashScreenController extends BaseController {
     }
     if (!Get.isRegistered<FirebaseFirestoreController>()) {
       Get.put(FirebaseFirestoreController());
+    }
+    if (!Get.isRegistered<LiveStatusController>()) {
+      Get.put(LiveStatusController(), permanent: true);
     }
     Future.wait([fetchSettings()]);
   }

@@ -46,6 +46,18 @@ class GifSheet extends StatelessWidget {
                   ? (controller.isTrendingLoading.value && items.isEmpty)
                   : (controller.isSearchLoading.value && items.isEmpty);
 
+              if (!controller.hasGiphyKey) {
+                return NoDataView(
+                  showShow: true,
+                  title: LKey.gifsUnavailableTitle.tr,
+                  description: LKey.gifsUnavailableDescription.tr,
+                  child: const SizedBox(),
+                );
+              }
+              if (items.isEmpty && !isLoading) {
+                // First open can race the settings download; retry once.
+                controller.fetchTrendingGiphy(isEmpty: true);
+              }
               return isLoading
                   ? const LoaderWidget()
                   : NoDataView(

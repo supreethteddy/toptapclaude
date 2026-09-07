@@ -5,6 +5,7 @@ import 'package:shortzz/common/functions/debounce_action.dart';
 import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
 import 'package:shortzz/common/widget/custom_divider.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
+import 'package:shortzz/common/widget/live_ring_avatar.dart';
 import 'package:shortzz/model/post_story/post_by_id.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/screen/post_screen/post_screen_controller.dart';
@@ -65,14 +66,18 @@ class PostCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CustomImage(
-                        size: const Size(38, 38),
-                        strokeWidth: 2,
-                        image: post.user?.profilePhoto?.addBaseURL(),
-                        fullName: post.user?.fullname,
-                        onTap: () {
-                          NavigationService.shared.openProfileScreen(post.user);
-                        },
+                      LiveRingAvatar(
+                        userId: post.user?.id,
+                        child: CustomImage(
+                          size: const Size(38, 38),
+                          strokeWidth: 2,
+                          image: post.user?.profilePhoto?.addBaseURL(),
+                          fullName: post.user?.fullname,
+                          onTap: () {
+                            NavigationService.shared
+                                .openProfileScreen(post.user);
+                          },
+                        ),
                       ),
                       const SizedBox(width: 7),
                       Expanded(

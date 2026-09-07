@@ -8,7 +8,11 @@ import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_c
 class LiveGoalProgressWidget extends StatefulWidget {
   final LivestreamScreenController controller;
 
-  const LiveGoalProgressWidget({super.key, required this.controller});
+  /// Compact = single-line chip that fits inside the LIVE top toolbar row.
+  final bool compact;
+
+  const LiveGoalProgressWidget(
+      {super.key, required this.controller, this.compact = false});
 
   @override
   State<LiveGoalProgressWidget> createState() => _LiveGoalProgressWidgetState();
@@ -51,6 +55,57 @@ class _LiveGoalProgressWidgetState extends State<LiveGoalProgressWidget> {
           ? (currentAmount / targetAmount).clamp(0.0, 1.0)
           : 0.0;
       bool isCompleted = currentAmount >= targetAmount && targetAmount > 0;
+
+      if (widget.compact) {
+        final accent = isCompleted ? Colors.green : Colors.orange;
+        return Tooltip(
+          message: stream.liveGoalTitle ?? 'Live Goal',
+          child: Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accent.withValues(alpha: 0.6)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(isCompleted ? Icons.check_circle : Icons.flag,
+                    color: accent, size: 13),
+                const SizedBox(width: 4),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: progress,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$currentAmount/$targetAmount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
 
       return Container(
         margin: const EdgeInsets.symmetric(

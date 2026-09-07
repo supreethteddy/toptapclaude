@@ -5,6 +5,7 @@ import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
+import 'package:shortzz/common/widget/live_ring_avatar.dart';
 import 'package:shortzz/common/widget/custom_popup_menu_button.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
 import 'package:shortzz/common/widget/gradient_border.dart';
@@ -186,15 +187,20 @@ class ProfileStatsRow extends StatelessWidget {
                           enabled: isHeroEnable.value,
                           child: Hero(
                             tag: 'profile-${user?.id}',
-                            child: CustomImage(
-                              size: isStoryAvailable
-                                  ? const Size(70, 70)
-                                  : const Size(80, 80),
-                              image: user?.isBlock == true
-                                  ? ''
-                                  : user?.profilePhoto
-                                      ?.addBaseURL(),
-                              fullName: user?.fullname,
+                            child: LiveRingAvatar(
+                              userId: user?.id,
+                              ringWidth: 3,
+                              ringGap: 4,
+                              child: CustomImage(
+                                size: isStoryAvailable
+                                    ? const Size(70, 70)
+                                    : const Size(80, 80),
+                                image: user?.isBlock == true
+                                    ? ''
+                                    : user?.profilePhoto
+                                        ?.addBaseURL(),
+                                fullName: user?.fullname,
+                              ),
                             ),
                           ),
                         ),

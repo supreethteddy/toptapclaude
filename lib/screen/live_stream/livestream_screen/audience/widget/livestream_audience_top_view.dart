@@ -179,20 +179,6 @@ class _BuildCenterView extends StatelessWidget {
                         isVerify: hostUser?.isVerify,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(
-                      Icons.favorite,
-                      color: Colors.redAccent,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      (stream.likeCount ?? 0).numberFormat,
-                      style: TextStyleCustom.outFitRegular400(
-                        color: whitePure(context),
-                        fontSize: 11,
-                      ),
-                    ),
                   ],
                 ),
                 Row(

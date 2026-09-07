@@ -226,7 +226,7 @@ class CameraScreenController extends BaseController
       final initializeResult = await deepArControllerPlus.value.initialize(
           androidLicenseKey: appSetting?.deeparAndroidKey,
           iosLicenseKey: appSetting?.deeparIOSKey,
-          resolution: Resolution.high);
+          resolution: Resolution.veryHigh);
       if (!initializeResult.success) {
         Loggers.error(
             'DeepAR initialization failed: ${initializeResult.message}');

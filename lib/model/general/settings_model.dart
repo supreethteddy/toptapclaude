@@ -68,6 +68,9 @@ class Setting {
   int? isDeepAr;
   int? isWithdrawalOn;
   String? helpMail;
+  String? helpPhone;
+  String? supportUsername;
+  String? communityUrl;
   int? isContentModeration;
   String? sightEngineApiUser;
   String? sightEngineApiSecret;
@@ -129,6 +132,9 @@ class Setting {
     this.isDeepAr,
     this.isWithdrawalOn,
     this.helpMail,
+    this.helpPhone,
+    this.supportUsername,
+    this.communityUrl,
     this.isContentModeration,
     this.sightEngineApiUser,
     this.sightEngineApiSecret,
@@ -191,6 +197,9 @@ class Setting {
         isDeepAr: json["is_deepAR"],
         isWithdrawalOn: json["is_withdrawal_on"],
         helpMail: json["help_mail"],
+        helpPhone: json["help_phone"],
+        supportUsername: json["support_username"],
+        communityUrl: json["community_url"],
         isContentModeration: json["is_content_moderation"],
         sightEngineApiUser: json["sight_engine_api_user"],
         sightEngineApiSecret: json["sight_engine_api_secret"],
@@ -286,6 +295,9 @@ class Setting {
         "is_deepAR": isDeepAr,
         "is_withdrawal_on": isWithdrawalOn,
         "help_mail": helpMail,
+        "help_phone": helpPhone,
+        "support_username": supportUsername,
+        "community_url": communityUrl,
         "is_content_moderation": isContentModeration,
         "sight_engine_api_user": sightEngineApiUser,
         "sight_engine_api_secret": sightEngineApiSecret,

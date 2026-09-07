@@ -20,6 +20,11 @@ class AppRes {
   /// Time before the battle officially starts (in seconds)
   static const int battleStartInSecond = 10;
 
+  /// Username of the official support account used by Help Center > Live Chat.
+  /// Can be overridden from the admin panel (support_username setting).
+  static const String supportUsername = 'toptapsupport';
+  static const String supportEmail = 'support@toptap.app';
+
   /// Total duration of the battle (in minutes)
   static const int battleDurationInMinutes = 1;
 

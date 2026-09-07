@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/gradient_border.dart';
+import 'package:shortzz/common/widget/live_ring_avatar.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/feed_screen/feed_screen_controller.dart';
@@ -114,20 +115,24 @@ class StoryView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            GradientBorder(
-              gradient: isWatch
-                  ? StyleRes.disabledGreyGradient()
-                  : StyleRes.themeGradient,
-              strokeWidth: 2,
-              radius: 90,
-              onPressed: () =>
-                  controller.onWatchStory(users, index, 'other_story'),
-              child: Padding(
-                padding: const EdgeInsets.all(3.0),
-                child: _buildImage(
-                    users[index].profilePhoto?.addBaseURL() ?? '',
-                    size: storySize,
-                    fullname: users[index].fullname),
+            LiveRingAvatar(
+              userId: user.id,
+              ringGap: 1,
+              child: GradientBorder(
+                gradient: isWatch
+                    ? StyleRes.disabledGreyGradient()
+                    : StyleRes.themeGradient,
+                strokeWidth: 2,
+                radius: 90,
+                onPressed: () =>
+                    controller.onWatchStory(users, index, 'other_story'),
+                child: Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: _buildImage(
+                      users[index].profilePhoto?.addBaseURL() ?? '',
+                      size: storySize,
+                      fullname: users[index].fullname),
+                ),
               ),
             ),
             Expanded(
