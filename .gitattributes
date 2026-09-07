@@ -1,0 +1,20 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.mp3 binary
+*.mp4 binary
+*.wav binary
+*.aac binary
+*.jar binary
+*.aar binary
+*.so binary
+*.bin binary
+*.deeparimport binary
+*.deepar binary
+*.dprm binary
+*.json text
