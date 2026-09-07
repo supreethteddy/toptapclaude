@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
@@ -50,7 +51,9 @@ class AuthScreenController extends BaseController {
         return;
       }
 
-      if (credential.user?.emailVerified == false) {
+      // Debug builds skip the e-mail verification gate so QA accounts with
+      // throw-away addresses can log in. Release builds still enforce it.
+      if (credential.user?.emailVerified == false && !kDebugMode) {
         showSnackBar(LKey.verifyEmailFirst.tr);
         return;
       }

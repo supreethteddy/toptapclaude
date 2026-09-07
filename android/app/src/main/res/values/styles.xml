@@ -15,4 +15,11 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+    <!-- Image cropper (uCrop). Android 15 enforces edge-to-edge for
+         targetSdk 35 and uCrop's toolbar is not inset-aware, which hid the
+         Cancel/Confirm buttons under the status bar. -->
+    <style name="UCropTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:statusBarColor">#FF5A5F</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>

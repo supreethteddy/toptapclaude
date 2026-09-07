@@ -32,6 +32,9 @@ subprojects {
                 if (namespace == null) {
                     namespace project.group
                 }
+                // Use one NDK for every plugin so a second NDK download is
+                // not required (Flutter plugins default to NDK 27).
+                ndkVersion "28.2.13676358"
             }
         }
     }

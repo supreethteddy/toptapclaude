@@ -513,13 +513,7 @@ class LiveStreamListView extends StatelessWidget {
                       title: LKey.noLivestreamsTitle,
                       description:
                           LKey.noLivestreamsDescription.tr,
-                      child: const Center(
-                        child: Text(
-                          "Live Stream Screen",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 25),
-                        ),
+                      child: const SizedBox()
                       ),
                     )
                   : GridView.builder(
