@@ -513,8 +513,7 @@ class LiveStreamListView extends StatelessWidget {
                       title: LKey.noLivestreamsTitle,
                       description:
                           LKey.noLivestreamsDescription.tr,
-                      child: const SizedBox()
-                      ),
+                      child: const SizedBox(),
                     )
                   : GridView.builder(
                       itemCount: controller
