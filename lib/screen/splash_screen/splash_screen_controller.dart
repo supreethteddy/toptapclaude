@@ -41,8 +41,27 @@ class SplashScreenController extends BaseController {
     Loggers.info(
         '🌐 [TRANSLATION] Starting settings fetch...');
 
-    bool showNavigate =
-        await CommonService.instance.fetchGlobalSettings();
+    // The very first request can fire before the network is validated
+    // (cold start, airplane mode just turned off, emulator boot). Retry with
+    // backoff instead of leaving the user on the splash screen forever, and
+    // fall back to the cached settings when the server stays unreachable.
+    bool showNavigate = false;
+    const delays = [2, 3, 5, 8, 8];
+    for (int attempt = 0; attempt <= delays.length; attempt++) {
+      showNavigate = await CommonService.instance.fetchGlobalSettings();
+      if (showNavigate) break;
+      if (SessionManager.instance.getSettings() != null) {
+        Loggers.warning(
+            '⚠️ [SPLASH] Settings fetch failed, using cached settings');
+        showNavigate = true;
+        break;
+      }
+      if (attempt < delays.length) {
+        Loggers.warning(
+            '⚠️ [SPLASH] Settings fetch failed, retrying in ${delays[attempt]}s');
+        await Future.delayed(Duration(seconds: delays[attempt]));
+      }
+    }
 
     if (showNavigate) {
       Loggers.success(

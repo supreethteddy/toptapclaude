@@ -6,6 +6,7 @@ import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/extensions/user_extension.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
+import 'package:shortzz/common/service/api/user_service.dart';
 import 'package:shortzz/common/service/zego_engine_service.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
 import 'package:shortzz/languages/languages_keys.dart';
@@ -436,8 +437,19 @@ class CreateLiveStreamScreenController extends BaseController {
   Future<void> onStartLive() async {
     Loggers.info('=== STARTING LIVE STREAM PROCESS ===');
 
-    if ((myUser.value?.followerCount ?? 0) <
-        (_setting?.minFollowersForLive ?? 0)) {
+    // The cached user can be stale (followers gained since login), so refresh
+    // it before applying the minimum-followers rule.
+    final minFollowers = _setting?.minFollowersForLive ?? 0;
+    if (minFollowers > 0 && (myUser.value?.followerCount ?? 0) < minFollowers) {
+      try {
+        await UserService.instance
+            .fetchUserDetails(userId: SessionManager.instance.getUserID());
+      } catch (e) {
+        Loggers.warning('Could not refresh user before LIVE: $e');
+      }
+    }
+
+    if ((myUser.value?.followerCount ?? 0) < minFollowers) {
       Loggers.info('Follower count check failed');
       showSnackBar(LKey.minFollowersNeededToGoLive
           .trParams({'count': '${_setting?.minFollowersForLive}'}));
