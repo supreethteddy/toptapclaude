@@ -19,10 +19,10 @@ next APK.
 | L-08 | Requests tab lists incoming join requests | **Done** | Same list as L-01; live-updating, searchable, with the pending count in the tab title. |
 | L-09 | Blank button in End Stream popup must read Cancel | **Done** | Button now reads "Cancel" with a visible grey background (it had a white-on-white label in the old APK). |
 | L-10 | Blinking red ring on profile picture when the user is live | **Done** | Red blinking ring + "LIVE" pill on avatars in the reels sidebar, feed posts, the stories row and profile pages. Tapping the ring opens that LIVE as a viewer. |
-| L-11 | Call options inside LIVE not working | **Done (re-tested)** | Full guest flow re-tested end to end: viewer taps **Guest** → host sees request → Accept → viewer's camera/mic publish → split-screen. Host mic / camera / flip / comments toggles verified. Viewer-side "Guest" button added at the bottom so the option is easy to find. |
+| L-11 | Call options inside LIVE not working | **Done (re-tested)** | The "call" options are the guest (co-host) flow. Re-tested: viewer taps **Guest** → host sees the request (badge + inline Accept/Refuse) → Accept → viewer becomes a co-host and appears under Co-hosts with mic / camera / remove controls. Host mic, camera, flip and comment toggles verified. A viewer-side **Guest** button was added at the bottom so the option is easy to find. Real camera/audio publishing between two phones must be confirmed on physical devices (emulators cannot stream real video). |
 | L-12 | PK Game — built? where? | **Answered + Done** | PK was built (it was labelled "Battle" and only appeared as a small flash icon once a co-host existed, which is why it could not be found). There is now a permanent **PK** button in the host control row. Flow: host accepts/invites a guest → tap PK → 10 s countdown → 1-minute PK with gift coins scored per side → winner shown. If no guest is on screen the button explains what is missing. |
 | L-13 | Guest call — built? where? | **Answered + Done** | Built. Viewer: **Guest** button (bottom bar) or the camera icon at the top → "request sent". Host: **Guests** sheet → Requests → Accept, or Invited → Invite a viewer (viewer gets a Join / Cancel popup). Accepted guests go live in split screen with the host. |
-| L-14 | Full re-verification of the live module | **Done** | Host start, viewer join, comments, likes, gifts, goal, guest request/accept/invite, co-host controls, PK, end stream and viewer exit re-tested on two Android emulators. |
+| L-14 | Full re-verification of the live module | **Done** | Verified on an Android 15 emulator: go live, title edit, goal chip, viewer join, guest request → Accept → co-host (Requests / Invited / Co-hosts tabs), PK button gating, daily ranking updates, likes counter, end-stream popup and summary, viewer screen with Guest button and exit. Real two-phone video/PK playback still needs a physical-device pass because emulators cannot publish real camera video. |
 
 ## B. Help Center & support
 
@@ -60,6 +60,26 @@ next APK.
 - **H-03** Live Chat Support: in-app chat with the support user account; answered by staff from the app.
 - **H-04** Community Forum: external link, hidden until a forum URL is configured.
 - **U-02** HD: recording is now 1080p; upload and playback keep that quality.
+
+## Extra defects found and fixed during verification (not in the client list)
+
+| # | Problem | Fix |
+|---|---------|-----|
+| X-1 | **Android 15 blocker:** the profile-photo crop screen drew its toolbar under the status bar, so the Confirm / Cancel buttons could not be tapped. New users must add a photo to finish their profile, so they were stuck. | Cropper theme opts out of edge-to-edge enforcement; buttons are reachable again. |
+| X-2 | App could sit on the splash screen forever when the settings download failed (network not ready at cold start). | Splash retries with back-off and falls back to cached settings. |
+| X-3 | "Go Live" refused with "need 1 follower" even after the user gained followers, because it used the follower count cached at login. | Follower count is refreshed from the server before the check. |
+| X-4 | Snackbar messages were lower-cased ("pk", "live"). | Messages keep their casing. |
+| X-5 | Empty LIVE list showed a leftover placeholder text overlapping the message. | Removed. |
+| X-6 | Live-stream tabs still referenced an Audience tab index after removal. | Tab indices rebuilt. |
+
+## Things the client should know before launch (not fixable from the app alone)
+
+1. **DeepAR watermark.** Every video recorded in the app carries a "DeepAR.ai" watermark because the DeepAR licence key in the admin panel is a free/trial key. A paid DeepAR licence removes it.
+2. **Firestore is open.** The Firebase database that powers LIVE, chat and rankings accepts reads and writes from anyone without login. Security rules should be tightened before a public launch (we can supply rules).
+3. **AdMob is on test ad units** (the consent dialog says "Publisher Test Ads"). Real ad unit IDs are needed in the admin panel.
+4. **RevenueCat key is a placeholder** ("Invalid API Key" in logs), so in-app coin purchases through RevenueCat will not work until the real key is set in `const_res.dart`.
+5. **Profile completion is mandatory** (name, username, bio, email, phone and photo) before a new user can use the app. This is stricter than TikTok and will cost sign-ups; we recommend making bio/phone/photo optional.
+6. The backend is served over plain HTTP (`http://194.164.151.34`). Google Play accepts it (cleartext is enabled in the manifest), but HTTPS is strongly recommended.
 
 ## Items that need the client / server side
 
