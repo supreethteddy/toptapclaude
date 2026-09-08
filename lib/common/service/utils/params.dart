@@ -74,6 +74,9 @@ class Params {
   static const String coinPackageId = 'coin_package_id';
   static const String transactionCode = 'transaction_code';
   static const String purchasedAt = 'purchased_at';
+  static const String purchaseToken = 'purchase_token';
+  static const String productId = 'product_id';
+  static const String store = 'store';
   static const String gateway = 'gateway';
   static const String account = 'account';
   static const String notifyPostLike = 'notify_post_like';

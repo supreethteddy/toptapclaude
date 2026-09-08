@@ -3,8 +3,7 @@
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
 // import 'package:proste_indexed_stack/proste_indexed_stack.dart';
-// import 'package:shortzz/common/widget/banner_ads_custom.dart';
-// import 'package:shortzz/common/widget/gradient_border.dart';
+// // import 'package:shortzz/common/widget/gradient_border.dart';
 // import 'package:shortzz/common/widget/gradient_icon.dart';
 // import 'package:shortzz/model/user_model/user_model.dart';
 // import 'package:shortzz/screen/dashboard_screen/dashboard_screen_controller.dart';
@@ -196,7 +195,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:proste_indexed_stack/proste_indexed_stack.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/banner_ads_custom.dart';
 import 'package:shortzz/common/widget/gradient_border.dart';
 import 'package:shortzz/common/widget/gradient_icon.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
@@ -259,8 +257,6 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-            if (controller.selectedPageIndex.value != 0)
-              const BannerAdsCustom(),
           ],
         );
       }),

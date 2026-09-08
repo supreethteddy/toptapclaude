@@ -4,7 +4,6 @@
 // import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/common/controller/ads_controller.dart';
 // import 'package:shortzz/common/controller/base_controller.dart';
 // import 'package:shortzz/common/manager/logger.dart';
 // import 'package:shortzz/common/manager/session_manager.dart';
@@ -67,7 +66,6 @@
 //     onProgress = (progress) {
 //       postProgress.value = progress;
 //     };
-//     Get.put(AdsController());
 //   }
 
 //   @override
@@ -205,7 +203,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/ads_controller.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
@@ -261,7 +258,6 @@ class DashboardScreenController extends BaseController
     onProgress = (progress) {
       postProgress.value = progress;
     };
-    Get.put(AdsController());
   }
 
   @override

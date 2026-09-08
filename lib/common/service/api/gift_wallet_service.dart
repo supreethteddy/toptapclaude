@@ -47,13 +47,21 @@ class GiftWalletService {
     return response;
   }
 
-  Future<User?> buyCoins({required int id, String? purchasedAt}) async {
+  Future<User?> buyCoins(
+      {required int id,
+      String? purchasedAt,
+      String? purchaseToken,
+      String? productId,
+      String? store}) async {
     UserModel response = await ApiService.instance.call(
         url: WebService.giftWallet.buyCoins,
         fromJson: UserModel.fromJson,
         param: {
           Params.coinPackageId: id,
           Params.purchasedAt: purchasedAt,
+          if (purchaseToken != null) Params.purchaseToken: purchaseToken,
+          if (productId != null) Params.productId: productId,
+          if (store != null) Params.store: store,
         });
     if (response.status == true) {
       return response.data;

@@ -25,6 +25,13 @@ class AppRes {
   static const String supportUsername = 'toptapsupport';
   static const String supportEmail = 'support@toptap.app';
 
+  /// Store subscription product ids that grant the verified badge. Create
+  /// them in Google Play Console > Monetise > Subscriptions.
+  static const List<String> verifiedBadgeProductIds = [
+    'toptap_verified_monthly',
+    'toptap_verified_yearly',
+  ];
+
   /// Total duration of the battle (in minutes)
   static const int battleDurationInMinutes = 1;
 

@@ -1,6 +1,6 @@
 
 import 'package:get/get.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/gift_wallet_service.dart';
@@ -11,7 +11,7 @@ import 'package:shortzz/model/user_model/user_model.dart';
 
 class CoinWalletScreenController extends BaseController {
   Rx<User?> myUser = Rx<User?>(null);
-  RxList<Package> offerings = <Package>[].obs;
+  RxList<ProductDetails> offerings = <ProductDetails>[].obs;
 
   Setting? get settings => SessionManager.instance.getSettings();
   RxList<CoinPlan> coinPlans = <CoinPlan>[].obs;
@@ -27,21 +27,22 @@ class CoinWalletScreenController extends BaseController {
     myUser.value = SessionManager.instance.getUser();
   }
 
-  void fetchOfferings() {
-    List<Package> items = SubscriptionManager.shared.offering;
-    offerings.addAll(items);
+  Future<void> fetchOfferings() async {
+    if (SubscriptionManager.shared.offering.isEmpty && isPurchaseConfig) {
+      await SubscriptionManager.shared.fetchOfferings();
+    }
+    List<ProductDetails> items = SubscriptionManager.shared.offering;
+    offerings.assignAll(items);
+    coinPlans.clear();
     if (settings?.coinPackages == null) return;
 
     for (var data in settings!.coinPackages!) {
       if (data.status == 1) {
         for (var element in items) {
           if ([data.appstoreProductId, data.playStoreProductId]
-              .contains(element.storeProduct.identifier)) {
+              .contains(element.id)) {
             coinPlans.add(CoinPlan(
-                data.coinAmount ?? 0,
-                data.id ?? -1,
-                element.storeProduct.identifier,
-                element.storeProduct.priceString));
+                data.coinAmount ?? 0, data.id ?? -1, element.id, element.price));
           }
         }
       }
@@ -49,16 +50,24 @@ class CoinWalletScreenController extends BaseController {
   }
 
   void onPurchase(CoinPlan offer) {
+    final product =
+        offerings.firstWhereOrNull((element) => element.id == offer.id);
+    if (product == null) {
+      showSnackBar('This coin pack is not available in the store yet.');
+      return;
+    }
     showLoader(barrierDismissible: false);
-    Package package = offerings
-        .firstWhere((element) => element.storeProduct.identifier == offer.id);
-    SubscriptionManager.shared.makePurchaseCustom(package).then((value) async {
+    SubscriptionManager.shared.makePurchaseCustom(product).then((value) async {
       if (value != null) {
-        String isoTime = value.nonSubscriptionTransactions.last.purchaseDate;
-        DateTime dt = DateTime.parse(isoTime);
-        int millis = dt.millisecondsSinceEpoch;
-        User? user = await GiftWalletService.instance
-            .buyCoins(id: offer.coinPackageId, purchasedAt: millis.toString());
+        final millis = int.tryParse(value.transactionDate ?? '') ??
+            DateTime.now().millisecondsSinceEpoch;
+        User? user = await GiftWalletService.instance.buyCoins(
+          id: offer.coinPackageId,
+          purchasedAt: millis.toString(),
+          purchaseToken: SubscriptionManager.verificationToken(value),
+          productId: value.productID,
+          store: SubscriptionManager.storeName(),
+        );
         stopLoader();
         if (user != null) {
           User? user = await UserService.instance

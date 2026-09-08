@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shortzz/common/controller/theme_controller.dart';
 import 'package:shortzz/common/manager/firebase_notification_manager.dart';
 import 'package:shortzz/common/manager/call_notification_manager.dart';
@@ -77,9 +76,6 @@ Future<void> main() async {
     Loggers.error('SubscriptionManager init error: $e\n$st');
   }
 
-  print('🔄 Initializing Mobile Ads...');
-  await MobileAds.instance.initialize();
-  print('✅ Mobile Ads initialized');
 
   try {
     print('🔄 Initializing Branch SDK...');
@@ -158,9 +154,6 @@ Future<void> main() async {
           'SubscriptionManager init error: $e\n$st');
     }
 
-    print('🔄 Initializing Mobile Ads...');
-    await MobileAds.instance.initialize();
-    print('✅ Mobile Ads initialized');
 
     try {
       print('🔄 Initializing Branch SDK...');
@@ -254,8 +247,7 @@ class MyBehavior extends ScrollBehavior {
 // import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 // import 'package:get/get.dart';
 // import 'package:get_storage/get_storage.dart';
-// import 'package:google_mobile_ads/google_mobile_ads.dart';
-// import 'package:shortzz/common/controller/theme_controller.dart';
+// // import 'package:shortzz/common/controller/theme_controller.dart';
 // import 'package:shortzz/common/manager/firebase_notification_manager.dart';
 // import 'package:shortzz/common/manager/internet_connection_manager.dart';
 // import 'package:shortzz/common/manager/logger.dart';

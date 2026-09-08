@@ -1,7 +1,7 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shortzz/common/widget/custom_back_button.dart';
 import 'package:shortzz/common/widget/gradient_text.dart';
 import 'package:shortzz/common/widget/text_button_custom.dart';
@@ -65,12 +65,12 @@ class SubscriptionScreen extends StatelessWidget {
                         children: List.generate(
                           controller.packages.length,
                           (index) {
-                            Package package = controller.packages[index];
+                            ProductDetails package = controller.packages[index];
 
                             return Obx(() {
                               bool isSelected = controller
-                                      .selectedPackage.value?.identifier ==
-                                  package.identifier;
+                                      .selectedPackage.value?.id ==
+                                  package.id;
                               return InkWell(
                                 onTap: () =>
                                     controller.onSubscriptionTap(package),
@@ -142,7 +142,7 @@ class SubscriptionScreen extends StatelessWidget {
                                         ),
                                       ),
                                       Text(
-                                        package.storeProduct.priceString,
+                                        package.price,
                                         style:
                                             TextStyleCustom.outFitExtraBold800(
                                                 fontSize: 24,
@@ -223,72 +223,52 @@ class BuildIconWithText extends StatelessWidget {
   }
 }
 
-extension RevenueCatProduct on Package {
+/// Presentation helpers for store subscription products. The billing period
+/// is inferred from the product id (…_weekly / …_monthly / …_yearly).
+extension StoreProductDetail on ProductDetails {
   SubscriptionDetail get getDetail {
-    final StoreProduct product = storeProduct;
-
-    String getTrialDescription() {
-      final intro = product.introductoryPrice;
-      if (intro == null) return '';
-      final count = intro.periodNumberOfUnits;
-      return LKey.freeTrialDescription
-          .trParams({'count': '$count', 'get_period': getPeriod});
+    final lower = id.toLowerCase();
+    String cleanTitle() {
+      // Google Play appends "(App name)" to titles.
+      final t = title.replaceAll(RegExp(r'\s*\(.*\)\s*$'), '').trim();
+      return t.isEmpty ? id : t;
     }
 
-    String getBilledDescription(String unitLabel, int months) {
-      final trial = getTrialDescription();
-      return trial.isEmpty
-          ? months <= 1
-              ? ''
-              : LKey.subscriptionDescription.trParams(
-                  {'price': calculatePrice(months), 'unit_label': unitLabel})
-          : trial;
+    if (lower.contains('lifetime')) {
+      return SubscriptionDetail(title: LKey.lifetime.tr, description: description);
     }
-
-    return switch (packageType) {
-      PackageType.unknown || PackageType.custom => SubscriptionDetail(),
-      PackageType.lifetime => SubscriptionDetail(
-          title: LKey.lifetime.tr,
-        ),
-      PackageType.annual => SubscriptionDetail(
+    if (lower.contains('year') || lower.contains('annual')) {
+      return SubscriptionDetail(
           title: LKey.annual.tr,
-          description: getBilledDescription(LKey.annually.tr, 12)),
-      PackageType.sixMonth => SubscriptionDetail(
+          description: LKey.subscriptionDescription.trParams(
+              {'price': calculatePrice(12), 'unit_label': LKey.annually.tr}));
+    }
+    if (lower.contains('6month') || lower.contains('six')) {
+      return SubscriptionDetail(
           title: LKey.sixMonth.tr,
-          description: getBilledDescription(LKey.semiAnnually.tr, 6)),
-      PackageType.threeMonth => SubscriptionDetail(
+          description: LKey.subscriptionDescription.trParams(
+              {'price': calculatePrice(6), 'unit_label': LKey.semiAnnually.tr}));
+    }
+    if (lower.contains('3month') || lower.contains('quarter')) {
+      return SubscriptionDetail(
           title: LKey.threeMonth.tr,
-          description: getBilledDescription(LKey.threeMonths.tr, 3)),
-      PackageType.twoMonth => SubscriptionDetail(
-          title: LKey.twoMonth.tr,
-          description: getBilledDescription(LKey.twoMonths.tr, 2)),
-      PackageType.monthly => SubscriptionDetail(
-          title: LKey.monthly.tr,
-          description: getBilledDescription(LKey.monthly.tr, 1)),
-      PackageType.weekly => SubscriptionDetail(
-          title: LKey.weekly.tr, description: LKey.giveItATry.tr),
-    };
+          description: LKey.subscriptionDescription.trParams(
+              {'price': calculatePrice(3), 'unit_label': LKey.threeMonths.tr}));
+    }
+    if (lower.contains('week')) {
+      return SubscriptionDetail(
+          title: LKey.weekly.tr, description: LKey.giveItATry.tr);
+    }
+    if (lower.contains('month')) {
+      return SubscriptionDetail(title: LKey.monthly.tr, description: '');
+    }
+    return SubscriptionDetail(title: cleanTitle(), description: description);
   }
 
   String calculatePrice(int months) {
     if (months <= 1) return '';
-    final perMonth = storeProduct.price / months;
-    final currencySymbol = storeProduct.priceString[0];
+    final perMonth = rawPrice / months;
     return '$currencySymbol${perMonth.toStringAsFixed(2)}';
-  }
-
-  String get getPeriod {
-    final intro = storeProduct.introductoryPrice;
-    final unit = intro?.periodUnit;
-    final cycles = intro?.cycles ?? 1;
-
-    return switch (unit) {
-      PeriodUnit.day => LKey.day.tr.trPlural(LKey.days.tr, cycles),
-      PeriodUnit.week => LKey.week.tr.trPlural(LKey.weeks.tr, cycles),
-      PeriodUnit.month => LKey.month.tr.trPlural(LKey.months.tr, cycles),
-      PeriodUnit.year => LKey.year.tr.trPlural(LKey.years.tr, cycles),
-      _ => '',
-    };
   }
 }
 

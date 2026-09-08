@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/ads_manager.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/widget/eula_sheet.dart';
@@ -59,7 +58,6 @@ class SelectLanguageScreenController
         LanguageNavigationType.fromStart) {
       openEULASheet();
     }
-    AdsManager.instance.requestConsentInfoUpdate();
   }
 
   Future<void> openEULASheet() async {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shortzz/common/controller/ads_controller.dart';
 import 'package:shortzz/common/controller/follow_controller.dart';
 import 'package:shortzz/common/controller/profile_controller.dart';
 import 'package:shortzz/common/enum/chat_enum.dart';
@@ -34,7 +33,6 @@ import 'package:shortzz/utilities/app_res.dart';
 class ProfileScreenController extends BlockUserController
     with GetTickerProviderStateMixin {
   static const tag = 'PROFILE';
-  final adsController = Get.find<AdsController>();
   late final GlobalKey<ScaffoldState> scaffoldKey;
 
   RxInt selectedTabIndex = 0.obs;

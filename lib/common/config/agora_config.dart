@@ -5,7 +5,7 @@
 class AgoraConfig {
   // ✅ NEW APP ID - No certificate required
   static const String appId =
-      "c0d00a01ab0d4111826a7ebc87c4c0ad";
+      "9a8340f679264eee911400f21d6c42c3";
 
       // static const String appId =f7bc5b1b34f74247a32aca28f54788e5
       // "c0d00a01ab0d4111826a7ebc87c4c0ad";

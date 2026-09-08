@@ -394,11 +394,7 @@ class ProfileScreen extends StatelessWidget {
       // endDrawer: SettingsScreen(
       //     onUpdateUser: controller.onUpdateUser),
       body: PopScope(
-        onPopInvokedWithResult: (didPop, result) {
-          controller.adsController
-              .showInterstitialAdIfAvailable(
-                  isPopScope: true);
-        },
+        onPopInvokedWithResult: (didPop, result) {},
         child: SafeArea(
           bottom: false,
           child: Column(
@@ -555,10 +551,7 @@ class _TopViewForOtherUser extends StatelessWidget {
               // comment code
 
               CustomBackButton(
-                onTap: () {
-                  controller.adsController
-                      .showInterstitialAdIfAvailable();
-                },
+                onTap: Get.back,
                 padding: const EdgeInsets.all(15),
               ),
 

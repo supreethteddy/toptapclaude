@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shortzz/common/controller/ads_controller.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
 import 'package:shortzz/common/extensions/user_extension.dart';
@@ -48,7 +47,6 @@ class LivestreamScreenController extends BaseController {
   ZegoExpressEngine zegoEngine = ZegoExpressEngine.instance;
 
   final firestoreController = Get.find<FirebaseFirestoreController>();
-  final adsController = Get.find<AdsController>();
 
   Timer? timer;
   Timer? minViewerTimeoutTimer;
@@ -1820,7 +1818,6 @@ class LivestreamScreenController extends BaseController {
         title: LKey.exitLiveStreamTitle.tr,
         description: LKey.exitLiveStreamDescription.tr,
         onTap: () async {
-          adsController.showInterstitialAdIfAvailable();
           if (liveData.value.coHostIds?.contains(myUserId) ?? false) {
             closeCoHostStream(myUserId);
           }

@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
@@ -7,8 +7,8 @@ import 'package:shortzz/common/service/subscription/subscription_manager.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 
 class SubscriptionScreenController extends BaseController {
-  RxList<Package> packages = <Package>[].obs;
-  Rx<Package?> selectedPackage = Rx(null);
+  RxList<ProductDetails> packages = <ProductDetails>[].obs;
+  Rx<ProductDetails?> selectedPackage = Rx(null);
   Function(User? user)? onUpdateUser;
 
   SubscriptionScreenController(this.onUpdateUser);
@@ -46,8 +46,8 @@ class SubscriptionScreenController extends BaseController {
     }
   }
 
-  void onSubscriptionTap(Package package) {
+  void onSubscriptionTap(ProductDetails package) {
     selectedPackage.value = package;
-    Loggers.success(selectedPackage.value?.toJson());
+    Loggers.success(selectedPackage.value?.id);
   }
 }
