@@ -31,7 +31,12 @@ class BaseController extends FullLifeCycleController {
       return;
     }
 
-    final message = title?.capitalizeFirst?.tr ?? '';
+    // Only upper-case the first letter; GetX's capitalizeFirst lower-cases the
+    // rest, which turned "PK" into "pk" and "LIVE" into "live".
+    final raw = (title ?? '').trim();
+    final message = raw.isEmpty
+        ? ''
+        : (raw[0].toUpperCase() + raw.substring(1)).tr;
     if (message.isEmpty) {
       return;
     }
