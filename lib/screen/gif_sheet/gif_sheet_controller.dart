@@ -6,6 +6,7 @@ import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/giphy_service.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/giphy/giphy_model.dart';
+import 'package:shortzz/utilities/app_res.dart';
 
 class GifSheetController extends BaseController {
   RxList<GiphyData> trendingList = <GiphyData>[].obs;
@@ -14,7 +15,12 @@ class GifSheetController extends BaseController {
   /// settings are downloaded, so a cached field would stay null forever.
   Setting? get setting => SessionManager.instance.getSettings();
 
-  bool get hasGiphyKey => (setting?.giphyKey ?? '').trim().isNotEmpty;
+  String get giphyKey {
+    final serverKey = (setting?.giphyKey ?? '').trim();
+    return serverKey.isNotEmpty ? serverKey : AppRes.giphyFallbackKey;
+  }
+
+  bool get hasGiphyKey => giphyKey.isNotEmpty;
   RxBool isTrendingLoading = false.obs;
   RxBool isSearchLoading = false.obs;
   TextEditingController searchTextController = TextEditingController();
@@ -31,7 +37,7 @@ class GifSheetController extends BaseController {
     if (!hasGiphyKey) return;
     if (isTrendingLoading.value || trendingList.length > 89) return;
     isTrendingLoading.value = true;
-    String apiKey = setting?.giphyKey ?? '';
+    String apiKey = giphyKey;
     List<GiphyData> items = await GiphyService.instance.trending(
         apiKey: apiKey,
         startCount:
@@ -48,7 +54,7 @@ class GifSheetController extends BaseController {
     if (isSearchLoading.value) return;
     if (!isEmpty && searchingGiphyList.length > 89) return;
     isSearchLoading.value = true;
-    String apiKey = setting?.giphyKey ?? '';
+    String apiKey = giphyKey;
     List<GiphyData> items = await GiphyService.instance.search(
         apiKey: apiKey,
         keyWord: searchTextController.text.trim(),

@@ -25,6 +25,10 @@ class AppRes {
   static const String supportUsername = 'toptapsupport';
   static const String supportEmail = 'support@toptap.app';
 
+  /// GIPHY key supplied by the client. Used when the admin panel has not set
+  /// one, so the GIF picker works out of the box. Server value takes priority.
+  static const String giphyFallbackKey = 'zrD2HxJwtMxjyig7Vzk05MizPzW60Czr';
+
   /// Store subscription product ids that grant the verified badge. Create
   /// them in Google Play Console > Monetise > Subscriptions.
   static const List<String> verifiedBadgeProductIds = [
