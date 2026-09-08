@@ -44,6 +44,11 @@ android {
         versionCode = 14
         versionName = '2.1.0'
         multiDexEnabled true
+        // Phones only: dropping x86/x86_64 keeps the bundle well under Play's
+        // size limit (Agora/Zego ship ~50 MB of x86_64 natives).
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a"
+        }
     }
 
     lintOptions {
