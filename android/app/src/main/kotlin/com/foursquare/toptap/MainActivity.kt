@@ -2,7 +2,6 @@ package com.fourtech.toptap
 
 import com.baseflow.permissionhandler.PermissionHandlerPlugin
 import com.retrytech.retrytech_plugin.RetrytechPlugin
-import com.revenuecat.purchases_flutter.PurchasesFlutterPlugin
 import com.ryanheise.just_audio.JustAudioPlugin
 import com.tekartik.sqflite.SqflitePlugin
 import im.zego.zego_express_engine.ZegoExpressEnginePlugin
@@ -15,7 +14,6 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         flutterEngine.plugins.add(PathProviderPlugin())
-        flutterEngine.plugins.add(PurchasesFlutterPlugin())
         flutterEngine.plugins.add(SqflitePlugin())
         flutterEngine.plugins.add(VideoPlayerPlugin())
         flutterEngine.plugins.add(ZegoExpressEnginePlugin())
