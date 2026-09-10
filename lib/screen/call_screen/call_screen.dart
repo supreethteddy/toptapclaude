@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/service/agora_call_service.dart';
+import 'package:shortzz/common/service/zego_call_service.dart';
 import 'package:shortzz/common/service/call_signaling_service.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/common/config/agora_config.dart';
@@ -31,7 +31,7 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  final AgoraCallService _callService = AgoraCallService();
+  final ZegoCallService _callService = ZegoCallService();
   bool _isConnected = false;
   bool _hasRemoteUser = false;
   bool _isMuted = false;
