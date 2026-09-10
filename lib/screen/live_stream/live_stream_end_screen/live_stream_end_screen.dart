@@ -16,14 +16,28 @@ class LiveStreamEndScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _goHome();
+      },
+      child: Scaffold(
         body: LiveStreamSummary(
           userState: userState,
           isHost: isHost,
           viewers: viewers,
-          onGoHomeTap: () async {
-          },
+          onGoHomeTap: _goHome,
         ),
-        );
+      ),
+    );
+  }
+
+  /// Leaves the "Stream Ended" summary and returns to the home dashboard.
+  /// Pops every route left on top of the first (dashboard) route so the host
+  /// is never trapped on this screen and can start a new live afterwards.
+  void _goHome() {
+    if (Get.isBottomSheetOpen ?? false) Get.back();
+    if (Get.isDialogOpen ?? false) Get.back();
+    Get.until((route) => route.isFirst);
   }
 }

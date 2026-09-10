@@ -16,6 +16,8 @@ import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/host/livestream_host_screen.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:shortzz/screen/reels_screen/reels_screen_controller.dart';
 import 'package:shortzz/utilities/firebase_const.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
 
@@ -40,6 +42,9 @@ class CreateLiveStreamScreenController extends BaseController {
   @override
   void onInit() {
     super.onInit();
+    // Pause the background home-feed reels so their audio does not keep playing
+    // behind the camera preview / LIVE screen.
+    ReelsScreenController.pauseHomeFeed();
     initZegoEngine();
   }
 
@@ -47,6 +52,12 @@ class CreateLiveStreamScreenController extends BaseController {
   void onClose() {
     super.onClose();
     stopPreview();
+    // Resume the feed only if we are backing out of create-live (cancel). When
+    // the user actually goes live the host controller is already registered and
+    // takes over resuming when the LIVE ends.
+    if (!Get.isRegistered<LivestreamScreenController>()) {
+      ReelsScreenController.resumeHomeFeed();
+    }
   }
 
   Future<bool> requestPermission() async {

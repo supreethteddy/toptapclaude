@@ -112,6 +112,41 @@ class ReelsScreenController extends BaseController {
     };
   }
 
+  /// Pause the currently visible reel when a full-screen overlay (going LIVE, a
+  /// call, etc.) is pushed over the feed. The bottom-tab index does not change
+  /// in that case, so the feed would otherwise keep playing audio in the
+  /// background. See [resumeForOverlay].
+  void pauseForOverlay() {
+    try {
+      videoControllers[position.value]?.pause();
+    } catch (_) {}
+  }
+
+  /// Resume the current reel after such an overlay is dismissed, but only while
+  /// the feed tab is the one on screen.
+  void resumeForOverlay() {
+    try {
+      if (dashboardController.selectedPageIndex.value == 0) {
+        videoControllers[position.value]?.play();
+      }
+    } catch (_) {}
+  }
+
+  /// Pauses the home-feed reels if that controller is currently alive. Safe to
+  /// call from anywhere (e.g. before opening the LIVE screen).
+  static void pauseHomeFeed() {
+    if (Get.isRegistered<ReelsScreenController>(tag: tag)) {
+      Get.find<ReelsScreenController>(tag: tag).pauseForOverlay();
+    }
+  }
+
+  /// Resumes the home-feed reels after an overlay screen is closed.
+  static void resumeHomeFeed() {
+    if (Get.isRegistered<ReelsScreenController>(tag: tag)) {
+      Get.find<ReelsScreenController>(tag: tag).resumeForOverlay();
+    }
+  }
+
   Future<void> _fetchMoreData() async {
     // Dynamic threshold: fetch when reaching 80% of list or within 3 items of end
     final fetchThreshold = (reels.length * 0.8)

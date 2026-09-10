@@ -27,6 +27,7 @@ import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/gift_sheet/send_gift_sheet.dart';
 import 'package:shortzz/screen/gift_sheet/send_gift_sheet_controller.dart';
 import 'package:shortzz/screen/live_stream/live_stream_end_screen/live_stream_end_screen.dart';
+import 'package:shortzz/screen/reels_screen/reels_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/live_stream_end_screen/widget/livestream_summary.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/audience/widget/live_stream_join_sheet.dart';
 import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream_search_screen.dart';
@@ -184,6 +185,9 @@ class LivestreamScreenController extends BaseController {
       Get.delete<LiveRankingController>(tag: _rankingTag);
     }
     rankingController = null;
+    // Resume the background home-feed reels that were paused when the LIVE flow
+    // opened, now that we are leaving the LIVE screen.
+    ReelsScreenController.resumeHomeFeed();
     super.onClose();
   }
 
@@ -249,12 +253,31 @@ class LivestreamScreenController extends BaseController {
     if (_isLoggingOut) return;
     _isLoggingOut = true;
 
+    // Each teardown step is guarded independently so that a failure in one
+    // (e.g. deleting the Firestore doc) never skips the Zego room logout. If the
+    // room is left logged-in the host cannot start a new live afterwards.
     if (isHost) {
-      await deleteStreamOnFirebase();
+      try {
+        await deleteStreamOnFirebase();
+      } catch (e, s) {
+        Loggers.error('deleteStreamOnFirebase failed during logout: $e\n$s');
+      }
     }
-    await stopPreview();
-    await stopPublish();
-    await zegoEngine.logoutRoom(liveData.value.roomID ?? '');
+    try {
+      await stopPreview();
+    } catch (e) {
+      Loggers.error('stopPreview failed during logout: $e');
+    }
+    try {
+      await stopPublish();
+    } catch (e) {
+      Loggers.error('stopPublish failed during logout: $e');
+    }
+    try {
+      await zegoEngine.logoutRoom(liveData.value.roomID ?? '');
+    } catch (e) {
+      Loggers.error('zego logoutRoom failed: $e');
+    }
   }
 
   Future<ZegoRoomLoginResult> loginRoom() async {
@@ -1570,7 +1593,12 @@ class LivestreamScreenController extends BaseController {
     userState?.user = user;
     int viewers = liveUsersStates.length;
     if (isHost) {
-      Get.back();
+      // Close the end-stream confirmation sheet/dialog if one is open, but do
+      // NOT pop the host screen itself — Get.off below replaces it with the end
+      // screen. Popping unconditionally here could remove the dashboard instead
+      // and leave the host trapped with no route to return to.
+      if (Get.isBottomSheetOpen ?? false) Get.back();
+      if (Get.isDialogOpen ?? false) Get.back();
       Get.off(
         () => LiveStreamEndScreen(
           userState: userState,
