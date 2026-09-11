@@ -94,19 +94,18 @@ class CallManager extends GetxController {
         calleeId: userId2,
       );
       if (!pushSent) {
-        await CallSignalingService.instance.updateStatus(
-          finalChannelId,
-          CallSignalStatus.failed,
-          reason: 'notification_failed',
-        );
-        callStatus.value = 'error';
-        errorMessage.value = 'Failed to notify callee about voice call';
-        return false;
+        // The FCM ring to the callee failed (backend push not configured, or
+        // the callee has no device token). Do NOT abort the call: the call
+        // session doc is already written, so the callee is still rung in-app by
+        // IncomingCallWatcher (Firestore) when their app is open, and the caller
+        // must still be able to enter the room and wait for them to answer.
+        Loggers.warning(
+            '📞 Call push to callee failed; continuing via in-app signalling');
       }
 
       isInCall.value = true;
       callStatus.value = 'connected';
-      Loggers.success('📞 Voice call started successfully: $finalChannelId');
+      Loggers.success('📞 Voice call started: $finalChannelId (push=$pushSent)');
       return true;
     } catch (e) {
       errorMessage.value = e.toString();
@@ -159,19 +158,15 @@ class CallManager extends GetxController {
         calleeId: userId2,
       );
       if (!pushSent) {
-        await CallSignalingService.instance.updateStatus(
-          finalChannelId,
-          CallSignalStatus.failed,
-          reason: 'notification_failed',
-        );
-        callStatus.value = 'error';
-        errorMessage.value = 'Failed to notify callee about video call';
-        return false;
+        // See startVoiceCall: a failed FCM ring must not abort the call. The
+        // callee is also rung in-app via IncomingCallWatcher (Firestore).
+        Loggers.warning(
+            '📹 Call push to callee failed; continuing via in-app signalling');
       }
 
       isInCall.value = true;
       callStatus.value = 'connected';
-      Loggers.success('📹 Video call started successfully: $finalChannelId');
+      Loggers.success('📹 Video call started: $finalChannelId (push=$pushSent)');
       return true;
     } catch (e) {
       errorMessage.value = e.toString();

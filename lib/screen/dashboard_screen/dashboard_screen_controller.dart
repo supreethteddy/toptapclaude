@@ -204,6 +204,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
+import 'package:shortzz/common/manager/incoming_call_watcher.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/subscription/subscription_manager.dart';
@@ -247,6 +248,10 @@ class DashboardScreenController extends BaseController
   @override
   void onInit() {
     super.onInit();
+
+    // Ring incoming 1:1 calls in-app (fallback for when the FCM push does not
+    // reach the callee). Safe to call repeatedly.
+    IncomingCallWatcher.instance.start();
 
     animationController = AnimationController(
         duration: const Duration(milliseconds: 200), vsync: this);

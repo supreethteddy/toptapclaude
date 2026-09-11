@@ -51,11 +51,13 @@ class CreateLiveStreamScreenController extends BaseController {
   @override
   void onClose() {
     super.onClose();
-    stopPreview();
-    // Resume the feed only if we are backing out of create-live (cancel). When
-    // the user actually goes live the host controller is already registered and
-    // takes over resuming when the LIVE ends.
+    // When the user actually goes live, the host screen REUSES this camera
+    // preview canvas (passed as hostPreview). Destroying it here — as
+    // stopPreview() does via destroyCanvasView — blacks out the host's own
+    // video on the live screen. So only tear the preview down (and resume the
+    // background feed) when we are cancelling out of create-live instead.
     if (!Get.isRegistered<LivestreamScreenController>()) {
+      stopPreview();
       ReelsScreenController.resumeHomeFeed();
     }
   }
