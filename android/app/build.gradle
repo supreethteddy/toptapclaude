@@ -74,6 +74,17 @@ android {
             minifyEnabled false
             signingConfig = hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
         }
+        debug {
+            // When the upload keystore is available (CI with signing secrets, or
+            // a local key.properties) sign the debug build with it too, so the
+            // installable debug APK carries a STABLE SHA-1 that can be registered
+            // in Firebase. Without this, each CI run signs with a throwaway debug
+            // key whose SHA-1 is not in Firebase, and Google Sign-In fails
+            // (ApiException 10). Falls back to the default debug key locally.
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.release
+            }
+        }
     }
 
     packagingOptions {
