@@ -9,6 +9,15 @@ class ZegoEngineService {
 
   static final ZegoEngineService instance = ZegoEngineService._();
 
+  /// Client-provided Zego credentials (2026-09-14). These take precedence over
+  /// the backend `tbl_settings` values because the live backend still serves the
+  /// old template credentials, which fail Zego authentication (error 1001005 —
+  /// "AppSign is incorrect"). When the backend settings are updated to a valid
+  /// pair these constants can be cleared to defer to the server again.
+  static const int _overrideAppId = 1814460474;
+  static const String _overrideAppSign =
+      '8d968dc628a7d485b9448fd4a7baeb4ea00475e7eb6955b66f797069eabc0cc8';
+
   Future<void>? _createEngineFuture;
   bool _isEngineCreated = false;
 
@@ -30,10 +39,15 @@ class ZegoEngineService {
 
   Future<void> _createEngine() async {
     Setting? appSetting = SessionManager.instance.getSettings();
-    int? appId = int.tryParse(appSetting?.zegoAppId ?? '');
-    String appSign = appSetting?.zegoAppSign ?? '';
+    final int? serverAppId = int.tryParse(appSetting?.zegoAppId ?? '');
+    final String serverAppSign = (appSetting?.zegoAppSign ?? '').trim();
 
-    if (appId == null || appId == 0 || appSign.trim().isEmpty) {
+    // Prefer the bundled override when set; otherwise fall back to the backend.
+    final int appId = _overrideAppId != 0 ? _overrideAppId : (serverAppId ?? 0);
+    final String appSign =
+        _overrideAppSign.isNotEmpty ? _overrideAppSign : serverAppSign;
+
+    if (appId == 0 || appSign.isEmpty) {
       throw StateError('Zego credentials are missing from settings.');
     }
 
