@@ -46,4 +46,5 @@ class FirebaseConst {
   static const String countedAsViewer = 'counted_as_viewer';
   static const String moderators = 'moderators';
   static const String addedAt = 'added_at';
+  static const String fanClub = 'fan_club';
 }

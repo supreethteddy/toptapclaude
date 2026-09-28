@@ -20,7 +20,9 @@ import 'package:shortzz/screen/live_stream/livestream_screen/host/widget/live_st
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_top_badges.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/fan_club_widgets.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_goal_progress_widget.dart';
 import 'package:shortzz/utilities/asset_res.dart';
@@ -60,6 +62,8 @@ class LiveStreamAudienceTopView extends StatelessWidget {
                   // Live Goal Progress Widget for audience
                   LiveGoalProgressWidget(controller: controller),
                   PinnedGiftGoalChip(controller: controller),
+                  LivePollBanner(controller: controller),
+                  FanClubBanner(controller: controller),
                   _BuildTopView(controller: controller),
                   _BuildCenterView(controller: controller),
                   _BuildRankingRow(controller: controller),

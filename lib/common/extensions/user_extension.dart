@@ -25,6 +25,9 @@ extension UserExtension on User {
     String? liveGoalTitle,
     String? liveGoalType,
     int? liveGoalTargetAmount,
+    BroadcastMode broadcastMode = BroadcastMode.camera,
+    bool hasFanClub = false,
+    String? fanClubPerks,
   }) {
     return Livestream(
         description: (description ?? '').trim(),
@@ -44,17 +47,21 @@ extension UserExtension on User {
         liveGoalTitle: liveGoalTitle,
         liveGoalType: liveGoalType,
         liveGoalTargetAmount: liveGoalTargetAmount,
-        liveGoalCurrentAmount: 0);
+        liveGoalCurrentAmount: 0,
+        broadcastMode: broadcastMode,
+        hasFanClub: hasFanClub,
+        fanClubPerks: fanClubPerks);
   }
 
   LivestreamUserState streamState(
       {LivestreamUserType stateType =
           LivestreamUserType.audience,
-      required int time}) {
+      required int time,
+      bool isVideoOn = true}) {
     return LivestreamUserState(
         type: stateType,
         isMuted: false,
-        isVideoOn: true,
+        isVideoOn: isVideoOn,
         userId: id ?? -1,
         totalBattleCoin: 0,
         currentBattleCoin: 0,

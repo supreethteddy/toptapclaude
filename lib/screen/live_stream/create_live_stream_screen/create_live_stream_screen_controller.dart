@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/extensions/user_extension.dart';
 import 'package:shortzz/common/manager/logger.dart';
@@ -27,6 +28,9 @@ class CreateLiveStreamScreenController extends BaseController {
   RxString liveGoalTitle = ''.obs;
   RxInt liveGoalTargetAmount = 0.obs;
   RxString liveGoalType = 'followers'.obs; // followers, likes, gifts, duration
+  Rx<BroadcastMode> broadcastMode = BroadcastMode.camera.obs;
+  RxBool hasFanClub = false.obs;
+  RxString fanClubPerks = ''.obs;
   bool isFrontCamera = true;
   FirebaseFirestore db = FirebaseFirestore.instance;
   ZegoExpressEngine zegoEngine = ZegoExpressEngine.instance;
@@ -157,6 +161,17 @@ class CreateLiveStreamScreenController extends BaseController {
   void toggleCamera() {
     isFrontCamera = !isFrontCamera;
     zegoEngine.useFrontCamera(isFrontCamera, channel: ZegoPublishChannel.Main);
+  }
+
+  /// Switches between broadcasting with the camera on (default) and
+  /// voice-chat (audio only). Camera preview stays initialized either way —
+  /// we just stop feeding it to Zego's publish stream — so switching back to
+  /// Device camera is instant. Mobile gaming isn't wired up here; the UI
+  /// shows it disabled until native screen-capture support exists.
+  Future<void> setBroadcastMode(BroadcastMode mode) async {
+    if (mode == BroadcastMode.gaming || broadcastMode.value == mode) return;
+    broadcastMode.value = mode;
+    await zegoEngine.enableCamera(mode == BroadcastMode.camera);
   }
 
   void onCloseTap() {
@@ -447,6 +462,88 @@ class CreateLiveStreamScreenController extends BaseController {
     );
   }
 
+  Future<void> shareGoingLive() async {
+    await SharePlus.instance.share(
+      ShareParams(text: LKey.shareGoingLiveText.tr, subject: 'TopTap LIVE'),
+    );
+  }
+
+  void onFanClubTap() {
+    final perksController = TextEditingController(text: fanClubPerks.value);
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.diamond_outlined, color: Colors.orange),
+                const SizedBox(width: 12),
+                Text(LKey.fanClub.tr,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600)),
+                const Spacer(),
+                Obx(() => Switch(
+                      value: hasFanClub.value,
+                      onChanged: (value) => hasFanClub.value = value,
+                    )),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: perksController,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: LKey.fanClubPerksHint.tr,
+                hintStyle: const TextStyle(color: Colors.grey),
+                filled: true,
+                fillColor: Colors.grey[800],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                fanClubPerks.value = perksController.text.trim();
+                Get.back();
+              },
+              child: Container(
+                width: double.infinity,
+                height: 50,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(LKey.done.tr,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
   Future<void> onStartLive() async {
     Loggers.info('=== STARTING LIVE STREAM PROCESS ===');
 
@@ -517,7 +614,13 @@ class CreateLiveStreamScreenController extends BaseController {
             liveGoalTitle: hasLiveGoal.value ? liveGoalTitle.value : null,
             liveGoalType: hasLiveGoal.value ? liveGoalType.value : null,
             liveGoalTargetAmount:
-                hasLiveGoal.value ? liveGoalTargetAmount.value : null);
+                hasLiveGoal.value ? liveGoalTargetAmount.value : null,
+            broadcastMode: broadcastMode.value,
+            hasFanClub: hasFanClub.value,
+            fanClubPerks:
+                hasFanClub.value && fanClubPerks.value.isNotEmpty
+                    ? fanClubPerks.value
+                    : null);
       } catch (e) {
         Loggers.error('Error creating livestream with goals: $e');
         // Fallback: create without live goal parameters
@@ -526,7 +629,8 @@ class CreateLiveStreamScreenController extends BaseController {
             time: time,
             description: titleController.text.trim(),
             restrictToJoin: isRestricted.value ? 1 : 0,
-            hostViewId: localViewID.value);
+            hostViewId: localViewID.value,
+            broadcastMode: broadcastMode.value);
       }
 
       Loggers.info('Livestream model created successfully');
@@ -537,7 +641,10 @@ class CreateLiveStreamScreenController extends BaseController {
 
       // Create LivestreamUser model
       LivestreamUserState livestreamUserState =
-          user.streamState(time: time, stateType: LivestreamUserType.host);
+          user.streamState(
+              time: time,
+              stateType: LivestreamUserType.host,
+              isVideoOn: broadcastMode.value != BroadcastMode.voice);
 
       Loggers.info('LivestreamUserState model created');
       Loggers.info('Starting live stream...');

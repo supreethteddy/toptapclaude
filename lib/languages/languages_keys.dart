@@ -261,6 +261,28 @@ class LKey {
   static const String selectAGift = "Select a gift";
   static const String targetCount = "Target count";
   static const String create = "Create";
+  static const String deviceCamera = "Device camera";
+  static const String voiceChat = "Voice chat";
+  static const String mobileGaming = "Mobile gaming";
+  static const String comingSoon = "Coming soon";
+  static const String fanClub = "Fan Club";
+  static const String interact = "Interact";
+  static const String enableFanClub = "Enable Fan Club";
+  static const String fanClubPerksHint =
+      "What do fans get for joining? (optional)";
+  static const String joinFanClub = "Join Fan Club";
+  static const String joinedFanClub = "Joined";
+  static const String fanClubEmptyTitle = "Fan Club is Off";
+  static const String fanClubEmptyDescription =
+      "Turn on Fan Club from Go Live setup to let viewers join for free.";
+  static const String createPoll = "Create Poll";
+  static const String pollQuestion = "Question";
+  static const String pollOption = "Option";
+  static const String addOption = "Add option";
+  static const String endPoll = "End poll";
+  static const String votes = "votes";
+  static const String shareGoingLiveText =
+      "I'm about to go LIVE, join me!";
   static const String inviteViewers = "Viewers you can invite";
   static const String noViewersToInvite = "No viewers to invite yet";
   static const String dailyRanking = "Daily Ranking";

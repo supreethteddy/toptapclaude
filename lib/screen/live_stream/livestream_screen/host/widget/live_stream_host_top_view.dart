@@ -11,6 +11,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_c
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_top_badges.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_goal_progress_widget.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
@@ -114,6 +115,11 @@ class LiveStreamHostTopView extends StatelessWidget {
                   Flexible(
                     flex: 0,
                     child: PinnedGiftGoalChip(controller: controller),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    flex: 0,
+                    child: LivePollBanner(controller: controller),
                   ),
                   const SizedBox(width: 6),
 

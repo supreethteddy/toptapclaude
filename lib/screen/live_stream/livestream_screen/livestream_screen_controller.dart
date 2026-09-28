@@ -67,6 +67,7 @@ class LivestreamScreenController extends BaseController {
   RxBool isPlayerMute = false.obs;
   RxBool isMinViewerTimeout = false.obs;
   RxBool isTextEmpty = true.obs;
+  RxBool isFanClubMember = false.obs;
   bool isJoinSheetOpen = false;
   bool isFrontCamera = true;
   bool isHost;
@@ -98,6 +99,11 @@ class LivestreamScreenController extends BaseController {
       .collection(FirebaseConst.liveStreams)
       .doc(liveData.value.roomID)
       .collection(FirebaseConst.comments);
+
+  CollectionReference get fanClubRef => db
+      .collection(FirebaseConst.appUsers)
+      .doc('${liveData.value.hostId}')
+      .collection(FirebaseConst.fanClub);
 
   Widget? hostPreview;
 
@@ -163,6 +169,31 @@ class LivestreamScreenController extends BaseController {
       tag: _rankingTag,
     );
     WakelockPlus.enable();
+    if (!isHost) unawaited(_checkFanClubMembership());
+  }
+
+  Future<void> _checkFanClubMembership() async {
+    try {
+      final doc = await fanClubRef.doc('$myUserId').get();
+      isFanClubMember.value = doc.exists;
+    } catch (e) {
+      Loggers.error('Failed to check Fan Club membership: $e');
+    }
+  }
+
+  Future<void> joinFanClub() async {
+    if (isFanClubMember.value) return;
+    isFanClubMember.value = true;
+    try {
+      await fanClubRef.doc('$myUserId').set({
+        FirebaseConst.id: myUserId,
+        FirebaseConst.addedAt: DateTime.now().millisecondsSinceEpoch,
+      });
+      showSnackBar(LKey.joinedFanClub.tr);
+    } catch (e) {
+      isFanClubMember.value = false;
+      Loggers.error('Failed to join Fan Club: $e');
+    }
   }
 
   @override
@@ -2127,6 +2158,42 @@ class LivestreamScreenController extends BaseController {
     } catch (e) {
       Loggers.error('Failed to record gift toward Gift Goals: $e');
     }
+  }
+
+  // Interact: a single live poll at a time.
+  Future<void> createPoll(String question, List<String> options) async {
+    final poll = LivePoll(
+      id: '${DateTime.now().millisecondsSinceEpoch}',
+      question: question,
+      options: options,
+    );
+    await liveStreamDocRef.update({'poll': poll.toJson()});
+  }
+
+  Future<void> votePoll(int optionIndex) async {
+    try {
+      await db.runTransaction<void>((transaction) async {
+        final snapshot = await transaction.get(liveStreamDocRef);
+        final data = snapshot.data() as Map<String, dynamic>? ?? {};
+        if (data['poll'] == null) return;
+        final poll = LivePoll.fromJson(Map<String, dynamic>.from(data['poll']));
+        if (poll.isClosed ||
+            poll.voterIds.contains(myUserId) ||
+            optionIndex < 0 ||
+            optionIndex >= poll.voteCounts.length) {
+          return;
+        }
+        poll.voteCounts[optionIndex] += 1;
+        poll.voterIds = [...poll.voterIds, myUserId];
+        transaction.update(liveStreamDocRef, {'poll': poll.toJson()});
+      });
+    } catch (e) {
+      Loggers.error('Failed to vote on poll: $e');
+    }
+  }
+
+  Future<void> endPoll() async {
+    await liveStreamDocRef.update({'poll': null});
   }
 }
 

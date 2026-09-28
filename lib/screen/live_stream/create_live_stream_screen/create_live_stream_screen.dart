@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/languages/languages_keys.dart';
+import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/live_stream/create_live_stream_screen/create_live_stream_screen_controller.dart';
 
@@ -20,6 +21,8 @@ class CreateLiveStreamScreen extends StatelessWidget {
           Obx(
             () {
               User? user = controller.myUser.value;
+              bool showCamera =
+                  controller.broadcastMode.value == BroadcastMode.camera;
               return Container(
                 width: double.infinity,
                 height: double.infinity,
@@ -34,7 +37,7 @@ class CreateLiveStreamScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                child: controller.localView.value ??
+                child: (showCamera ? controller.localView.value : null) ??
                     ((user?.profilePhoto ?? '').isNotEmpty
                         ? Image.network(
                             user!.profilePhoto!.addBaseURL(),
@@ -203,8 +206,56 @@ class CreateLiveStreamScreen extends StatelessWidget {
                                 isActive: controller.hasLiveGoal.value,
                                 onTap: controller.onLiveGoalTap,
                               )),
+                          Obx(() => _buildFeatureButton(
+                                icon: Icons.diamond_outlined,
+                                label: LKey.fanClub.tr,
+                                isActive: controller.hasFanClub.value,
+                                onTap: controller.onFanClubTap,
+                              )),
+                          _buildFeatureButton(
+                            icon: Icons.ios_share,
+                            label: LKey.share.tr,
+                            onTap: controller.shareGoingLive,
+                          ),
                         ],
                       ),
+
+                      const SizedBox(height: 20),
+
+                      // Broadcast source (matches TikTok's Device camera /
+                      // Voice chat / Mobile gaming row). Mobile gaming needs
+                      // native screen-capture support, so it's shown but
+                      // disabled for now.
+                      Obx(() => Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildBroadcastModeOption(
+                                icon: Icons.videocam,
+                                label: LKey.deviceCamera.tr,
+                                mode: BroadcastMode.camera,
+                                current: controller.broadcastMode.value,
+                                onTap: () => controller
+                                    .setBroadcastMode(BroadcastMode.camera),
+                              ),
+                              _buildBroadcastModeOption(
+                                icon: Icons.mic,
+                                label: LKey.voiceChat.tr,
+                                mode: BroadcastMode.voice,
+                                current: controller.broadcastMode.value,
+                                onTap: () => controller
+                                    .setBroadcastMode(BroadcastMode.voice),
+                              ),
+                              _buildBroadcastModeOption(
+                                icon: Icons.sports_esports_outlined,
+                                label: LKey.mobileGaming.tr,
+                                mode: BroadcastMode.gaming,
+                                current: controller.broadcastMode.value,
+                                enabled: false,
+                                onTap: () =>
+                                    controller.showSnackBar(LKey.comingSoon.tr),
+                              ),
+                            ],
+                          )),
 
                       const SizedBox(height: 20),
 
@@ -441,6 +492,38 @@ class CreateLiveStreamScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBroadcastModeOption({
+    required IconData icon,
+    required String label,
+    required BroadcastMode mode,
+    required BroadcastMode current,
+    required VoidCallback onTap,
+    bool enabled = true,
+  }) {
+    bool isSelected = mode == current;
+    Color color = !enabled
+        ? Colors.white.withOpacity(0.3)
+        : (isSelected ? Colors.orange : Colors.white.withOpacity(0.7));
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ],
       ),
     );
   }

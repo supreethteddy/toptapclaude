@@ -37,6 +37,19 @@ class Livestream {
   // target for the whole stream.
   List<GiftGoal>? giftGoals;
 
+  // How this LIVE is being broadcast. 'GAMING' (mobile screen capture) is
+  // modeled but not selectable yet — no native screen-capture support.
+  BroadcastMode? broadcastMode;
+
+  // Fan Club: free, opt-in membership viewers can join when the host turns
+  // this on for a LIVE. No payment involved — see ManageFanClubScreen.
+  bool? hasFanClub;
+  String? fanClubPerks;
+
+  // Interact (Poll): a single live question/options poll the host can run at
+  // a time. Cleared/replaced when a new one starts; not archived after.
+  LivePoll? poll;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -61,6 +74,10 @@ class Livestream {
     this.liveGoalTargetAmount,
     this.liveGoalCurrentAmount,
     this.giftGoals,
+    this.broadcastMode,
+    this.hasFanClub,
+    this.fanClubPerks,
+    this.poll,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -90,6 +107,12 @@ class Livestream {
     giftGoals = (json['gift_goals'] as List<dynamic>?)
         ?.map((e) => GiftGoal.fromJson(Map<String, dynamic>.from(e)))
         .toList();
+    broadcastMode = BroadcastMode.fromString(json['broadcast_mode']);
+    hasFanClub = json['has_fan_club'];
+    fanClubPerks = json['fan_club_perks'];
+    poll = json['poll'] != null
+        ? LivePoll.fromJson(Map<String, dynamic>.from(json['poll']))
+        : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -117,6 +140,10 @@ class Livestream {
     data['live_goal_target_amount'] = liveGoalTargetAmount;
     data['live_goal_current_amount'] = liveGoalCurrentAmount;
     data['gift_goals'] = giftGoals?.map((e) => e.toJson()).toList();
+    data['broadcast_mode'] = broadcastMode?.value;
+    data['has_fan_club'] = hasFanClub;
+    data['fan_club_perks'] = fanClubPerks;
+    data['poll'] = poll?.toJson();
     return data;
   }
 
@@ -233,4 +260,78 @@ class GiftGoal {
   }
 
   bool get isCompleted => currentCount >= targetCount && targetCount > 0;
+}
+
+enum BroadcastMode {
+  camera('CAMERA'),
+  voice('VOICE'),
+  // Mobile screen-capture broadcasting. Modeled for forward-compat but not
+  // selectable yet — needs native screen-capture support (MediaProjection).
+  gaming('GAMING');
+
+  final String value;
+
+  const BroadcastMode(this.value);
+
+  static BroadcastMode fromString(String? value) {
+    return BroadcastMode.values.firstWhereOrNull((e) => e.value == value) ??
+        BroadcastMode.camera;
+  }
+}
+
+/// A single live question/options poll a host can run during a LIVE.
+/// Replaces any previous poll on the stream when a new one starts.
+class LivePoll {
+  String id;
+  String question;
+  List<String> options;
+
+  /// Parallel to [options]: how many votes each option has.
+  List<int> voteCounts;
+
+  /// Every user id that has voted on this poll, so no one can vote twice.
+  List<int> voterIds;
+  bool isClosed;
+
+  LivePoll({
+    required this.id,
+    required this.question,
+    required this.options,
+    List<int>? voteCounts,
+    this.voterIds = const [],
+    this.isClosed = false,
+  }) : voteCounts = voteCounts ?? List.filled(options.length, 0);
+
+  factory LivePoll.fromJson(Map<String, dynamic> json) {
+    final options = (json['options'] as List<dynamic>? ?? [])
+        .map((e) => e.toString())
+        .toList();
+    return LivePoll(
+      id: json['id'] ?? '',
+      question: json['question'] ?? '',
+      options: options,
+      voteCounts: (json['vote_counts'] as List<dynamic>? ?? [])
+          .whereType<num>()
+          .map((e) => e.toInt())
+          .toList(),
+      voterIds: (json['voter_ids'] as List<dynamic>? ?? [])
+          .whereType<num>()
+          .map((e) => e.toInt())
+          .toList(),
+      isClosed: json['is_closed'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'question': question,
+      'options': options,
+      'vote_counts': voteCounts,
+      'voter_ids': voterIds,
+      'is_closed': isClosed,
+    };
+  }
+
+  int get totalVotes => voteCounts.fold(0, (sum, v) => sum + v);
 }

@@ -12,7 +12,9 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_com
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_like_button.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_text_field.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/livestream_exist_message_bar.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/fan_club_widgets.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/live_stream/manage_moderators_screen/manage_moderators_screen.dart';
 import 'package:shortzz/utilities/asset_res.dart';
@@ -493,6 +495,29 @@ class LiveStreamBottomView extends StatelessWidget {
                   );
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.poll_outlined),
+                title: Text(LKey.interact.tr),
+                onTap: () {
+                  Get.back();
+                  Get.bottomSheet(
+                    LivePollSheet(controller: controller),
+                    isScrollControlled: true,
+                  );
+                },
+              ),
+              if (controller.liveData.value.hasFanClub == true)
+                ListTile(
+                  leading: const Icon(Icons.diamond_outlined),
+                  title: Text(LKey.fanClub.tr),
+                  onTap: () {
+                    Get.back();
+                    Get.bottomSheet(
+                      FanClubMembersSheet(controller: controller),
+                      isScrollControlled: true,
+                    );
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.shield_outlined),
                 title: Text(LKey.manageModerators.tr),
