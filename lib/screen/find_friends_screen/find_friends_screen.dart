@@ -30,17 +30,15 @@ class FindFriendsScreen extends StatelessWidget {
             _InviteFriendsRow(controller: controller),
             const SizedBox(height: 8),
             Expanded(
-              child: Obx(
-                () => UserList<User>(
-                  users: controller.users,
-                  isLoading: controller.isUsersLoading,
-                  loadMore: controller.searchUsers,
-                  onTap: controller.onUserTap,
-                  getProfilePhoto: (user) => user.profilePhoto ?? '',
-                  getUserName: (user) => user.username ?? '',
-                  getFullName: (user) => user.fullname ?? '',
-                  getVerified: (user) => user.isVerify ?? 0,
-                ),
+              child: UserList<User>(
+                users: controller.users,
+                isLoading: controller.isUsersLoading,
+                loadMore: controller.searchUsers,
+                onTap: controller.onUserTap,
+                getProfilePhoto: (user) => user.profilePhoto ?? '',
+                getUserName: (user) => user.username ?? '',
+                getFullName: (user) => user.fullname ?? '',
+                getVerified: (user) => user.isVerify ?? 0,
               ),
             ),
           ],
