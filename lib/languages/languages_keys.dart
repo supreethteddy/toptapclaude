@@ -242,6 +242,25 @@ class LKey {
   static const String pkNeedsGuest =
       "Add a guest first. PK starts once a co-host is on screen.";
   static const String joinAsGuest = "Join as guest";
+  static const String manageModerators = "Manage moderators";
+  static const String searchAccounts = "Search accounts";
+  static const String moderator = "Moderator";
+  static const String add = "Add";
+  static const String remove = "Remove";
+  static const String moderatorLimitReached =
+      "You can add up to 30 moderators.";
+  static const String mostWatchTime = "Most watch time";
+  static const String giftGoals = "Gift Goals";
+  static const String addGiftGoal = "Add Gift Goal";
+  static const String contributors = "contributors";
+  static const String giftGoalLimitReached =
+      "You can run up to 3 Gift Goals at once.";
+  static const String giftGoalsEmptyTitle = "No Gift Goals Yet";
+  static const String giftGoalsEmptyDescription =
+      "Set a target for a gift and let viewers help you reach it.";
+  static const String selectAGift = "Select a gift";
+  static const String targetCount = "Target count";
+  static const String create = "Create";
   static const String inviteViewers = "Viewers you can invite";
   static const String noViewersToInvite = "No viewers to invite yet";
   static const String dailyRanking = "Daily Ranking";
@@ -491,6 +510,9 @@ class LKey {
   static const String coHostListEmptyTitle = "No Co-hosts Yet";
   static const String coHostListEmptyDescription =
       "Co-hosts will appear here once they accept your invitation.";
+  static const String moderatorListEmptyTitle = "No Moderators Yet";
+  static const String moderatorListEmptyDescription =
+      "Add trusted followers as moderators to help manage your LIVEs.";
   static const String sendingCoinsMessage =
       "You are sending coins to the above user.";
   static const String noLivestreamsTitle = "No Live Streams Yet";

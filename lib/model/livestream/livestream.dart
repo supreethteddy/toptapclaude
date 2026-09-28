@@ -31,6 +31,12 @@ class Livestream {
   int? liveGoalTargetAmount;
   int? liveGoalCurrentAmount;
 
+  // Gift Goals: up to a few simultaneous per-gift targets the host can set,
+  // one of which can be "pinned" to feature on screen. Separate from the
+  // single Live Goal above, which tracks one overall follower/like/duration
+  // target for the whole stream.
+  List<GiftGoal>? giftGoals;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -54,6 +60,7 @@ class Livestream {
     this.liveGoalType,
     this.liveGoalTargetAmount,
     this.liveGoalCurrentAmount,
+    this.giftGoals,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -80,6 +87,9 @@ class Livestream {
     liveGoalType = json['live_goal_type'];
     liveGoalTargetAmount = json['live_goal_target_amount'];
     liveGoalCurrentAmount = json['live_goal_current_amount'];
+    giftGoals = (json['gift_goals'] as List<dynamic>?)
+        ?.map((e) => GiftGoal.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   Map<String, dynamic> toJson() {
@@ -106,6 +116,7 @@ class Livestream {
     data['live_goal_type'] = liveGoalType;
     data['live_goal_target_amount'] = liveGoalTargetAmount;
     data['live_goal_current_amount'] = liveGoalCurrentAmount;
+    data['gift_goals'] = giftGoals?.map((e) => e.toJson()).toList();
     return data;
   }
 
@@ -170,4 +181,56 @@ enum BattleType {
     return BattleType.values.firstWhereOrNull((e) => e.value == value) ??
         BattleType.initiate;
   }
+}
+
+/// A single "send this specific gift N times" target the host can set up
+/// before or during a LIVE. Several can run at once; [isPinned] marks the
+/// one currently featured on screen.
+class GiftGoal {
+  String id;
+  int giftId;
+  int giftCoinPrice;
+  int targetCount;
+  int currentCount;
+  bool isPinned;
+  List<int> contributorIds;
+
+  GiftGoal({
+    required this.id,
+    required this.giftId,
+    required this.giftCoinPrice,
+    required this.targetCount,
+    this.currentCount = 0,
+    this.isPinned = false,
+    this.contributorIds = const [],
+  });
+
+  factory GiftGoal.fromJson(Map<String, dynamic> json) {
+    return GiftGoal(
+      id: json['id'] ?? '',
+      giftId: json['gift_id'] ?? 0,
+      giftCoinPrice: json['gift_coin_price'] ?? 0,
+      targetCount: json['target_count'] ?? 0,
+      currentCount: json['current_count'] ?? 0,
+      isPinned: json['is_pinned'] ?? false,
+      contributorIds: (json['contributor_ids'] as List<dynamic>? ?? [])
+          .whereType<num>()
+          .map((e) => e.toInt())
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'gift_id': giftId,
+      'gift_coin_price': giftCoinPrice,
+      'target_count': targetCount,
+      'current_count': currentCount,
+      'is_pinned': isPinned,
+      'contributor_ids': contributorIds,
+    };
+  }
+
+  bool get isCompleted => currentCount >= targetCount && targetCount > 0;
 }

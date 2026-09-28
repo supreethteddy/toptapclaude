@@ -42,6 +42,12 @@ class AppRes {
   /// Duration to show the main view after battle ends (in seconds)
   static const int battleEndMainViewInSecond = 10;
 
+  /// Max number of per-host LIVE moderators
+  static const int maxLivestreamModerators = 30;
+
+  /// Max number of simultaneous Gift Goals in one LIVE
+  static const int maxGiftGoals = 3;
+
   /// Cooldown duration after a battle ends.
   /// Please wait some time before starting a new battle. (in seconds)
   static const int battleCooldownDurationInSecond = 10;

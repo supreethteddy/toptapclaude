@@ -1241,6 +1241,11 @@ class LivestreamScreenController extends BaseController {
             liveData.value.liveGoalType == 'gifts') {
           incrementLiveGoalProgress(1);
         }
+        if (type == GiftType.livestream &&
+            user?.userId == liveData.value.hostId &&
+            gift.id != null) {
+          unawaited(_recordGiftTowardGoals(gift.id!, myUserId));
+        }
       },
       giftType: type,
       battleViewType: battleViewType,
@@ -1661,6 +1666,7 @@ class LivestreamScreenController extends BaseController {
           userState: userState,
           isHost: isHost,
           viewers: viewers,
+          mostWatchedUsers: _mostWatchedViewers(excludeUserId: myUserId),
         ),
       );
     } else {
@@ -1685,6 +1691,25 @@ class LivestreamScreenController extends BaseController {
         });
       }
     }
+  }
+
+  /// Top 3 non-host viewers by how long they stuck around this LIVE, for the
+  /// host's end-of-stream "Most watch time" summary. Watch time is
+  /// approximated as elapsed time since they joined, since that's the only
+  /// timestamp already tracked per viewer.
+  List<LivestreamUserState> _mostWatchedViewers({required int excludeUserId}) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final viewers = liveUsersStates
+        .where((state) =>
+            state.userId != excludeUserId && state.joinStreamTime > 0)
+        .toList()
+      ..sort((a, b) =>
+          (now - a.joinStreamTime).compareTo(now - b.joinStreamTime) * -1);
+    for (final state in viewers) {
+      state.user = firestoreController.users
+          .firstWhereOrNull((user) => user.userId == state.userId);
+    }
+    return viewers.take(3).toList();
   }
 
   togglePlayerAudioToggle() {
@@ -2025,6 +2050,83 @@ class LivestreamScreenController extends BaseController {
       duration: const Duration(seconds: 3),
       snackPosition: SnackPosition.TOP,
     );
+  }
+
+  // Gift Goals: several simultaneous per-gift targets, one pinned at a time.
+  bool get canAddGiftGoal =>
+      (liveData.value.giftGoals?.length ?? 0) < AppRes.maxGiftGoals;
+
+  Future<void> addGiftGoal(Gift gift, int targetCount) async {
+    if (!canAddGiftGoal || gift.id == null || targetCount <= 0) return;
+    final goal = GiftGoal(
+      id: '${DateTime.now().millisecondsSinceEpoch}',
+      giftId: gift.id!,
+      giftCoinPrice: gift.coinPrice?.toInt() ?? 0,
+      targetCount: targetCount,
+      isPinned: (liveData.value.giftGoals ?? []).isEmpty,
+    );
+    final goals = [...(liveData.value.giftGoals ?? []), goal];
+    await liveStreamDocRef.update({
+      'gift_goals': goals.map((e) => e.toJson()).toList(),
+    });
+  }
+
+  Future<void> removeGiftGoal(String goalId) async {
+    final goals = (liveData.value.giftGoals ?? [])
+        .where((goal) => goal.id != goalId)
+        .toList();
+    await liveStreamDocRef.update({
+      'gift_goals': goals.map((e) => e.toJson()).toList(),
+    });
+  }
+
+  Future<void> pinGiftGoal(String goalId) async {
+    final goals = (liveData.value.giftGoals ?? [])
+        .map((goal) => GiftGoal(
+              id: goal.id,
+              giftId: goal.giftId,
+              giftCoinPrice: goal.giftCoinPrice,
+              targetCount: goal.targetCount,
+              currentCount: goal.currentCount,
+              contributorIds: goal.contributorIds,
+              isPinned: goal.id == goalId,
+            ))
+        .toList();
+    await liveStreamDocRef.update({
+      'gift_goals': goals.map((e) => e.toJson()).toList(),
+    });
+  }
+
+  /// Called whenever a gift is sent to the host; bumps every active (not yet
+  /// completed) Gift Goal that targets this exact gift.
+  Future<void> _recordGiftTowardGoals(int giftId, int senderId) async {
+    if ((liveData.value.giftGoals ?? []).isEmpty) return;
+    try {
+      await db.runTransaction<void>((transaction) async {
+        final snapshot = await transaction.get(liveStreamDocRef);
+        final data = snapshot.data() as Map<String, dynamic>? ?? {};
+        final goals = (data['gift_goals'] as List<dynamic>? ?? [])
+            .map((e) => GiftGoal.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        bool changed = false;
+        for (final goal in goals) {
+          if (goal.giftId == giftId && !goal.isCompleted) {
+            goal.currentCount += 1;
+            if (!goal.contributorIds.contains(senderId)) {
+              goal.contributorIds = [...goal.contributorIds, senderId];
+            }
+            changed = true;
+          }
+        }
+        if (changed) {
+          transaction.update(liveStreamDocRef, {
+            'gift_goals': goals.map((e) => e.toJson()).toList(),
+          });
+        }
+      });
+    } catch (e) {
+      Loggers.error('Failed to record gift toward Gift Goals: $e');
+    }
   }
 }
 

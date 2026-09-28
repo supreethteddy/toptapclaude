@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
+import 'package:shortzz/common/service/api/user_service.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
 import 'package:shortzz/common/widget/gradient_text.dart';
@@ -18,6 +19,7 @@ class LiveStreamSummary extends StatelessWidget {
   final LivestreamUserState? userState;
   final int viewers;
   final bool isHost;
+  final List<LivestreamUserState> mostWatchedUsers;
   final VoidCallback? onGoHomeTap;
 
   const LiveStreamSummary(
@@ -25,6 +27,7 @@ class LiveStreamSummary extends StatelessWidget {
       this.userState,
       required this.isHost,
       required this.viewers,
+      this.mostWatchedUsers = const [],
       this.onGoHomeTap});
 
   @override
@@ -115,6 +118,8 @@ class LiveStreamSummary extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (isHost && mostWatchedUsers.isNotEmpty)
+                    MostWatchedSection(users: mostWatchedUsers),
                 ],
               ),
               InkWell(
@@ -146,6 +151,124 @@ class LiveStreamSummary extends StatelessWidget {
           ),
         )
       ],
+    );
+  }
+}
+
+class MostWatchedSection extends StatelessWidget {
+  final List<LivestreamUserState> users;
+
+  const MostWatchedSection({super.key, required this.users});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            child: Text(
+              LKey.mostWatchTime.tr,
+              style: TextStyleCustom.outFitMedium500(
+                  color: ColorRes.green1, fontSize: 16),
+            ),
+          ),
+          for (final state in users)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 18, vertical: 6),
+              child: Row(
+                children: [
+                  CustomImage(
+                    size: const Size(36, 36),
+                    image: state.user?.profile?.addBaseURL(),
+                    fullName: state.user?.fullname,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FullNameWithBlueTick(
+                      username: state.user?.username,
+                      fontColor: ColorRes.green1,
+                      isVerify: state.user?.isVerify,
+                      fontSize: 13,
+                      iconSize: 16,
+                    ),
+                  ),
+                  _FollowButton(userId: state.userId),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FollowButton extends StatefulWidget {
+  final int userId;
+
+  const _FollowButton({required this.userId});
+
+  @override
+  State<_FollowButton> createState() => _FollowButtonState();
+}
+
+class _FollowButtonState extends State<_FollowButton> {
+  bool _isFollowing = false;
+  bool _isLoading = false;
+
+  Future<void> _onTap() async {
+    if (_isFollowing || _isLoading) return;
+    setState(() => _isLoading = true);
+    final response =
+        await UserService.instance.followUser(userId: widget.userId);
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      if (response.status == true) _isFollowing = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _onTap,
+      child: Container(
+        height: 30,
+        constraints: const BoxConstraints(minWidth: 90),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        decoration: ShapeDecoration(
+          color: _isFollowing
+              ? Colors.transparent
+              : ColorRes.green1,
+          shape: SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius(
+                cornerRadius: 8, cornerSmoothing: 1),
+            side: _isFollowing
+                ? const BorderSide(color: ColorRes.green1)
+                : BorderSide.none,
+          ),
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 14,
+                width: 14,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: ColorRes.green1),
+              )
+            : Text(
+                (_isFollowing ? LKey.following : LKey.follow).tr,
+                style: TextStyleCustom.outFitMedium500(
+                    color: _isFollowing
+                        ? ColorRes.green1
+                        : Colors.black,
+                    fontSize: 13),
+              ),
+      ),
     );
   }
 }

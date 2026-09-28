@@ -44,4 +44,6 @@ class FirebaseConst {
   static const String lastHeartbeatAt = 'last_heartbeat_at';
   static const String lastSeenAt = 'last_seen_at';
   static const String countedAsViewer = 'counted_as_viewer';
+  static const String moderators = 'moderators';
+  static const String addedAt = 'added_at';
 }

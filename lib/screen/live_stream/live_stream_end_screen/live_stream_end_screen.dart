@@ -7,12 +7,14 @@ class LiveStreamEndScreen extends StatelessWidget {
   final LivestreamUserState? userState;
   final bool isHost;
   final int viewers;
+  final List<LivestreamUserState> mostWatchedUsers;
 
   const LiveStreamEndScreen(
       {super.key,
       required this.userState,
       required this.isHost,
-      required this.viewers});
+      required this.viewers,
+      this.mostWatchedUsers = const []});
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class LiveStreamEndScreen extends StatelessWidget {
           userState: userState,
           isHost: isHost,
           viewers: viewers,
+          mostWatchedUsers: mostWatchedUsers,
           onGoHomeTap: _goHome,
         ),
       ),

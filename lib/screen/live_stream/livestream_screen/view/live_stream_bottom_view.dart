@@ -12,9 +12,12 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_com
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_like_button.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_text_field.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/livestream_exist_message_bar.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
+import 'package:shortzz/screen/live_stream/manage_moderators_screen/manage_moderators_screen.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
+import 'package:shortzz/utilities/theme_res.dart';
 
 class LiveStreamBottomView extends StatelessWidget {
   final bool isAudience;
@@ -438,7 +441,7 @@ class LiveStreamBottomView extends StatelessWidget {
   Widget _buildRightControls(BuildContext context) {
     // Share used to live here too (Figma "Live1" moved it to the always
     // visible bottom bar, see `_buildBottomControlsRow`), so this collapsible
-    // panel now only holds the beauty filter shortcut.
+    // panel now only holds the beauty filter shortcut plus host-only extras.
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -449,15 +452,59 @@ class LiveStreamBottomView extends StatelessWidget {
             _showBeautyFilters(context);
           },
         ),
-        const SizedBox(height: 30),
-        // _buildControlButton(
-        //   context,
-        //   icon: Icons.more_vert,
-        //   onTap: () {
-        //     _showMoreOptions(context);
-        //   },
-        // ),
+        if (!isAudience) ...[
+          const SizedBox(height: 30),
+          _buildControlButton(
+            context,
+            icon: Icons.more_vert,
+            onTap: () {
+              _showMoreOptions(context);
+            },
+          ),
+        ],
       ],
+    );
+  }
+
+  void _showMoreOptions(BuildContext context) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: adaptiveBackground(context),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.card_giftcard),
+                title: Text(LKey.giftGoals.tr),
+                onTap: () {
+                  Get.back();
+                  Get.bottomSheet(
+                    GiftGoalsPanel(controller: controller),
+                    isScrollControlled: true,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: Text(LKey.manageModerators.tr),
+                onTap: () {
+                  Get.back();
+                  Get.to(() => const ManageModeratorsScreen());
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
