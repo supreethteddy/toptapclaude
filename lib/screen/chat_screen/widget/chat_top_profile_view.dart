@@ -115,14 +115,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
+import 'package:shortzz/common/controller/live_status_controller.dart';
 import 'package:shortzz/common/widget/custom_back_button.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
+import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/chat/chat_thread.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/chat_screen/chat_screen_controller.dart';
 import 'package:shortzz/utilities/asset_res.dart';
+import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -191,14 +194,43 @@ class ChatTopProfileView extends StatelessWidget {
                           iconSize: 16,
                           isVerify: chatUser?.isVerify,
                         ),
-                        Text(
-                          chatUser?.fullname ?? '',
-                          style: TextStyleCustom
-                              .outFitLight300(
-                            color: textLightGrey(context),
-                            fontSize: 15,
-                          ),
-                        )
+                        Obx(() {
+                          bool isLive = LiveStatusController.to
+                              .isLive(chatUser?.userId);
+                          if (isLive) {
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  margin:
+                                      const EdgeInsets.only(right: 5),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: ColorRes.likeRed,
+                                  ),
+                                ),
+                                Text(
+                                  LKey.inAStreamNow.tr,
+                                  style: TextStyleCustom
+                                      .outFitLight300(
+                                    color: textLightGrey(context),
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                          return Text(
+                            chatUser?.fullname ?? '',
+                            style: TextStyleCustom
+                                .outFitLight300(
+                              color: textLightGrey(context),
+                              fontSize: 15,
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ],

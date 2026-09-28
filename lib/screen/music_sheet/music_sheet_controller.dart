@@ -7,11 +7,9 @@ import 'package:shortzz/common/functions/debounce_action.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/post_story/music/music_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/selected_music_sheet/selected_music_sheet.dart';
 import 'package:shortzz/screen/selected_music_sheet/selected_music_sheet_controller.dart';
 
@@ -30,7 +28,6 @@ class MusicSheetController extends BaseController {
   RxList<Music> savedMusicList = <Music>[].obs;
   RxList<Music> categoryMusicList = <Music>[].obs;
   RxList<Music> searchMusicList = <Music>[].obs;
-  RxList<int> savedMusicIds = <int>[].obs;
 
   RxBool isSearch = false.obs;
 
@@ -46,16 +43,6 @@ class MusicSheetController extends BaseController {
     fetchMusicExplore();
     fetchMusicCategories();
     fetchSavedMusics();
-    getUserData();
-  }
-
-  getUserData() {
-    User? user = SessionManager.instance.getUser();
-    savedMusicIds.value = user?.savedMusicIds == null
-        ? []
-        : (user?.savedMusicIds ?? '').split(',').map((e) {
-            return int.parse(e);
-          }).toList();
   }
 
   onChangedMusicCategories(int index) {
@@ -152,27 +139,9 @@ class MusicSheetController extends BaseController {
     });
   }
 
-  void updateSavedMusicIds(List<int> savedMusicIds) async {
-    await UserService.instance.updateUserDetails(savedMusicIds: savedMusicIds);
-    this.savedMusicIds.value =
-        (SessionManager.instance.getUser()?.savedMusicIds ?? '')
-            .split(',')
-        .map((e) => int.parse(e))
-        .toList();
-  }
-
   void onCancelTap() {
     isSearch.value = false;
     searchController.clear();
-  }
-
-  void onBookMarkTap(Music music) {
-    if (savedMusicIds.contains(music.id)) {
-      savedMusicIds.remove(music.id);
-    } else {
-      savedMusicIds.add(music.id!);
-    }
-    updateSavedMusicIds(savedMusicIds);
   }
 
   void onTapMusic(Music music, bool isCategorySheet) async {

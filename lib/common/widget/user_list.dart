@@ -1,4 +1,3 @@
-import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
@@ -9,8 +8,6 @@ import 'package:shortzz/common/widget/load_more_widget.dart';
 import 'package:shortzz/common/widget/loader_widget.dart';
 import 'package:shortzz/common/widget/no_data_widget.dart';
 import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/search_screen/search_screen.dart';
-import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -118,32 +115,6 @@ class UserCard<T> extends StatelessWidget {
                     ],
                   ),
                 ),
-                InkWell(
-                  onTap: () {
-                    // Navigate to SearchScreen with Users tab selected
-                    Get.to(() => const SearchScreen(
-                        initialTabIndex: 2));
-                  },
-                  child: Container(
-                    height: 45,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12),
-                    // decoration: ShapeDecoration(
-                    //   shape: SmoothRectangleBorder(
-                    //     side: BorderSide(
-                    //       color:
-                    //           adaptiveBorderColor(context),
-                    //       width: 1.5,
-                    //     ),
-                    //     borderRadius: SmoothBorderRadius(
-                    //         cornerRadius: 10),
-                    //   ),
-                    //   color: adaptiveBackground(context),
-                    // ),
-                    // child: Image.asset(AssetRes.icaddfriend,
-                    //     height: 21, width: 21),
-                  ),
-                )
               ],
             ),
           ),

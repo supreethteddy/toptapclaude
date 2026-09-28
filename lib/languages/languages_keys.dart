@@ -174,6 +174,15 @@ class LKey {
   static const String rechargeWallet =
       "Recharge your wallet. And\nsend gifts to your favorite creators.";
   static const String purchase = "Purchase";
+  static const String getCoin = "Get Coin";
+  static const String recharge = "Recharge";
+  static const String services = "SERVICES";
+  static const String helpAndFeedback = "Help and Feedback";
+  static const String firstCoinPurchaseOffer = "First Coin Purchase Offer";
+  static const String firstCoinPurchaseOfferDescription =
+      "Get bonus value the first time you recharge your coin wallet.";
+  static const String selectACoinPackage =
+      "Please select a coin package to recharge.";
   static const String withdrawals = "Withdrawals";
   static const String requestWithdrawal = "Request Withdrawal";
   static const String pending = "Pending";
@@ -192,6 +201,7 @@ class LKey {
   static const String location = "Location";
   static const String allowComments = "Allow Comments";
   static const String selectMusic = "Select Music";
+  static const String sounds = "Sounds";
   static const String explore = "Explore";
   static const String categories = "Categories";
   static const String saved = "Saved";
@@ -241,6 +251,12 @@ class LKey {
   static const String noRankingYetTitle = "No ranking yet";
   static const String noRankingYetDescription =
       "Hosts appear here as soon as they receive gifts today.";
+  static const String contributorRanking = "Contributor Ranking";
+  static const String contributorRankingInfo =
+      "Top gifters in this LIVE, ranked by total coins gifted during this session only. It resets when a new LIVE starts.";
+  static const String noContributorsYetTitle = "No contributors yet";
+  static const String noContributorsYetDescription =
+      "Contributors appear here as soon as someone sends a gift in this LIVE.";
   static const String liveChatSupport = "Live Chat Support";
   static const String sendEmail = "Send Email";
   static const String callSupport = "Call Support";
@@ -489,12 +505,13 @@ class LKey {
   static const String noUserPostsTitle = "No Posts Yet";
   static const String noUserPostsDescription =
       "This user hasn’t shared any posts so far.";
-  static const String chatListEmptyTitle = "Start a Conversation";
+  static const String chatListEmptyTitle = "Message your friends";
   static const String chatListEmptyDescription =
-      "Your chats will show up here once you start messaging someone.";
+      "Share videos or start a conversation";
   static const String chatRequestEmptyTitle = "No Requests Right Now";
   static const String chatRequestEmptyDescription =
       "New chat requests will appear here when someone messages you.";
+  static const String inAStreamNow = "In a stream now";
   static const String joinRequestSentDescription =
       "Your request to join the live stream is pending approval.";
   static const String joinedTheStream = "Joined the stream";
@@ -632,4 +649,8 @@ class LKey {
   static const String selectProfileImage = "Select Profile Image";
   static const String camera = "Camera";
   static const String gallery = "Gallery";
+
+  // Find Friends Screen
+  static const String findFriends = "Find friends";
+  static const String inviteFriends = "Invite friends";
 }

@@ -18,7 +18,7 @@ import 'package:shortzz/screen/level_screen/level_screen.dart';
 import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
 import 'package:shortzz/screen/profile_screen/widget/profile_preview_interactive_screen.dart';
 import 'package:shortzz/screen/profile_screen/widget/user_link_sheet.dart';
-import 'package:shortzz/screen/search_screen/search_screen.dart';
+import 'package:shortzz/screen/find_friends_screen/find_friends_screen.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/style_res.dart';
@@ -522,9 +522,7 @@ class UserButtonView extends StatelessWidget {
           if (isMe)
             InkWell(
               onTap: () {
-                // Navigate to SearchScreen with Users tab selected
-                Get.to(() =>
-                    const SearchScreen(initialTabIndex: 2));
+                Get.to(() => const FindFriendsScreen());
               },
               child: Container(
                 height: 45,

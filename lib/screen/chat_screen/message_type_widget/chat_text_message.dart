@@ -2,7 +2,7 @@ import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/model/chat/message_data.dart';
-import 'package:shortzz/utilities/style_res.dart';
+import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -20,15 +20,11 @@ class ChatTextMessage extends StatelessWidget {
       decoration: ShapeDecoration(
           shape: SmoothRectangleBorder(
               borderRadius: SmoothBorderRadius(cornerRadius: 10, cornerSmoothing: 1),
-              side: isMe
-                  ? BorderSide.none
-                  : BorderSide(color: bgGrey(context), strokeAlign: BorderSide.strokeAlignInside)),
-          color: isMe ? null : bgLightGrey(context),
-          gradient: isMe ? StyleRes.themeGradient : null),
+              side: BorderSide.none),
+          color: isMe ? ColorRes.textgreenColor : ColorRes.themeGradient1),
       child: Text(
         message.textMessage ?? '',
-        style: TextStyleCustom.outFitRegular400(
-            color: isMe ? whitePure(context) : textDarkGrey(context), fontSize: 16),
+        style: TextStyleCustom.outFitRegular400(color: whitePure(context), fontSize: 16),
       ),
     );
   }

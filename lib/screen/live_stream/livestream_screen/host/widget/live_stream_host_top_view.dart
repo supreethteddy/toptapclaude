@@ -8,6 +8,7 @@ import 'package:shortzz/common/widget/text_button_custom.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_top_badges.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_goal_progress_widget.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
@@ -109,6 +110,12 @@ class LiveStreamHostTopView extends StatelessWidget {
                         controller: controller, compact: true),
                   ),
                   if (stream.hasLiveGoal == true) const SizedBox(width: 6),
+
+                  // Top-3 contributor badges for THIS LIVE session
+                  // (Figma "Live1"), next to the viewer count. Tap opens the
+                  // full Contributor Ranking sheet.
+                  ContributorTopBadges(controller: controller),
+                  const SizedBox(width: 6),
 
                   // Viewer count -> opens the audience list.
                   GestureDetector(

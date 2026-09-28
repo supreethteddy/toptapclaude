@@ -212,14 +212,14 @@ class SettingsScreen extends StatelessWidget {
                     },
                   ),
 
-                  // SettingIconTextWithArrow(
-                  //   icon: AssetRes.iccameraicon,
-                  //   title: "Content Preferences",
-                  //   onTap: () {
-                  //     Get.to(() =>
-                  //         const ContentPreferencesScreen());
-                  //   },
-                  // ),
+                  SettingIconTextWithArrow(
+                    icon: AssetRes.iccameraicon,
+                    title: "Content preferences",
+                    onTap: () {
+                      Get.to(() =>
+                          const ContentPreferencesScreen());
+                    },
+                  ),
                   SettingIconTextWithArrow(
                     icon: AssetRes.icDelete2,
                     title: LKey.deleteAccount,
@@ -230,6 +230,15 @@ class SettingsScreen extends StatelessWidget {
                     title: LKey.general.toUpperCase(),
                   ),
 
+                  SettingIconTextWithArrow(
+                    icon: AssetRes.icNotification_1,
+                    title: 'Push Notifications',
+                    onTap: () {
+                      Get.to(
+                        () => const NotificationSettingsScreen(),
+                      );
+                    },
+                  ),
                   SettingIconTextWithArrow(
                     icon: AssetRes.icMoon, // use any appropriate icon
                     title: 'Theme',
@@ -242,15 +251,6 @@ class SettingsScreen extends StatelessWidget {
                         },
                       );
                     }),
-                  ),
-                  SettingIconTextWithArrow(
-                    icon: AssetRes.icNotification_1,
-                    title: 'Push Notifications',
-                    onTap: () {
-                      Get.to(
-                        () => const NotificationSettingsScreen(),
-                      );
-                    },
                   ),
                   SettingIconTextWithArrow(
                     icon: AssetRes.icLanguage_1,

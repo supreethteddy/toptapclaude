@@ -167,18 +167,22 @@ class TextFieldSuffixIcon extends StatelessWidget {
   }
 
   Widget _sendButton(BuildContext context) {
+    // Figma "Live1": green send-arrow icon instead of plain "Send" text.
     return InkWell(
       onTap: controller.onTextCommentSend,
       child: Container(
         height: 37,
-        alignment: AlignmentDirectional.centerEnd,
-        padding: const EdgeInsets.symmetric(horizontal: 10.0),
-        child: Text(
-          LKey.send.tr,
-          style: TextStyleCustom.unboundedMedium500(
-            color: whitePure(context),
-            fontSize: 15,
-          ),
+        width: 37,
+        margin: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 3),
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: ColorRes.green1,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.send_rounded,
+          color: Colors.white,
+          size: 18,
         ),
       ),
     );

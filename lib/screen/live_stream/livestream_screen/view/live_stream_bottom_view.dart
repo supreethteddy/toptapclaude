@@ -205,6 +205,27 @@ class LiveStreamBottomView extends StatelessWidget {
                 ),
               ),
             ),
+          // Share (Figma "Live1"): moved out of the collapsible right-controls
+          // panel so it's always visible, far right of the bottom bar. Same
+          // `_shareStream` logic as before, just a white outline icon here.
+          if (isVisible) const SizedBox(width: 8),
+          if (isVisible)
+            GestureDetector(
+              onTap: () => _shareStream(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                ),
+                child: const Icon(
+                  Icons.share_outlined,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
         ],
       );
     });
@@ -250,6 +271,9 @@ class LiveStreamBottomView extends StatelessWidget {
     final myState = controller.liveUsersStates
         .firstWhereOrNull((e) => e.userId == controller.myUserId);
     final requested = myState?.type == LivestreamUserType.requested;
+    // Figma "Live1": pink/purple tint, matching the PK button's gradient
+    // colors used elsewhere in this file for consistency.
+    const guestRequestTint = Color(0xFF7C4DFF);
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: GestureDetector(
@@ -260,9 +284,13 @@ class LiveStreamBottomView extends StatelessWidget {
           decoration: BoxDecoration(
             color: requested
                 ? Colors.white.withOpacity(0.25)
-                : Colors.black.withOpacity(0.5),
+                : guestRequestTint.withOpacity(0.35),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            border: Border.all(
+              color: requested
+                  ? Colors.white.withOpacity(0.3)
+                  : guestRequestTint.withOpacity(0.8),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -408,6 +436,9 @@ class LiveStreamBottomView extends StatelessWidget {
   }
 
   Widget _buildRightControls(BuildContext context) {
+    // Share used to live here too (Figma "Live1" moved it to the always
+    // visible bottom bar, see `_buildBottomControlsRow`), so this collapsible
+    // panel now only holds the beauty filter shortcut.
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -416,14 +447,6 @@ class LiveStreamBottomView extends StatelessWidget {
           icon: Icons.face_retouching_natural,
           onTap: () {
             _showBeautyFilters(context);
-          },
-        ),
-        const SizedBox(height: 10),
-        _buildControlButton(
-          context,
-          icon: Icons.share,
-          onTap: () {
-            _shareStream(context);
           },
         ),
         const SizedBox(height: 30),

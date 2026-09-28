@@ -99,12 +99,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart';
 import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/common/widget/gradient_text.dart';
 import 'package:shortzz/common/widget/privacy_policy_text.dart';
 import 'package:shortzz/common/widget/text_button_custom.dart';
 import 'package:shortzz/common/widget/theme_blur_bg.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/screen/auth_screen/auth_screen_controller.dart';
+import 'package:shortzz/screen/auth_screen/forget_password_sheet.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
@@ -151,20 +151,14 @@ class RegistrationScreen extends StatelessWidget {
                           ).copyWith(letterSpacing: -.2),
                         ),
                         const SizedBox(height: 10),
-                        GradientText(
+                        Text(
                           LKey.connectWithYourFriends,
-                          // gradient: StyleRes.themeGradient,
-                          gradient: LinearGradient(colors: [
-                            adaptiveTextColor(context)
-                                .withValues(alpha: .5),
-                            adaptiveTextColor(context)
-                          ]),
                           style: TextStyleCustom
-                              .unboundedBlack900(
+                              .outFitRegular400(
                             fontSize: 15,
-                            color:
-                                adaptiveTextColor(context),
-                          ).copyWith(letterSpacing: -.2),
+                            color: adaptiveTextColor(context)
+                                .withValues(alpha: .6),
+                          ),
                         ),
                         const SizedBox(height: 40),
 
@@ -198,28 +192,35 @@ class RegistrationScreen extends StatelessWidget {
                           isPasswordField: true,
                         ),
 
-                        // // Forgot Password
-                        // Align(
-                        //   alignment: Alignment.centerRight,
-                        //   child: Padding(
-                        //     padding:
-                        //         const EdgeInsets.symmetric(
-                        //             vertical: 8.0),
-                        //     child: InkWell(
-                        //       onTap: () {
-                        //         // Add forget password flow if needed
-                        //       },
-                        //       child: Text(
-                        //         LKey.forgetPassword.tr,
-                        //         style: TextStyleCustom
-                        //             .outFitRegular400(
-                        //           fontSize: 16,
-                        //           color: whitePure(context),
-                        //         ),
-                        //       ),
-                        //     ),
-                        //   ),
-                        // ),
+                        // Forgot Password
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(
+                                    vertical: 8.0),
+                            child: InkWell(
+                              onTap: () {
+                                Get.bottomSheet(
+                                        const ForgetPasswordSheet(),
+                                        isScrollControlled:
+                                            true)
+                                    .then((value) => controller
+                                        .forgetEmailController
+                                        .clear());
+                              },
+                              child: Text(
+                                LKey.forgetPassword.tr,
+                                style: TextStyleCustom
+                                    .outFitRegular400(
+                                  fontSize: 16,
+                                  color: ColorRes
+                                      .textgreenColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
 
                         const SizedBox(height: 40),
 
@@ -277,17 +278,15 @@ class RegistrationScreen extends StatelessWidget {
                           mainAxisAlignment:
                               MainAxisAlignment.center,
                           children: [
-                            // if (Platform.isIOS)
-                            _socialIcon(
-                                context,
-                                AssetRes.icApple,
-                                controller.onAppleTap),
-                            //  if (Platform.isIOS)
-                            const SizedBox(width: 12),
                             _socialIcon(
                                 context,
                                 AssetRes.icGoogle,
                                 controller.onGoogleTap),
+                            const SizedBox(width: 12),
+                            _socialIcon(
+                                context,
+                                AssetRes.icApple,
+                                controller.onAppleTap),
                             const SizedBox(width: 12),
                             _socialIcon(context,
                                 AssetRes.icFacebook, () {}),

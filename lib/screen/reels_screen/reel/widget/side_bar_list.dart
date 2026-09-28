@@ -3,18 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:math' as math;
 import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/live_ring_avatar.dart';
-import 'package:shortzz/common/widget/gradient_icon.dart';
 import 'package:shortzz/model/post_story/music/music_model.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/screen/reels_screen/reel/reel_page_controller.dart';
 import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/style_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class SideBarList extends StatelessWidget {
   final ReelController controller;
@@ -75,18 +71,6 @@ class SideBarList extends StatelessWidget {
                     ? '1'
                     : (reel.comments ?? 0).toString(),
               ),
-            IconWithLabel(
-              onTap: isPlaceholder
-                  ? () {}
-                  : controller.onSaved,
-              image: (reel.isSaved ?? false)
-                  ? AssetRes.icFillBookmark1
-                  : AssetRes.icBookmark,
-              text: isPlaceholder
-                  ? '1'
-                  : (reel.saves ?? 0).toString(),
-              iconColor: whitePure(context),
-            ),
             IconWithLabel(
               onTap: isPlaceholder
                   ? () {}

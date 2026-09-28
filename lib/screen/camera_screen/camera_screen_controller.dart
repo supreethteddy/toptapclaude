@@ -622,9 +622,8 @@ class CameraScreenController extends BaseController
   }
 
   Future<void> onMusicTap() async {
-    final music = await Get.bottomSheet<SelectedMusic>(
-        MusicSheet(videoDurationInSecond: selectedSecond.value),
-        isScrollControlled: true);
+    final music = await Get.to<SelectedMusic>(() =>
+        MusicSheet(videoDurationInSecond: selectedSecond.value));
 
     if (music != null) {
       selectedMusic.value = music;

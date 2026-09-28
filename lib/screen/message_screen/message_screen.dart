@@ -7,6 +7,7 @@ import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/chat/chat_thread.dart';
 import 'package:shortzz/screen/message_screen/message_screen_controller.dart';
 import 'package:shortzz/screen/message_screen/widget/chat_conversation_user_card.dart';
+import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -93,6 +94,7 @@ class ChatsListView extends StatelessWidget {
     return Obx(() {
       return NoDataView(
         showShow: controller.chatsUsers.isEmpty,
+        iconAsset: AssetRes.icMessage,
         title: LKey.chatListEmptyTitle.tr,
         description: LKey.chatListEmptyDescription.tr,
         child: ListView.builder(

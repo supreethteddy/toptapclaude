@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
-import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_list.dart';
+import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_first_purchase_banner.dart';
+import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_get_coin_button.dart';
+import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_services_view.dart';
 import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_top_view.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
 
+/// "Balance" screen (per Figma): shows the coin balance, lifetime
+/// stats + withdrawal menu (all still in [CoinWalletTopView]), a "Get Coin"
+/// action that opens the new package-purchase flow, a first-purchase promo
+/// banner and a "Services" section. The actual package grid + purchase flow
+/// now lives in `lib/screen/recharge_screen/recharge_screen.dart`.
 class CoinWalletScreen extends StatelessWidget {
   const CoinWalletScreen({super.key});
 
@@ -17,17 +21,21 @@ class CoinWalletScreen extends StatelessWidget {
       body: Column(
         children: [
           const CoinWalletTopView(),
-          const SizedBox(height: 15),
-          Text(LKey.coinShop.tr,
-              style: TextStyleCustom.unboundedRegular400(
-                color: textDarkGrey(context),
-                fontSize: 17,
-              )),
-          const SizedBox(height: 5),
-          Text(LKey.rechargeWallet.tr,
-              style: TextStyleCustom.outFitLight300(color: textLightGrey(context), fontSize: 17),
-              textAlign: TextAlign.center),
-          CoinWalletList(controller: controller)
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CoinWalletGetCoinButton(controller: controller),
+                  const SizedBox(height: 16),
+                  CoinWalletFirstPurchaseBanner(controller: controller),
+                  const SizedBox(height: 8),
+                  const CoinWalletServicesView(),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -16,6 +16,20 @@ class CoinWalletScreenController extends BaseController {
   Setting? get settings => SessionManager.instance.getSettings();
   RxList<CoinPlan> coinPlans = <CoinPlan>[].obs;
 
+  /// Currently highlighted package on the Recharge grid. Selecting a
+  /// package does NOT purchase it - the single bottom "Recharge" button
+  /// triggers [onPurchase] for whatever is selected here.
+  Rx<CoinPlan?> selectedPlan = Rx<CoinPlan?>(null);
+
+  /// There is no dedicated "first purchase eligibility" flag exposed by the
+  /// backend/user model. As a reasonable, non-invented proxy we treat a user
+  /// who has never had a successful coin purchase (lifetime purchased == 0)
+  /// as eligible for the "First Coin Purchase" promo banner on the Balance
+  /// screen. If the API adds a real eligibility/offer flag later, swap it
+  /// in here instead.
+  bool get isEligibleForFirstPurchaseOffer =>
+      (myUser.value?.coinPurchasedLifetime ?? 0) == 0;
+
   @override
   void onInit() {
     super.onInit();
@@ -49,6 +63,14 @@ class CoinWalletScreenController extends BaseController {
     }
   }
 
+  void selectPlan(CoinPlan plan) {
+    selectedPlan.value = plan;
+  }
+
+  void clearSelection() {
+    selectedPlan.value = null;
+  }
+
   void onPurchase(CoinPlan offer) {
     final product =
         offerings.firstWhereOrNull((element) => element.id == offer.id);
@@ -76,6 +98,7 @@ class CoinWalletScreenController extends BaseController {
             myUser.value = user;
             SessionManager.instance.setUser(myUser.value);
           }
+          clearSelection();
         }
       } else {
         stopLoader();

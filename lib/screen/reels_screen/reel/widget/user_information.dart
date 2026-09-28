@@ -43,6 +43,7 @@ class UserInformation extends StatelessWidget {
           UserStats(controller: controller),
           UserLocation(controller: controller),
           UserDescription(controller: controller),
+          UserMusicName(controller: controller),
         ],
       ),
     );
@@ -255,6 +256,47 @@ class UserLocation extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class UserMusicName extends StatelessWidget {
+  final ReelController controller;
+
+  const UserMusicName({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final music = controller.reelData.value.music;
+      if (music == null ||
+          ((music.title ?? '').isEmpty &&
+              (music.artist ?? '').isEmpty)) {
+        return const SizedBox();
+      }
+      final label = [music.artist, music.title]
+          .where((e) => (e ?? '').isNotEmpty)
+          .join(' - ');
+      return Padding(
+        padding: const EdgeInsets.only(top: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(AssetRes.icMusic,
+                width: 13, height: 13, color: whitePure(context)),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyleCustom.outFitLight300(
+                    color: whitePure(context), fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 

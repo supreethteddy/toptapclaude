@@ -1106,15 +1106,16 @@ class CameraEditScreenController extends BaseController {
 
     videoPlayerController.value?.pause();
 
-    final SelectedMusic? selectedMusic =
-        await Get.bottomSheet<SelectedMusic?>(
-      initialMusic != null
-          ? SelectedMusicSheet(
-              selectedMusic: initialMusic,
-              totalVideoSecond: duration)
-          : MusicSheet(videoDurationInSecond: duration),
-      isScrollControlled: true,
-    );
+    final SelectedMusic? selectedMusic = initialMusic != null
+        ? await Get.bottomSheet<SelectedMusic?>(
+            SelectedMusicSheet(
+                selectedMusic: initialMusic,
+                totalVideoSecond: duration),
+            isScrollControlled: true,
+          )
+        : await Get.to<SelectedMusic?>(
+            () => MusicSheet(videoDurationInSecond: duration),
+          );
 
     // Handle result
     await _processSelectedMusic(

@@ -10,6 +10,7 @@ import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/screen/reels_screen/reels_screen.dart';
 import 'package:shortzz/utilities/asset_res.dart';
+import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 import 'package:super_context_menu/super_context_menu.dart';
@@ -124,26 +125,31 @@ class ReelGridCardView extends StatelessWidget {
                   ),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.all(5.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    AssetRes.icPlay1,
-                    height: 15,
-                    width: 18,
-                  ),
-                  Text(
-                    (post?.views?.toInt() ?? 0).numberFormat,
-                    style: TextStyleCustom.outFitMedium500(
-                      fontSize: 13,
-                      color: whitePure(context),
+            Align(
+              alignment: AlignmentDirectional.bottomStart,
+              child: Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      AssetRes.icEye_2,
+                      height: 15,
+                      width: 18,
+                      color: ColorRes.likeRed,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 3),
+                    Text(
+                      (post?.views?.toInt() ?? 0).numberFormat,
+                      style: TextStyleCustom.outFitMedium500(
+                        fontSize: 13,
+                        color: whitePure(context),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
           ],

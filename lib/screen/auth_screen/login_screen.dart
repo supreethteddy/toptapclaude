@@ -373,38 +373,6 @@ class LoginScreen extends StatelessWidget {
                           left: 20, right: 20, top: 30),
                       child: Column(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                top: 20, bottom: 10),
-                            child: RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
-                                  text: LKey.signIn.tr
-                                      .toUpperCase(),
-                                  style: TextStyleCustom
-                                      .unboundedBlack900(
-                                    fontSize: 25,
-                                    color:
-                                        adaptiveTextColor(
-                                            context),
-                                  ).copyWith(
-                                      letterSpacing: -.2),
-                                  children: [
-                                    TextSpan(
-                                        text: '\n${LKey.toContinue.tr}'
-                                            .toUpperCase(),
-                                        style: TextStyleCustom.unboundedBlack900(
-                                            fontSize: 25,
-                                            color: adaptiveTextColor(
-                                                    context)
-                                                .withValues(
-                                                    alpha:
-                                                        .5),
-                                            opacity: .5))
-                                  ],
-                                )),
-                          ),
-
                           // Logo placement
                           Padding(
                             padding:

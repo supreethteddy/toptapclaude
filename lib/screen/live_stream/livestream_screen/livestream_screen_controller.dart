@@ -31,8 +31,10 @@ import 'package:shortzz/screen/reels_screen/reels_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/live_stream_end_screen/widget/livestream_summary.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/audience/widget/live_stream_join_sheet.dart';
 import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream_search_screen.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/contributor_rank_entry.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/host/widget/live_stream_host_top_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/live_ranking_controller.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/report_sheet/report_sheet.dart';
@@ -197,6 +199,61 @@ class LivestreamScreenController extends BaseController {
     HapticManager.shared.light();
     Get.bottomSheet(
       LiveRankingSheet(controller: ranking),
+      isScrollControlled: true,
+    );
+  }
+
+  /// Per-room "Contributor Ranking": contributors ordered by total coins
+  /// gifted during THIS LIVE session only.
+  ///
+  /// This is intentionally *not* backed by a separate Firestore query.
+  /// [comments] already streams every `livestreams/{roomID}/comments`
+  /// document for this room (see [fetchLiveStreamComments]), so gift
+  /// comments (`commentType == LivestreamCommentType.gift`) are grouped by
+  /// `senderId` and summed here using the same gift-catalog lookup
+  /// (`gifts.firstWhereOrNull`) that [onGiftTap] uses to price a gift, via
+  /// the `comment.gift` already resolved in [fetchLiveStreamComments].
+  /// Reusing that stream avoids a second Firestore listener on the same
+  /// collection and stays perfectly in sync with the chat feed.
+  List<ContributorRankEntry> get contributorRanking {
+    final Map<int, int> coinsBySender = {};
+    final Map<int, int> giftsBySender = {};
+    for (final comment in comments) {
+      if (comment.commentType != LivestreamCommentType.gift) continue;
+      final senderId = comment.senderId;
+      if (senderId == null) continue;
+      final coinPrice = (comment.gift ??
+                  gifts.firstWhereOrNull((g) => g.id == comment.giftId))
+              ?.coinPrice
+              ?.toInt() ??
+          0;
+      if (coinPrice <= 0) continue;
+      coinsBySender[senderId] = (coinsBySender[senderId] ?? 0) + coinPrice;
+      giftsBySender[senderId] = (giftsBySender[senderId] ?? 0) + 1;
+    }
+    final entries = coinsBySender.entries.map((entry) {
+      final user = firestoreController.users
+          .firstWhereOrNull((u) => u.userId == entry.key);
+      return ContributorRankEntry(
+        userId: entry.key,
+        coins: entry.value,
+        gifts: giftsBySender[entry.key] ?? 0,
+        user: user,
+      );
+    }).toList();
+    entries.sort((a, b) => b.coins.compareTo(a.coins));
+    return entries;
+  }
+
+  /// Top 3 of [contributorRanking], for the small avatar badges shown in the
+  /// LIVE top bar next to the viewer count.
+  List<ContributorRankEntry> get topContributors =>
+      contributorRanking.take(3).toList();
+
+  void openContributorRankingSheet() {
+    HapticManager.shared.light();
+    Get.bottomSheet(
+      ContributorRankingSheet(controller: this),
       isScrollControlled: true,
     );
   }

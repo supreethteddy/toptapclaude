@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/languages/languages_keys.dart';
+import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -12,7 +13,8 @@ class NoDataView extends StatelessWidget {
       this.child,
       this.showShow = true,
       this.bgColor,
-      this.safeAreaTop = false});
+      this.safeAreaTop = false,
+      this.iconAsset});
 
   final String? title;
   final String? description;
@@ -20,6 +22,10 @@ class NoDataView extends StatelessWidget {
   final bool showShow;
   final Color? bgColor;
   final bool safeAreaTop;
+
+  /// Optional icon asset shown above the [title]. When null (the default),
+  /// nothing is rendered in its place and layout is unchanged.
+  final String? iconAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +40,16 @@ class NoDataView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   spacing: 3,
                   children: [
+                    if (iconAsset != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Image.asset(
+                          iconAsset!,
+                          width: 70,
+                          height: 70,
+                          color: ColorRes.textgreenColor,
+                        ),
+                      ),
                     Center(
                       child: Text(
                         (title ?? LKey.noData).tr,

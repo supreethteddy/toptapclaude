@@ -6,7 +6,6 @@ import 'package:shortzz/common/widget/loader_widget.dart';
 import 'package:shortzz/common/widget/no_data_widget.dart';
 import 'package:shortzz/model/post_story/music/music_model.dart';
 import 'package:shortzz/screen/music_sheet/music_sheet_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -87,7 +86,7 @@ class MusicCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1),
                 Text(
-                  '${music.artist} • ${music.duration}',
+                  music.artist ?? '',
                   style: TextStyleCustom.outFitLight300(
                       color: textLightGrey(context)),
                   overflow: TextOverflow.ellipsis,
@@ -96,22 +95,13 @@ class MusicCard extends StatelessWidget {
               ],
             )),
             const SizedBox(width: 10),
-            InkWell(
-                onTap: () =>
-                    controller.onBookMarkTap(music),
-                child: Obx(
-                  () {
-                    bool isSaved = controller.savedMusicIds
-                        .contains(music.id);
-                    return Image.asset(
-                        isSaved
-                            ? AssetRes.icFillBookmark1
-                            : AssetRes.icBookmark,
-                        color: adaptiveTextColor(context),
-                        height: 22,
-                        width: 22);
-                  },
-                )),
+            Text(
+              music.duration ?? '',
+              style: TextStyleCustom.outFitLight300(
+                  color: textLightGrey(context)),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ],
         ),
       ),

@@ -106,17 +106,6 @@ class CreateLiveStreamScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Spacer(),
-                      const Text(
-                        'Create Live Stream',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      const SizedBox(width: 40), // Balance the layout
                     ],
                   ),
                 ),
@@ -128,42 +117,12 @@ class CreateLiveStreamScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      // Camera flip button (exact TopTap style)
-                      GestureDetector(
+                      // Camera flip button (small icon+label, matching the
+                      // Music/Live Goal row style)
+                      _buildFeatureButton(
+                        icon: Icons.flip_camera_ios,
+                        label: 'Flip',
                         onTap: controller.toggleCamera,
-                        child: Container(
-                          height: 60,
-                          width: 60,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.purple,
-                                  Colors.pink,
-                                  Colors.orange,
-                                ],
-                              ),
-                            ),
-                            margin: const EdgeInsets.all(2),
-                            child: const Icon(
-                              Icons.flip_camera_ios,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                        ),
                       ),
 
                       const SizedBox(height: 20),
@@ -219,6 +178,15 @@ class CreateLiveStreamScreen extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // Enhanced feature options row (exact TopTap style)
+                      // NOTE: "Music" stays disabled here intentionally. Its
+                      // onTap was never wired to real functionality (just an
+                      // empty stub), and there is no music-for-livestream
+                      // backend support in this app — the same Music button
+                      // is independently commented out in the camera
+                      // recording screen (lib/screen/camera_screen/camera_screen.dart)
+                      // for the same reason. Re-enabling it would require new
+                      // backend/engine capability, which is out of scope for
+                      // this cosmetic pass.
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [

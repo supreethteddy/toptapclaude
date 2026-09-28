@@ -108,7 +108,6 @@ class CommentCard extends StatelessWidget {
                             if (isReplyVisible)
                               InkWell(
                                 onTap: () {
-                                  print(comment?.toJson());
                                   if (comment != null) {
                                     controller.commentHelper
                                         .onReply(comment);

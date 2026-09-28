@@ -93,6 +93,7 @@ class ChatTextField extends StatelessWidget {
         shape: SmoothRectangleBorder(
             borderRadius: SmoothBorderRadius(cornerRadius: 30),
             side: BorderSide(color: borderColor ?? bgGrey(context))),
+        color: bgLightGrey(context),
       ),
       margin: const EdgeInsets.symmetric(horizontal: 15),
       child: Obx(() {
