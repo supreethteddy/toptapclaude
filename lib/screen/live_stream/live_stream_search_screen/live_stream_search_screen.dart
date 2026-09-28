@@ -8,6 +8,7 @@ import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/custom_search_text_field.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
+import 'package:shortzz/common/widget/live_ring_avatar.dart';
 import 'package:shortzz/common/widget/loader_widget.dart';
 import 'package:shortzz/common/widget/no_data_widget.dart';
 import 'package:shortzz/languages/languages_keys.dart';
@@ -36,6 +37,7 @@ class LiveStreamSearchScreen extends StatelessWidget {
           Column(
             children: [
               const LiveStreamSearchTopView(),
+              LiveStreamAvatarCarousel(controller: controller),
               CustomSearchTextField(
                 onChanged: controller.onSearchChange,
                 backgroundColor:
@@ -146,6 +148,71 @@ class LiveStreamSearchTopView extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Horizontal, scrollable row of circular avatars for every currently-live
+/// host, so viewers can quickly jump between live rooms (mirrors the avatar
+/// strip on TikTok's "Discover LIVE" screen). Tapping an avatar opens that
+/// stream via the same [LiveStreamSearchScreenController.onLiveUserTap]
+/// used by the list below.
+class LiveStreamAvatarCarousel extends StatelessWidget {
+  final LiveStreamSearchScreenController controller;
+
+  const LiveStreamAvatarCarousel({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final streams = controller.livestreamFilterList;
+      if (streams.isEmpty) return const SizedBox();
+      return SizedBox(
+        height: 96,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          itemCount: streams.length,
+          itemBuilder: (context, index) {
+            Livestream stream = streams[index];
+            AppUser? hostUser = stream
+                .getHostUser(controller.firebaseFirestoreController.users);
+            return InkWell(
+              onTap: () => controller.onLiveUserTap(stream),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LiveRingAvatar(
+                      userId: hostUser?.userId,
+                      onLiveTap: () => controller.onLiveUserTap(stream),
+                      showLabel: false,
+                      child: CustomImage(
+                        size: const Size(60, 60),
+                        image: hostUser?.profile?.addBaseURL(),
+                        fullName: hostUser?.fullname,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: 64,
+                      child: Text(
+                        hostUser?.username ?? '',
+                        style: TextStyleCustom.outFitRegular400(
+                            fontSize: 11, color: whitePure(context)),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    });
   }
 }
 
