@@ -138,11 +138,6 @@ class ReelsTopBar extends StatelessWidget {
                     children: [
                       Spacer(),
                       _NavTab(
-                          // When we tap here it should go to join a live stream Screen
-                          label: 'Live',
-                          tabType: TabType.nearby),
-                      Spacer(),
-                      _NavTab(
                           label: 'Following',
                           tabType: TabType.following),
                       Spacer(),
