@@ -307,13 +307,21 @@ class _CallScreenState extends State<CallScreen> {
 
     final route = ModalRoute.of(context);
     if (route == null) return;
-
-    // Remove this exact CallScreen route. A notification action or snackbar
-    // may place another route above it, so `pop`/`isCurrent` can close the
-    // overlay while leaving the ended call visible underneath.
     final navigator = route.navigator;
-    if (navigator != null && navigator.canPop()) {
-      navigator.removeRoute(route);
+    if (navigator == null) return;
+
+    // A notification action or snackbar may have placed another route above
+    // this one, so pop back down to this route first (a no-op if it's already
+    // current), then pop it normally. Reproduced bug: this used to call
+    // navigator.removeRoute(route) directly, which bypasses Navigator's usual
+    // pop bookkeeping — ending one call, then immediately starting a second
+    // one, left the caller's next Get.to() silently do nothing (the callee
+    // still rang correctly, since that path doesn't touch the caller's
+    // Navigator at all). popUntil + pop uses only standard Navigator/GetX
+    // paths and doesn't have that problem.
+    navigator.popUntil((r) => r == route);
+    if (navigator.canPop()) {
+      navigator.pop();
     }
   }
 
