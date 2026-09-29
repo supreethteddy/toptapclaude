@@ -13,8 +13,8 @@ import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/audience/live_stream_audience_screen.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/host/livestream_host_screen.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/live_rooms_page_view.dart';
 import 'package:shortzz/utilities/firebase_const.dart';
 
 class LiveStreamSearchScreenController extends BaseController {
@@ -128,7 +128,8 @@ class LiveStreamSearchScreenController extends BaseController {
     if (stream.hostId == myUser?.id) {
       Get.to(() => LivestreamHostScreen(isHost: true, livestream: stream));
     } else {
-      Get.to(() => LiveStreamAudienceScreen(isHost: false, livestream: stream));
+      Get.to(() => LiveRoomsPageView(
+          initialRoom: stream, rooms: livestreamFilterList));
     }
   }
 

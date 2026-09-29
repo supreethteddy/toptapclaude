@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/audience/live_stream_audience_screen.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/live_rooms_page_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/utilities/firebase_const.dart';
 
@@ -91,16 +91,19 @@ class LiveStatusController extends GetxController {
   Livestream? streamOf(int? userId) =>
       userId == null ? null : liveByHost[userId];
 
-  /// Opens the LIVE of [userId] as an audience member. Does nothing when the
-  /// user is not live, when it is our own stream, or when we are already
-  /// inside a LIVE screen.
+  /// Opens the LIVE of [userId] as an audience member, inside a swipeable
+  /// [LiveRoomsPageView] seeded with every other room currently live so the
+  /// viewer can swipe straight to another one. Does nothing when the user is
+  /// not live, when it is our own stream, or when we are already inside a
+  /// LIVE screen.
   Future<void> openLive(int? userId) async {
     final stream = streamOf(userId);
     if (stream == null) return;
     if (userId == SessionManager.instance.getUserID()) return;
     if (LivestreamScreenController.activeRoomIds.isNotEmpty) return;
     await Get.to(
-      () => LiveStreamAudienceScreen(livestream: stream, isHost: false),
+      () => LiveRoomsPageView(
+          initialRoom: stream, rooms: liveByHost.values.toList()),
     );
   }
 }
