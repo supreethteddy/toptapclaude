@@ -116,6 +116,8 @@ class LKey {
   static const String story = "Story";
   static const String unFollow = "Unfollow";
   static const String goLive = "Go Live";
+  static const String discoverLive = "Discover LIVE";
+  static const String seeAll = "See All";
   static const String levels = "Levels";
   static const String gatherMoreCoins =
       "Gather more coins, ascend to new heights, and proudly showcase your badge on your profile for all to admire.";
@@ -337,6 +339,8 @@ class LKey {
       "Hosts in @division appear here as soon as they receive gifts this week.";
   static const String win = "WIN";
   static const String nextRound = "Next Round";
+  static const String round = "Round";
+  static const String firstGiftBonus = "First Gift x@multiplier gifting points";
   static const String contributorRanking = "Contributor Ranking";
   static const String contributorRankingInfo =
       "Top gifters in this LIVE, ranked by total coins gifted during this session only. It resets when a new LIVE starts.";

@@ -747,6 +747,9 @@ class LivestreamScreenController extends BaseController {
     dynamic battleRoundWins,
     dynamic battleRoundWinsHost,
     dynamic battleRoundWinsCoHost,
+    dynamic battleTotalRounds,
+    dynamic battleCurrentRound,
+    dynamic firstGiftBonusClaimed,
   }) async {
     bool isExist = (await liveStreamDocRef.get()).exists;
     if (!isExist) return;
@@ -767,6 +770,12 @@ class LivestreamScreenController extends BaseController {
         FirebaseConst.battleRoundWinsHost: battleRoundWinsHost,
       if (battleRoundWinsCoHost != null)
         FirebaseConst.battleRoundWinsCoHost: battleRoundWinsCoHost,
+      if (battleTotalRounds != null)
+        FirebaseConst.battleTotalRounds: battleTotalRounds,
+      if (battleCurrentRound != null)
+        FirebaseConst.battleCurrentRound: battleCurrentRound,
+      if (firstGiftBonusClaimed != null)
+        FirebaseConst.firstGiftBonusClaimed: firstGiftBonusClaimed,
     });
   }
 
@@ -1395,11 +1404,14 @@ class LivestreamScreenController extends BaseController {
       return showSnackBar(LKey.battleEndedGiftNotSent.tr);
     }
     GiftManager.openGiftSheet(
-      onCompletion: (giftManager) {
+      onCompletion: (giftManager) async {
         Gift gift = giftManager.gift;
         AppUser? user = giftManager.streamUser;
 
         int coinPrice = gift.coinPrice?.toInt() ?? 0;
+        if (type == GiftType.battle) {
+          coinPrice = await _claimFirstGiftBonusIfEligible(coinPrice);
+        }
 
         _sendCommentToFirestore(
           type: LivestreamCommentType.gift,
@@ -1446,6 +1458,39 @@ class LivestreamScreenController extends BaseController {
       streamUsers: availableUsers,
       roomID: liveData.value.roomID,
     );
+  }
+
+  /// If a battle round is active, still within its first-gift bonus window
+  /// (AppRes.firstGiftBonusWindowInSecond after battleCreatedAt), and no one
+  /// has claimed it yet, atomically claims it and returns [coinPrice]
+  /// multiplied by AppRes.firstGiftBonusMultiplier; otherwise returns
+  /// [coinPrice] unchanged. The transaction is what makes "only the very
+  /// first gift wins it" race-safe when two people gift near-simultaneously.
+  Future<int> _claimFirstGiftBonusIfEligible(int coinPrice) async {
+    final stream = liveData.value;
+    if (stream.battleType != BattleType.waiting) return coinPrice;
+    if (stream.firstGiftBonusClaimed == true) return coinPrice;
+    final createdAt = stream.battleCreatedAt;
+    if (createdAt == null) return coinPrice;
+    final elapsedSeconds =
+        (DateTime.now().millisecondsSinceEpoch - createdAt) / 1000;
+    if (elapsedSeconds > AppRes.firstGiftBonusWindowInSecond) return coinPrice;
+
+    try {
+      final claimed = await db.runTransaction<bool>((tx) async {
+        final snap = await tx.get(liveStreamDocRef);
+        final data = snap.data() as Map<String, dynamic>? ?? {};
+        if (data[FirebaseConst.firstGiftBonusClaimed] == true) return false;
+        tx.update(liveStreamDocRef, {FirebaseConst.firstGiftBonusClaimed: true});
+        return true;
+      });
+      if (claimed) {
+        return coinPrice * AppRes.firstGiftBonusMultiplier;
+      }
+    } catch (e) {
+      Loggers.error('Failed to claim first-gift bonus: $e');
+    }
+    return coinPrice;
   }
 
   _sendCommentToFirestore({
@@ -1941,6 +1986,9 @@ class LivestreamScreenController extends BaseController {
       battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
       battleRoundWinsHost: 0,
       battleRoundWinsCoHost: 0,
+      battleTotalRounds: AppRes.battleTotalRounds,
+      battleCurrentRound: 1,
+      firstGiftBonusClaimed: false,
     );
   }
 
@@ -1949,9 +1997,20 @@ class LivestreamScreenController extends BaseController {
   /// clear it, since those end the whole match), snapshots each side's
   /// current cumulative battle coins as the new round's baseline, and
   /// restarts the timer. Only meaningful once a round has actually ended.
+  /// Whether a further round can start — false once the match has already
+  /// played its fixed [Livestream.battleTotalRounds] rounds, at which point
+  /// only Stop (ending the whole match) is offered.
+  bool get canStartNextRound {
+    final current = liveData.value.battleCurrentRound ?? 1;
+    final total = liveData.value.battleTotalRounds ?? AppRes.battleTotalRounds;
+    return current < total;
+  }
+
   Future<void> startNextRound() async {
     if (liveData.value.battleType != BattleType.end) return;
+    if (!canStartNextRound) return;
     final now = DateTime.now().millisecondsSinceEpoch;
+    final nextRound = (liveData.value.battleCurrentRound ?? 1) + 1;
     final opponentRoomId = liveData.value.opponentRoomId;
     if (opponentRoomId != null) {
       final myCoins = mySideBattleCoins;
@@ -1965,11 +2024,15 @@ class LivestreamScreenController extends BaseController {
           FirebaseConst.battleType: BattleType.waiting.value,
           FirebaseConst.battleCreatedAt: now,
           FirebaseConst.battleRoundWins: FieldValue.increment(myWon ? 1 : 0),
+          FirebaseConst.battleCurrentRound: nextRound,
+          FirebaseConst.firstGiftBonusClaimed: false,
         });
         batch.update(_roomDocRef(opponentRoomId), {
           FirebaseConst.battleType: BattleType.waiting.value,
           FirebaseConst.battleCreatedAt: now,
           FirebaseConst.battleRoundWins: FieldValue.increment(myWon ? 0 : 1),
+          FirebaseConst.battleCurrentRound: nextRound,
+          FirebaseConst.firstGiftBonusClaimed: false,
         });
         await batch.commit();
       } catch (e) {
@@ -1992,6 +2055,8 @@ class LivestreamScreenController extends BaseController {
         battleCreatedAt: now,
         battleRoundWinsHost: hostWon ? FieldValue.increment(1) : null,
         battleRoundWinsCoHost: hostWon ? null : FieldValue.increment(1),
+        battleCurrentRound: nextRound,
+        firstGiftBonusClaimed: false,
       );
     }
   }
@@ -2089,6 +2154,9 @@ class LivestreamScreenController extends BaseController {
         FirebaseConst.opponentRoomId: opponentRoomId,
         FirebaseConst.pendingBattleInviteFromId: null,
         FirebaseConst.battleRoundWins: 0,
+        FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
+        FirebaseConst.battleCurrentRound: 1,
+        FirebaseConst.firstGiftBonusClaimed: false,
       });
       batch.update(_roomDocRef(opponentRoomId), {
         FirebaseConst.type: LivestreamType.battle.value,
@@ -2096,6 +2164,9 @@ class LivestreamScreenController extends BaseController {
         FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
         FirebaseConst.opponentRoomId: myRoomId,
         FirebaseConst.battleRoundWins: 0,
+        FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
+        FirebaseConst.battleCurrentRound: 1,
+        FirebaseConst.firstGiftBonusClaimed: false,
       });
       await batch.commit();
     } catch (e) {

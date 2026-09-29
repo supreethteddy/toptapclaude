@@ -8,6 +8,7 @@ import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/battle_view.dart';
+import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
@@ -144,12 +145,17 @@ class _PartyBattleStats extends StatelessWidget {
                 final myWins = controller.liveData.value.battleRoundWins ?? 0;
                 final opponentWins =
                     controller.opponentLiveData.value?.battleRoundWins ?? 0;
+                final currentRound =
+                    controller.liveData.value.battleCurrentRound ?? 1;
+                final totalRounds = controller.liveData.value.battleTotalRounds ??
+                    AppRes.battleTotalRounds;
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       WinPill(count: myWins, color: ColorRes.likeRed),
+                      RoundLabel(current: currentRound, total: totalRounds),
                       WinPill(
                           count: opponentWins,
                           color: ColorRes.battleProgressColor),
@@ -157,6 +163,7 @@ class _PartyBattleStats extends StatelessWidget {
                   ),
                 );
               }),
+              FirstGiftBonusBanner(controller: controller),
               if (stream.battleType == BattleType.end) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -165,7 +172,7 @@ class _PartyBattleStats extends StatelessWidget {
                     _winnerTag(context, rightSide: true, isWinner: !isRedWin),
                   ],
                 ),
-                if (controller.isHost)
+                if (controller.isHost && controller.canStartNextRound)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: InkWell(

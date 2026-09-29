@@ -52,6 +52,14 @@ class AppRes {
   /// Please wait some time before starting a new battle. (in seconds)
   static const int battleCooldownDurationInSecond = 10;
 
+  /// Fixed number of rounds per PK Battle match ("Round 1/2").
+  static const int battleTotalRounds = 2;
+
+  /// Window after a round starts during which the first gift sent (by
+  /// anyone) is worth [firstGiftBonusMultiplier]x its normal coin value.
+  static const int firstGiftBonusWindowInSecond = 30;
+  static const int firstGiftBonusMultiplier = 3;
+
   // Pagination limit
   static const int paginationLimit = 20;
   static const int chatPaginationLimit = 40;

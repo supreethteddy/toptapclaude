@@ -72,6 +72,12 @@ class Livestream {
   int? battleRoundWinsHost;
   int? battleRoundWinsCoHost;
 
+  // Fixed round count per match ("Round 1/2") and the room-wide "first
+  // gift" bonus window — both reset at the start of every round.
+  int? battleTotalRounds;
+  int? battleCurrentRound;
+  bool? firstGiftBonusClaimed;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -105,6 +111,9 @@ class Livestream {
     this.battleRoundWins,
     this.battleRoundWinsHost,
     this.battleRoundWinsCoHost,
+    this.battleTotalRounds,
+    this.battleCurrentRound,
+    this.firstGiftBonusClaimed,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -145,6 +154,9 @@ class Livestream {
     battleRoundWins = json['battle_round_wins'];
     battleRoundWinsHost = json['battle_round_wins_host'];
     battleRoundWinsCoHost = json['battle_round_wins_cohost'];
+    battleTotalRounds = json['battle_total_rounds'];
+    battleCurrentRound = json['battle_current_round'];
+    firstGiftBonusClaimed = json['first_gift_bonus_claimed'];
   }
 
   Map<String, dynamic> toJson() {
@@ -181,6 +193,9 @@ class Livestream {
     data['battle_round_wins'] = battleRoundWins;
     data['battle_round_wins_host'] = battleRoundWinsHost;
     data['battle_round_wins_cohost'] = battleRoundWinsCoHost;
+    data['battle_total_rounds'] = battleTotalRounds;
+    data['battle_current_round'] = battleCurrentRound;
+    data['first_gift_bonus_claimed'] = firstGiftBonusClaimed;
     return data;
   }
 

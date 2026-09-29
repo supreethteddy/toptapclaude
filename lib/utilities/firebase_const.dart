@@ -59,4 +59,10 @@ class FirebaseConst {
   static const String battleRoundWins = 'battle_round_wins';
   static const String battleRoundWinsHost = 'battle_round_wins_host';
   static const String battleRoundWinsCoHost = 'battle_round_wins_cohost';
+
+  // PK Battle rounds: fixed round count per match, and the room-wide
+  // "first gift" bonus window that resets every round.
+  static const String battleTotalRounds = 'battle_total_rounds';
+  static const String battleCurrentRound = 'battle_current_round';
+  static const String firstGiftBonusClaimed = 'first_gift_bonus_claimed';
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:figma_squircle_updated/figma_squircle.dart';
@@ -14,6 +15,7 @@ import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
+import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
@@ -294,6 +296,89 @@ class WinPill extends StatelessWidget {
   }
 }
 
+/// "Round {current}/{total}" label for the fixed round count per match.
+/// Shared by both [BuildStates] (same-room) and PartyBattleView
+/// (cross-room).
+class RoundLabel extends StatelessWidget {
+  final int current;
+  final int total;
+
+  const RoundLabel({super.key, required this.current, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '${LKey.round.tr} $current/$total',
+      style: TextStyleCustom.outFitMedium500(
+          color: Colors.white70, fontSize: 11),
+    );
+  }
+}
+
+/// "First Gift x3 gifting points | Ns" countdown banner: visible for
+/// AppRes.firstGiftBonusWindowInSecond after a round starts, until someone
+/// claims the bonus (LivestreamScreenController._claimFirstGiftBonusIfEligible)
+/// or the window elapses. Shared by both battle views.
+class FirstGiftBonusBanner extends StatefulWidget {
+  final LivestreamScreenController controller;
+
+  const FirstGiftBonusBanner({super.key, required this.controller});
+
+  @override
+  State<FirstGiftBonusBanner> createState() => _FirstGiftBonusBannerState();
+}
+
+class _FirstGiftBonusBannerState extends State<FirstGiftBonusBanner> {
+  Timer? _tickTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // The countdown text depends on wall-clock elapsed time, not an Rx
+    // value, so a plain periodic rebuild drives the ticking; Obx below
+    // still reacts immediately once firstGiftBonusClaimed flips true.
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tickTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final stream = widget.controller.liveData.value;
+      if (stream.battleType != BattleType.waiting) return const SizedBox();
+      if (stream.firstGiftBonusClaimed == true) return const SizedBox();
+      final createdAt = stream.battleCreatedAt;
+      if (createdAt == null) return const SizedBox();
+      final elapsed =
+          (DateTime.now().millisecondsSinceEpoch - createdAt) ~/ 1000;
+      final remaining = AppRes.firstGiftBonusWindowInSecond - elapsed;
+      if (remaining <= 0) return const SizedBox();
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: .55),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          '${LKey.firstGiftBonus.trParams({
+                'multiplier': '${AppRes.firstGiftBonusMultiplier}'
+              })} | ${remaining}s',
+          style: TextStyleCustom.outFitMedium500(
+              color: Colors.white, fontSize: 11),
+        ),
+      );
+    });
+  }
+}
+
 class BuildStates extends StatelessWidget {
   final int red;
   final int blue;
@@ -329,12 +414,17 @@ class BuildStates extends StatelessWidget {
                     WinPill(
                         count: stream.battleRoundWinsHost ?? 0,
                         color: ColorRes.likeRed),
+                    RoundLabel(
+                        current: stream.battleCurrentRound ?? 1,
+                        total: stream.battleTotalRounds ??
+                            AppRes.battleTotalRounds),
                     WinPill(
                         count: stream.battleRoundWinsCoHost ?? 0,
                         color: ColorRes.battleProgressColor),
                   ],
                 ),
               ),
+              FirstGiftBonusBanner(controller: controller),
               // coin view
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -354,7 +444,7 @@ class BuildStates extends StatelessWidget {
                         rightSide: true, winnerTag: !isRedWin),
                   ],
                 ),
-                if (controller.isHost)
+                if (controller.isHost && controller.canStartNextRound)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: InkWell(

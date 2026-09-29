@@ -74,6 +74,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/widget/custom_back_button.dart';
+import 'package:shortzz/screen/live_stream/discover_live/discover_live_overlay.dart';
 import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream_search_screen.dart';
 import 'package:shortzz/screen/reels_screen/reels_screen_controller.dart';
 import 'package:shortzz/screen/home_screen/home_screen_controller.dart';
@@ -122,8 +123,7 @@ class ReelsTopBar extends StatelessWidget {
                   onPressed: () {
                     // Browse who else is currently live; going live
                     // yourself is reached via the create (+) menu.
-                    Get.to(() =>
-                        const LiveStreamSearchScreen());
+                    DiscoverLiveOverlay.show();
                   },
                   icon: const Icon(
                     Icons.live_tv_outlined,
