@@ -318,13 +318,9 @@ class _BuildCenterView extends StatelessWidget {
   }
 }
 
-/// Daily ranking chip, below the host info row (Figma "Live1"). Reuses the
-/// same [LiveRankChip] widget / `controller.openRankingSheet` the host
-/// toolbar already uses, so tapping it opens the same [LiveRankingSheet].
-///
-/// NOTE: Figma also shows an "hourly ranking" chip next to this one, but
-/// hourly ranking aggregation is not implemented yet (scoped separately) -
-/// only the daily ranking chip is added here.
+/// Daily + hourly ranking chips, below the host info row (Figma "Live1").
+/// Reuses the same [LiveRankChip]/[HourlyRankChip] widgets the host toolbar
+/// already uses, so tapping either opens the matching ranking sheet.
 class _BuildRankingRow extends StatelessWidget {
   final LivestreamScreenController controller;
 
@@ -338,6 +334,8 @@ class _BuildRankingRow extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           LiveRankChip(controller: controller),
+          const SizedBox(width: 6),
+          HourlyRankChip(controller: controller),
         ],
       ),
     );

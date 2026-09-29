@@ -320,6 +320,14 @@ class LKey {
   static const String noRankingYetTitle = "No ranking yet";
   static const String noRankingYetDescription =
       "Hosts appear here as soon as they receive gifts today.";
+  static const String hourlyRanking = "Hourly Ranking";
+  static const String thisHour = "This Hour";
+  static const String yourRankThisHour = "Your rank this hour";
+  static const String notRankedThisHourYet =
+      "Not ranked yet — receive a gift to enter this hour's ranking";
+  static const String noHourlyRankingYetTitle = "No ranking yet";
+  static const String noHourlyRankingYetDescription =
+      "Hosts appear here as soon as they receive gifts this hour.";
   static const String contributorRanking = "Contributor Ranking";
   static const String contributorRankingInfo =
       "Top gifters in this LIVE, ranked by total coins gifted during this session only. It resets when a new LIVE starts.";

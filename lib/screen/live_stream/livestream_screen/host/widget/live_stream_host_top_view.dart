@@ -70,6 +70,8 @@ class LiveStreamHostTopView extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             LiveRankChip(controller: controller),
+                            const SizedBox(width: 6),
+                            HourlyRankChip(controller: controller),
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -256,6 +258,52 @@ class LiveRankChip extends StatelessWidget {
               const SizedBox(width: 3),
               Text(
                 '$label ${LKey.today.tr}',
+                style: TextStyleCustom.outFitSemiBold600(
+                    color: Colors.white, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// "#N This Hour" chip, the hourly counterpart of [LiveRankChip]. Uses a
+/// blue/purple gradient and a bolt icon so it reads as distinct from the
+/// daily ranking's amber crown chip when shown side by side.
+class HourlyRankChip extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const HourlyRankChip({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final ranking = controller.hourlyRankingController;
+    if (ranking == null) return const SizedBox();
+    return Obx(() {
+      final rank = ranking.hostRank.value;
+      final label = rank == 0 ? '—' : '#$rank';
+      return GestureDetector(
+        onTap: controller.openHourlyRankingSheet,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 20,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF5C6BC0), Color(0xFF7E57C2)],
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(AssetRes.icFlash,
+                  height: 12, width: 12, color: Colors.white),
+              const SizedBox(width: 3),
+              Text(
+                '$label ${LKey.thisHour.tr}',
                 style: TextStyleCustom.outFitSemiBold600(
                     color: Colors.white, fontSize: 10),
               ),

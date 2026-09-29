@@ -33,8 +33,10 @@ import 'package:shortzz/screen/live_stream/livestream_screen/audience/widget/liv
 import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream_search_screen.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/contributor_rank_entry.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/host/widget/live_stream_host_top_view.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/hourly_ranking_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/live_ranking_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_ranking_sheet.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/hourly_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/report_sheet/report_sheet.dart';
@@ -122,7 +124,13 @@ class LivestreamScreenController extends BaseController {
   /// Daily ranking (coins received today) for the host of this LIVE.
   LiveRankingController? rankingController;
 
+  /// Hourly ranking (coins received this hour) for the host of this LIVE —
+  /// same idea as [rankingController], keyed by hour instead of day.
+  HourlyRankingController? hourlyRankingController;
+
   String get _rankingTag => 'rank_${liveData.value.roomID}';
+
+  String get _hourlyRankingTag => 'hourly_rank_${liveData.value.roomID}';
 
   LivestreamScreenController(this.liveData, this.isHost, {this.hostPreview});
 
@@ -190,6 +198,10 @@ class LivestreamScreenController extends BaseController {
       LiveRankingController(liveData.value.hostId ?? -1),
       tag: _rankingTag,
     );
+    hourlyRankingController = Get.put(
+      HourlyRankingController(liveData.value.hostId ?? -1),
+      tag: _hourlyRankingTag,
+    );
     WakelockPlus.enable();
     if (!isHost) unawaited(_checkFanClubMembership());
   }
@@ -242,6 +254,10 @@ class LivestreamScreenController extends BaseController {
       Get.delete<LiveRankingController>(tag: _rankingTag);
     }
     rankingController = null;
+    if (Get.isRegistered<HourlyRankingController>(tag: _hourlyRankingTag)) {
+      Get.delete<HourlyRankingController>(tag: _hourlyRankingTag);
+    }
+    hourlyRankingController = null;
     // Resume the background home-feed reels that were paused when the LIVE flow
     // opened, now that we are leaving the LIVE screen.
     ReelsScreenController.resumeHomeFeed();
@@ -254,6 +270,16 @@ class LivestreamScreenController extends BaseController {
     HapticManager.shared.light();
     Get.bottomSheet(
       LiveRankingSheet(controller: ranking),
+      isScrollControlled: true,
+    );
+  }
+
+  void openHourlyRankingSheet() {
+    final ranking = hourlyRankingController;
+    if (ranking == null) return;
+    HapticManager.shared.light();
+    Get.bottomSheet(
+      HourlyRankingSheet(controller: ranking),
       isScrollControlled: true,
     );
   }
@@ -1308,8 +1334,14 @@ class LivestreamScreenController extends BaseController {
           currentBattleCoin: type == GiftType.battle ? coinPrice : null,
           liveCoin: type == GiftType.livestream ? coinPrice : null,
         );
-        // Daily ranking: every coin received in a LIVE counts for the receiver.
+        // Daily + hourly ranking: every coin received in a LIVE counts for
+        // the receiver in both leaderboards.
         unawaited(LiveRankingController.recordGift(
+          hostId: user?.userId,
+          coins: coinPrice,
+          host: user,
+        ));
+        unawaited(HourlyRankingController.recordGift(
           hostId: user?.userId,
           coins: coinPrice,
           host: user,
