@@ -136,6 +136,8 @@ class AppRes {
       "https://play.google.com/store/apps/details?id=com.instagram.android&hl=en_IN";
   static const String telegramPlayStoreLink =
       "https://play.google.com/store/apps/details?id=org.telegram.messenger&hl=en_IN";
+  static const String facebookPlayStoreLink =
+      "https://play.google.com/store/apps/details?id=com.facebook.katana&hl=en_IN";
 
   // Create Post
   // nearBySearch

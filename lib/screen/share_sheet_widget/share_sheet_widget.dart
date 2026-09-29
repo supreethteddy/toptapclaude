@@ -279,70 +279,147 @@ class ShareSheetWidget extends StatelessWidget {
                         ],
                       );
                     }),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 23.0, horizontal: 15),
-                    child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceAround,
-                      children: [
-                        if (isDownloadShow)
-                          CustomAssetWithBgButton(
-                            image: AssetRes.icDownload,
-                            boxSize: 58,
-                            iconSize: 30,
+                  SizedBox(
+                    height: 168,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 15),
+                      child: Row(
+                        children: [
+                          ShareGridItem(
+                            image: AssetRes.icCopy,
+                            label: LKey.copyLink.tr,
+                            onTap: () async {
+                              Get.back();
+                              await link.copyText;
+                              DebounceAction.shared.call(() {
+                                controller
+                                    .increaseShareCount(post?.id);
+                              }, milliseconds: 1000);
+                            },
+                          ),
+                          ShareGridItem(
+                            image: AssetRes.icWhatsapp,
+                            label: LKey.whatsapp.tr,
                             onTap: () => controller
                                 .onShareSheetBottomBtnTap(
-                                    ShareOption.download,
-                                    link,
+                                    ShareOption.whatsapp, link,
                                     post: post),
                           ),
-                        CustomAssetWithBgButton(
-                          image: AssetRes.icWhatsapp,
-                          boxSize: 58,
-                          iconSize: 30,
-                          onTap: () => controller
-                              .onShareSheetBottomBtnTap(
-                                  ShareOption.whatsapp,
-                                  link,
-                                  post: post),
-                        ),
-                        CustomAssetWithBgButton(
-                          image: AssetRes.icInstagram,
-                          boxSize: 58,
-                          iconSize: 30,
-                          onTap: () => controller
-                              .onShareSheetBottomBtnTap(
-                                  ShareOption.instagram,
-                                  link,
-                                  post: post),
-                        ),
-                        CustomAssetWithBgButton(
-                          image: AssetRes.icTelegram,
-                          boxSize: 58,
-                          iconSize: 30,
-                          onTap: () => controller
-                              .onShareSheetBottomBtnTap(
-                                  ShareOption.telegram,
-                                  link,
-                                  post: post),
-                        ),
-                        CustomAssetWithBgButton(
-                          image: AssetRes.icMore,
-                          boxSize: 58,
-                          iconSize: 30,
-                          onTap: onMoreTap,
-                        ),
-                      ],
+                          ShareGridItem(
+                            image: AssetRes.icInstagram,
+                            label: LKey.instagram.tr,
+                            onTap: () => controller
+                                .onShareSheetBottomBtnTap(
+                                    ShareOption.instagram, link,
+                                    post: post),
+                          ),
+                          ShareGridItem(
+                            image: AssetRes.icTelegram,
+                            label: LKey.telegram.tr,
+                            onTap: () => controller
+                                .onShareSheetBottomBtnTap(
+                                    ShareOption.telegram, link,
+                                    post: post),
+                          ),
+                          ShareGridItem(
+                            image: AssetRes.icFacebook,
+                            label: LKey.facebook.tr,
+                            applyTint: false,
+                            onTap: () => controller
+                                .onShareSheetBottomBtnTap(
+                                    ShareOption.facebook, link,
+                                    post: post),
+                          ),
+                          if (isDownloadShow)
+                            ShareGridItem(
+                              image: AssetRes.icDownload,
+                              label: LKey.download.tr,
+                              onTap: () => controller
+                                  .onShareSheetBottomBtnTap(
+                                      ShareOption.download, link,
+                                      post: post),
+                            ),
+                          if (type == ShareBranchType.post &&
+                              post != null)
+                            ShareGridItem(
+                              image: AssetRes.icReport,
+                              label: LKey.report.tr,
+                              onTap: () => controller
+                                  .onShareSheetBottomBtnTap(
+                                      ShareOption.report, link,
+                                      post: post),
+                            ),
+                          ShareGridItem(
+                            image: AssetRes.icMore,
+                            label: LKey.more.tr,
+                            onTap: onMoreTap,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class ShareGridItem extends StatelessWidget {
+  final String image;
+  final String label;
+  final VoidCallback onTap;
+  final bool applyTint;
+
+  const ShareGridItem(
+      {super.key,
+      required this.image,
+      required this.label,
+      required this.onTap,
+      this.applyTint = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        width: 78,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 58,
+              width: 58,
+              alignment: Alignment.center,
+              decoration: ShapeDecoration(
+                  color: bgGrey(context),
+                  shape: SmoothRectangleBorder(
+                      borderRadius: SmoothBorderRadius(
+                          cornerRadius: 18, cornerSmoothing: 1))),
+              child: Image.asset(image,
+                  height: 28,
+                  width: 28,
+                  color: applyTint ? textDarkGrey(context) : null),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyleCustom.outFitRegular400(
+                  fontSize: 12, color: textDarkGrey(context)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -390,6 +467,8 @@ enum ShareOption {
   share,
   instagram,
   telegram,
+  facebook,
+  report,
   more,
   copy;
 
@@ -401,8 +480,11 @@ enum ShareOption {
         return "instagram://sharesheet?text=$link";
       case ShareOption.telegram:
         return "https://t.me/share/url?url=${Uri.encodeComponent(link)}";
+      case ShareOption.facebook:
+        return "https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(link)}";
       case ShareOption.download:
       case ShareOption.share:
+      case ShareOption.report:
       case ShareOption.more:
       case ShareOption.copy:
         return '';

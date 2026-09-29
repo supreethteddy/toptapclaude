@@ -103,6 +103,11 @@ class LKey {
   static const String publish = "Publish";
   static const String website = "Website";
   static const String instagram = "Instagram";
+  static const String whatsapp = "WhatsApp";
+  static const String telegram = "Telegram";
+  static const String facebook = "Facebook";
+  static const String download = "Download";
+  static const String copyLink = "Copy Link";
   static const String youtube = "Youtube";
   static const String shopNow = "Shop Now";
   static const String feed = "Feed";

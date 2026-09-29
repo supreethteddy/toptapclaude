@@ -26,6 +26,7 @@ import 'package:shortzz/model/general/status_model.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/chat_screen/chat_screen_controller.dart';
+import 'package:shortzz/screen/report_sheet/report_sheet.dart';
 import 'package:shortzz/screen/share_sheet_widget/share_sheet_widget.dart';
 import 'package:shortzz/screen/share_sheet_widget/widget/more_user_sheet.dart';
 import 'package:shortzz/utilities/app_res.dart';
@@ -186,8 +187,24 @@ class ShareSheetWidgetController extends BaseController {
         );
         break;
 
+      case ShareOption.facebook:
+        await _handleUrlLaunch(
+          type.value(link),
+          fallbackUrl: AppRes.facebookPlayStoreLink,
+        );
+        break;
+
       case ShareOption.download:
         _downloadReel(post);
+        break;
+
+      case ShareOption.report:
+        Get.back();
+        if (postId != null) {
+          Get.bottomSheet(
+              ReportSheet(reportType: ReportType.post, id: postId),
+              isScrollControlled: true);
+        }
         break;
 
       case ShareOption.share:

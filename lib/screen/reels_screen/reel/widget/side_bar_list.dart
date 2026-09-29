@@ -74,6 +74,17 @@ class SideBarList extends StatelessWidget {
             IconWithLabel(
               onTap: isPlaceholder
                   ? () {}
+                  : controller.onSaved,
+              image: (reel.isSaved ?? false)
+                  ? AssetRes.icFillBookmark
+                  : AssetRes.icPostBookmark,
+              text: isPlaceholder
+                  ? '1'
+                  : (reel.saves ?? 0).toString(),
+            ),
+            IconWithLabel(
+              onTap: isPlaceholder
+                  ? () {}
                   : controller.onShareTap,
               image: AssetRes.icShare,
               text: isPlaceholder
