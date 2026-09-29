@@ -82,6 +82,18 @@ class LivestreamScreenController extends BaseController {
   StreamSubscription<QuerySnapshot<LivestreamComment?>>?
       liveStreamCommentsListener;
 
+  // Cross-room PK Battle: the opponent room's own state, watched read-only
+  // while opponentRoomId is set. No multi-room Zego login needed — see
+  // opponentStreamViews.
+  String? _watchedOpponentRoomId;
+  StreamSubscription<DocumentSnapshot>? opponentLiveDocListener;
+  StreamSubscription<QuerySnapshot>? opponentUserStatesListener;
+  Rx<Livestream?> opponentLiveData = Rx(null);
+  RxList<LivestreamUserState> opponentUserStates =
+      <LivestreamUserState>[].obs;
+  RxList<StreamView> opponentStreamViews = <StreamView>[].obs;
+  int? _lastHandledInviteFromId;
+
   TextEditingController textCommentController = TextEditingController();
 
   DocumentReference get liveStreamDocRef =>
@@ -206,6 +218,7 @@ class LivestreamScreenController extends BaseController {
     liveStreamUserStatesListener?.cancel();
     liveStreamCommentsListener?.cancel();
     liveStreamDocListener?.cancel();
+    _stopWatchingOpponent();
     countdownPlayer.dispose();
     battleStartPlayer.dispose();
     winAudioPlayer.dispose();
@@ -990,6 +1003,27 @@ class LivestreamScreenController extends BaseController {
           onLikeTap?.call();
           likeCount = newLikeCount;
         }
+
+        // Cross-room PK Battle: an incoming invite to accept/decline.
+        if (isHost &&
+            stream.pendingBattleInviteFromId != null &&
+            stream.pendingBattleInviteFromId != _lastHandledInviteFromId) {
+          _lastHandledInviteFromId = stream.pendingBattleInviteFromId;
+          _showIncomingBattleInviteDialog(stream.pendingBattleInviteFromId!);
+        }
+        if (stream.pendingBattleInviteFromId == null) {
+          _lastHandledInviteFromId = null;
+        }
+
+        // Cross-room PK Battle: start/stop watching the opponent room as
+        // opponentRoomId comes and goes.
+        if (stream.opponentRoomId != _watchedOpponentRoomId) {
+          if (stream.opponentRoomId != null) {
+            _startWatchingOpponent(stream.opponentRoomId!);
+          } else {
+            _stopWatchingOpponent();
+          }
+        }
       },
       onError: (error) =>
           Loggers.error('Error listening to livestream: $error'),
@@ -1654,10 +1688,14 @@ class LivestreamScreenController extends BaseController {
       StopLiveStreamSheet(
         onTap: () {
           if (isBattleOn) {
-            updateLiveStreamData(
-              battleType: BattleType.initiate,
-              type: LivestreamType.livestream,
-            );
+            if (liveData.value.opponentRoomId != null) {
+              endCrossRoomBattleAndReset();
+            } else {
+              updateLiveStreamData(
+                battleType: BattleType.initiate,
+                type: LivestreamType.livestream,
+              );
+            }
             startMinViewerTimeoutCheck();
           } else {
             hostEndStream();
@@ -1775,6 +1813,209 @@ class LivestreamScreenController extends BaseController {
       final userId = int.tryParse(view.streamId);
       return userId != null && coHostIds.contains(userId);
     });
+  }
+
+  // Cross-room PK Battle. This room's "side" is always whoever is already
+  // publishing into it (host + any co-hosts, via streamViews) — so a room
+  // that already has a co-host from the multi-guest grid naturally battles
+  // as a 2v2 side with zero extra code. The opponent side works the same way
+  // but read from their own, independent room.
+
+  int get mySideBattleCoins => liveUsersStates.fold(
+      0, (total, state) => total + state.currentBattleCoin);
+
+  int get opponentSideBattleCoins => opponentUserStates.fold(
+      0, (total, state) => total + state.currentBattleCoin);
+
+  DocumentReference _roomDocRef(String roomId) =>
+      db.collection(FirebaseConst.liveStreams).doc(roomId);
+
+  Future<void> sendBattleInvite(int opponentHostId) async {
+    if (!isHost) return;
+    try {
+      await _roomDocRef('$opponentHostId').update({
+        FirebaseConst.pendingBattleInviteFromId: myUserId,
+      });
+      showSnackBar(LKey.battleInviteSent.tr);
+    } catch (e) {
+      Loggers.error('Failed to send PK invite: $e');
+      showSnackBar(LKey.battleInviteFailed.tr);
+    }
+  }
+
+  void _showIncomingBattleInviteDialog(int fromHostId) {
+    if (liveData.value.type == LivestreamType.battle) {
+      // Already battling (or mid-invite) — quietly decline further invites.
+      declineBattleInvite();
+      return;
+    }
+    final inviter = firestoreController.users
+        .firstWhereOrNull((user) => user.userId == fromHostId);
+    Get.dialog(
+      AlertDialog(
+        title: Text(LKey.battleInviteTitle.tr),
+        content: Text(LKey.battleInviteDescription
+            .trParams({'name': inviter?.username ?? 'A creator'})),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+              declineBattleInvite();
+            },
+            child: Text(LKey.refuse.tr),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              acceptBattleInvite(fromHostId);
+            },
+            child: Text(LKey.accept.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> declineBattleInvite() async {
+    await liveStreamDocRef.update({
+      FirebaseConst.pendingBattleInviteFromId: null,
+    });
+  }
+
+  Future<void> acceptBattleInvite(int fromHostId) async {
+    if (!isHost) return;
+    final myRoomId = liveData.value.roomID;
+    if (myRoomId == null) return;
+    final opponentRoomId = '$fromHostId';
+    try {
+      final batch = db.batch();
+      batch.update(liveStreamDocRef, {
+        FirebaseConst.type: LivestreamType.battle.value,
+        FirebaseConst.battleType: BattleType.waiting.value,
+        FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
+        FirebaseConst.opponentRoomId: opponentRoomId,
+        FirebaseConst.pendingBattleInviteFromId: null,
+      });
+      batch.update(_roomDocRef(opponentRoomId), {
+        FirebaseConst.type: LivestreamType.battle.value,
+        FirebaseConst.battleType: BattleType.waiting.value,
+        FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
+        FirebaseConst.opponentRoomId: myRoomId,
+      });
+      await batch.commit();
+    } catch (e) {
+      Loggers.error('Failed to accept PK invite: $e');
+      showSnackBar(LKey.battleInviteFailed.tr);
+    }
+  }
+
+  /// Ends a cross-room battle on both sides at once, so whichever host's
+  /// timer fires first (both start from the same battleCreatedAt) doesn't
+  /// leave the other room stuck showing a running battle.
+  Future<void> _endCrossRoomBattleType() async {
+    final myRoomId = liveData.value.roomID;
+    final opponentRoomId = liveData.value.opponentRoomId;
+    if (myRoomId == null || opponentRoomId == null) return;
+    try {
+      final batch = db.batch();
+      batch.update(liveStreamDocRef, {
+        FirebaseConst.battleType: BattleType.end.value,
+      });
+      batch.update(_roomDocRef(opponentRoomId), {
+        FirebaseConst.battleType: BattleType.end.value,
+      });
+      await batch.commit();
+    } catch (e) {
+      Loggers.error('Failed to end cross-room battle: $e');
+    }
+  }
+
+  /// Reverts both rooms to normal once the host dismisses the battle-end
+  /// screen (mirrors the same-room battle's manual "Stop" behavior).
+  Future<void> endCrossRoomBattleAndReset() async {
+    final opponentRoomId = liveData.value.opponentRoomId;
+    try {
+      await updateLiveStreamData(
+        battleType: BattleType.initiate,
+        type: LivestreamType.livestream,
+      );
+      await liveStreamDocRef.update({FirebaseConst.opponentRoomId: null});
+      if (opponentRoomId != null) {
+        await _roomDocRef(opponentRoomId).update({
+          FirebaseConst.battleType: BattleType.initiate.value,
+          FirebaseConst.type: LivestreamType.livestream.value,
+          FirebaseConst.opponentRoomId: null,
+        });
+      }
+    } catch (e) {
+      Loggers.error('Failed to reset after cross-room battle: $e');
+    }
+  }
+
+  Future<void> _startWatchingOpponent(String opponentRoomId) async {
+    _stopWatchingOpponent();
+    _watchedOpponentRoomId = opponentRoomId;
+
+    opponentLiveDocListener = _roomDocRef(opponentRoomId)
+        .snapshots()
+        .listen((snapshot) {
+      if (!snapshot.exists) return;
+      final data = snapshot.data() as Map<String, dynamic>?;
+      if (data == null) return;
+      final stream = Livestream.fromJson(data);
+      opponentLiveData.value = stream;
+      // Their client plays MY stream the same way — I just need to know
+      // their host id to subscribe to their published stream.
+      if (opponentStreamViews.isEmpty && stream.hostId != null) {
+        _playOpponentStream(stream.hostId!);
+      }
+    }, onError: (e) => Loggers.error('Opponent room listener failed: $e'));
+
+    opponentUserStatesListener = _roomDocRef(opponentRoomId)
+        .collection(FirebaseConst.userState)
+        .snapshots()
+        .listen((snapshot) {
+      opponentUserStates.value = snapshot.docs
+          .map((doc) => LivestreamUserState.fromJson(doc.data()))
+          .toList();
+    }, onError: (e) => Loggers.error('Opponent user-states listener failed: $e'));
+  }
+
+  Future<void> _playOpponentStream(int opponentHostId) async {
+    try {
+      final streamId = '$opponentHostId';
+      await zegoEngine.createCanvasView((viewID) {
+        zegoEngine.startPlayingStream(
+          streamId,
+          canvas: ZegoCanvas(viewID, viewMode: ZegoViewMode.AspectFill),
+        );
+      }).then((canvasViewWidget) {
+        if (canvasViewWidget != null) {
+          opponentStreamViews.add(
+            StreamView(streamId, -1, canvasViewWidget, false),
+          );
+        }
+      });
+    } catch (e) {
+      Loggers.error('Failed to play opponent stream: $e');
+    }
+  }
+
+  void _stopWatchingOpponent() {
+    _watchedOpponentRoomId = null;
+    opponentLiveDocListener?.cancel();
+    opponentUserStatesListener?.cancel();
+    opponentLiveDocListener = null;
+    opponentUserStatesListener = null;
+    opponentLiveData.value = null;
+    opponentUserStates.clear();
+    if (opponentStreamViews.isNotEmpty) {
+      for (final view in opponentStreamViews) {
+        zegoEngine.stopPlayingStream(view.streamId);
+      }
+      opponentStreamViews.clear();
+    }
   }
 
   Future<void> showEditLiveTitleDialog() async {
@@ -1928,7 +2169,11 @@ class LivestreamScreenController extends BaseController {
         winAudioPlayer.seek(const Duration(seconds: 0));
         winAudioPlayer.play();
         timer?.cancel();
-        updateLiveStreamData(battleType: BattleType.end);
+        if (liveData.value.opponentRoomId != null) {
+          _endCrossRoomBattleType();
+        } else {
+          updateLiveStreamData(battleType: BattleType.end);
+        }
       }
     });
   }

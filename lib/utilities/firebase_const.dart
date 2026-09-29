@@ -47,4 +47,7 @@ class FirebaseConst {
   static const String moderators = 'moderators';
   static const String addedAt = 'added_at';
   static const String fanClub = 'fan_club';
+  static const String opponentRoomId = 'opponent_room_id';
+  static const String pendingBattleInviteFromId =
+      'pending_battle_invite_from_id';
 }

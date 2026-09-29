@@ -8,6 +8,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/battle_view.da
 import 'package:shortzz/screen/live_stream/livestream_screen/view/live_stream_bottom_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/live_video_player.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/view/party_battle_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/battle_start_countdown_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_background_blur_image.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -50,10 +51,14 @@ class LivestreamHostScreen extends StatelessWidget {
                         streamViews: controller.streamViews,
                         controller: controller);
                   case LivestreamType.battle:
-                    return BattleView(
-                        isAudience: false,
-                        controller: controller,
-                        margin: const EdgeInsets.only(top: 60));
+                    return controller.liveData.value.opponentRoomId != null
+                        ? PartyBattleView(
+                            controller: controller,
+                            margin: const EdgeInsets.only(top: 60))
+                        : BattleView(
+                            isAudience: false,
+                            controller: controller,
+                            margin: const EdgeInsets.only(top: 60));
                   case LivestreamType.dummy:
                     return LivestreamVideoPlayer(
                         controller: controller.videoPlayerController);

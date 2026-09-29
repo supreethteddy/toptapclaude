@@ -283,6 +283,17 @@ class LKey {
   static const String votes = "votes";
   static const String shareGoingLiveText =
       "I'm about to go LIVE, join me!";
+  static const String findOpponent = "Find Opponent";
+  static const String findOpponentEmptyTitle = "No One to Challenge";
+  static const String findOpponentEmptyDescription =
+      "No other creators are LIVE right now. Check back soon.";
+  static const String challenge = "Challenge";
+  static const String battleInviteSent = "PK invite sent!";
+  static const String battleInviteFailed =
+      "Couldn't send that invite. Try again.";
+  static const String battleInviteTitle = "Incoming PK Battle";
+  static const String battleInviteDescription =
+      "@name wants to battle you. Accept?";
   static const String inviteViewers = "Viewers you can invite";
   static const String noViewersToInvite = "No viewers to invite yet";
   static const String dailyRanking = "Daily Ranking";

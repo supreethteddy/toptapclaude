@@ -7,6 +7,7 @@ import 'package:shortzz/common/widget/black_gradient_shadow.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
+import 'package:shortzz/screen/live_stream/find_opponent_screen/find_opponent_screen.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_comment_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_like_button.dart';
@@ -526,6 +527,15 @@ class LiveStreamBottomView extends StatelessWidget {
                   Get.to(() => const ManageModeratorsScreen());
                 },
               ),
+              if (controller.liveData.value.type != LivestreamType.battle)
+                ListTile(
+                  leading: Image.asset(AssetRes.icBattleVs, height: 22, width: 22),
+                  title: Text(LKey.findOpponent.tr),
+                  onTap: () {
+                    Get.back();
+                    Get.to(() => FindOpponentScreen(myLive: controller));
+                  },
+                ),
             ],
           ),
         ),

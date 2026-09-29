@@ -50,6 +50,18 @@ class Livestream {
   // a time. Cleared/replaced when a new one starts; not archived after.
   LivePoll? poll;
 
+  // Cross-room PK Battle: unlike the same-room co-host battle (BattleType
+  // above, which scores a guest already in this room), this pits this whole
+  // room (host + any co-hosts — naturally 2v2 when both sides already have a
+  // co-host) against a second, independently-run LIVE room. No multi-room
+  // Zego login needed — the SDK supports playing a stream from another room
+  // under the same AppID directly.
+  String? opponentRoomId;
+
+  // Set on THIS room's doc (the invitee) while a cross-room PK invite from
+  // [pendingBattleInviteFromId] is awaiting accept/decline.
+  int? pendingBattleInviteFromId;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -78,6 +90,8 @@ class Livestream {
     this.hasFanClub,
     this.fanClubPerks,
     this.poll,
+    this.opponentRoomId,
+    this.pendingBattleInviteFromId,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -113,6 +127,8 @@ class Livestream {
     poll = json['poll'] != null
         ? LivePoll.fromJson(Map<String, dynamic>.from(json['poll']))
         : null;
+    opponentRoomId = json['opponent_room_id'];
+    pendingBattleInviteFromId = json['pending_battle_invite_from_id'];
   }
 
   Map<String, dynamic> toJson() {
@@ -144,6 +160,8 @@ class Livestream {
     data['has_fan_club'] = hasFanClub;
     data['fan_club_perks'] = fanClubPerks;
     data['poll'] = poll?.toJson();
+    data['opponent_room_id'] = opponentRoomId;
+    data['pending_battle_invite_from_id'] = pendingBattleInviteFromId;
     return data;
   }
 
