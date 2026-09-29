@@ -328,6 +328,13 @@ class LKey {
   static const String noHourlyRankingYetTitle = "No ranking yet";
   static const String noHourlyRankingYetDescription =
       "Hosts appear here as soon as they receive gifts this hour.";
+  static const String league = "League";
+  static const String yourDivision = "Your division";
+  static const String promotionZone = "Promotion";
+  static const String relegationZone = "Relegation";
+  static const String noLeagueStandingsTitle = "No standings yet";
+  static const String noLeagueStandingsDescription =
+      "Hosts in @division appear here as soon as they receive gifts this week.";
   static const String contributorRanking = "Contributor Ranking";
   static const String contributorRankingInfo =
       "Top gifters in this LIVE, ranked by total coins gifted during this session only. It resets when a new LIVE starts.";

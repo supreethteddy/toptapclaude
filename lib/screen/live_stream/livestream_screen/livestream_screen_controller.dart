@@ -34,9 +34,11 @@ import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream
 import 'package:shortzz/screen/live_stream/livestream_screen/contributor_rank_entry.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/host/widget/live_stream_host_top_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/hourly_ranking_controller.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/league_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/live_ranking_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/hourly_ranking_sheet.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/league_standings_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/report_sheet/report_sheet.dart';
@@ -128,9 +130,14 @@ class LivestreamScreenController extends BaseController {
   /// same idea as [rankingController], keyed by hour instead of day.
   HourlyRankingController? hourlyRankingController;
 
+  /// This week's competitive League standing for the host of this LIVE.
+  LeagueController? leagueController;
+
   String get _rankingTag => 'rank_${liveData.value.roomID}';
 
   String get _hourlyRankingTag => 'hourly_rank_${liveData.value.roomID}';
+
+  String get _leagueTag => 'league_${liveData.value.roomID}';
 
   LivestreamScreenController(this.liveData, this.isHost, {this.hostPreview});
 
@@ -202,6 +209,10 @@ class LivestreamScreenController extends BaseController {
       HourlyRankingController(liveData.value.hostId ?? -1),
       tag: _hourlyRankingTag,
     );
+    leagueController = Get.put(
+      LeagueController(liveData.value.hostId ?? -1),
+      tag: _leagueTag,
+    );
     WakelockPlus.enable();
     if (!isHost) unawaited(_checkFanClubMembership());
   }
@@ -258,6 +269,10 @@ class LivestreamScreenController extends BaseController {
       Get.delete<HourlyRankingController>(tag: _hourlyRankingTag);
     }
     hourlyRankingController = null;
+    if (Get.isRegistered<LeagueController>(tag: _leagueTag)) {
+      Get.delete<LeagueController>(tag: _leagueTag);
+    }
+    leagueController = null;
     // Resume the background home-feed reels that were paused when the LIVE flow
     // opened, now that we are leaving the LIVE screen.
     ReelsScreenController.resumeHomeFeed();
@@ -280,6 +295,16 @@ class LivestreamScreenController extends BaseController {
     HapticManager.shared.light();
     Get.bottomSheet(
       HourlyRankingSheet(controller: ranking),
+      isScrollControlled: true,
+    );
+  }
+
+  void openLeagueSheet() {
+    final league = leagueController;
+    if (league == null) return;
+    HapticManager.shared.light();
+    Get.bottomSheet(
+      LeagueStandingsSheet(controller: league),
       isScrollControlled: true,
     );
   }
@@ -1342,6 +1367,11 @@ class LivestreamScreenController extends BaseController {
           host: user,
         ));
         unawaited(HourlyRankingController.recordGift(
+          hostId: user?.userId,
+          coins: coinPrice,
+          host: user,
+        ));
+        unawaited(LeagueController.recordGift(
           hostId: user?.userId,
           coins: coinPrice,
           host: user,

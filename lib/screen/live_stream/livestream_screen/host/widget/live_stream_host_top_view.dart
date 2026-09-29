@@ -72,6 +72,8 @@ class LiveStreamHostTopView extends StatelessWidget {
                             LiveRankChip(controller: controller),
                             const SizedBox(width: 6),
                             HourlyRankChip(controller: controller),
+                            const SizedBox(width: 6),
+                            LeagueBadge(controller: controller),
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -304,6 +306,52 @@ class HourlyRankChip extends StatelessWidget {
               const SizedBox(width: 3),
               Text(
                 '$label ${LKey.thisHour.tr}',
+                style: TextStyleCustom.outFitSemiBold600(
+                    color: Colors.white, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// "{division} · #N" chip, the weekly League counterpart of [LiveRankChip]
+/// / [HourlyRankChip]. Green, with a star icon.
+class LeagueBadge extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const LeagueBadge({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final league = controller.leagueController;
+    if (league == null) return const SizedBox();
+    return Obx(() {
+      final division = league.division.value;
+      final rank = league.hostRank.value;
+      final label = rank == 0 ? division : '$division · #$rank';
+      return GestureDetector(
+        onTap: controller.openLeagueSheet,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 20,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(AssetRes.icStar,
+                  height: 12, width: 12, color: Colors.white),
+              const SizedBox(width: 3),
+              Text(
+                label,
                 style: TextStyleCustom.outFitSemiBold600(
                     color: Colors.white, fontSize: 10),
               ),

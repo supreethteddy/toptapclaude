@@ -336,6 +336,8 @@ class _BuildRankingRow extends StatelessWidget {
           LiveRankChip(controller: controller),
           const SizedBox(width: 6),
           HourlyRankChip(controller: controller),
+          const SizedBox(width: 6),
+          LeagueBadge(controller: controller),
         ],
       ),
     );
