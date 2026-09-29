@@ -62,6 +62,16 @@ class Livestream {
   // [pendingBattleInviteFromId] is awaiting accept/decline.
   int? pendingBattleInviteFromId;
 
+  // PK Battle rounds: how many rounds each side has won across the current
+  // multi-round match. Cleared only when the whole match ends (Stop), not
+  // between individual rounds (Next Round). Cross-room battles use
+  // [battleRoundWins] — this room's own side, the opponent's is read from
+  // their own doc via opponentLiveData; same-room co-host battles use the
+  // host/co-host pair since both sides live on this one doc.
+  int? battleRoundWins;
+  int? battleRoundWinsHost;
+  int? battleRoundWinsCoHost;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -92,6 +102,9 @@ class Livestream {
     this.poll,
     this.opponentRoomId,
     this.pendingBattleInviteFromId,
+    this.battleRoundWins,
+    this.battleRoundWinsHost,
+    this.battleRoundWinsCoHost,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -129,6 +142,9 @@ class Livestream {
         : null;
     opponentRoomId = json['opponent_room_id'];
     pendingBattleInviteFromId = json['pending_battle_invite_from_id'];
+    battleRoundWins = json['battle_round_wins'];
+    battleRoundWinsHost = json['battle_round_wins_host'];
+    battleRoundWinsCoHost = json['battle_round_wins_cohost'];
   }
 
   Map<String, dynamic> toJson() {
@@ -162,6 +178,9 @@ class Livestream {
     data['poll'] = poll?.toJson();
     data['opponent_room_id'] = opponentRoomId;
     data['pending_battle_invite_from_id'] = pendingBattleInviteFromId;
+    data['battle_round_wins'] = battleRoundWins;
+    data['battle_round_wins_host'] = battleRoundWinsHost;
+    data['battle_round_wins_cohost'] = battleRoundWinsCoHost;
     return data;
   }
 

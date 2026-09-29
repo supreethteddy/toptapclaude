@@ -335,6 +335,8 @@ class LKey {
   static const String noLeagueStandingsTitle = "No standings yet";
   static const String noLeagueStandingsDescription =
       "Hosts in @division appear here as soon as they receive gifts this week.";
+  static const String win = "WIN";
+  static const String nextRound = "Next Round";
   static const String contributorRanking = "Contributor Ranking";
   static const String contributorRankingInfo =
       "Top gifters in this LIVE, ranked by total coins gifted during this session only. It resets when a new LIVE starts.";

@@ -50,4 +50,13 @@ class FirebaseConst {
   static const String opponentRoomId = 'opponent_room_id';
   static const String pendingBattleInviteFromId =
       'pending_battle_invite_from_id';
+
+  // PK Battle rounds: how many rounds each side has won across the current
+  // multi-round match (cleared only when the whole match ends, not between
+  // rounds). Cross-room battles use battleRoundWins (this room's own side,
+  // read from the opponent's own doc for their count); same-room co-host
+  // battles use the host/co-host pair since both sides live on one doc.
+  static const String battleRoundWins = 'battle_round_wins';
+  static const String battleRoundWinsHost = 'battle_round_wins_host';
+  static const String battleRoundWinsCoHost = 'battle_round_wins_cohost';
 }

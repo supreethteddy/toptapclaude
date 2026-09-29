@@ -108,9 +108,14 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
         if (coHostUser != null) coHostUser,
       ];
 
-      // Battle coins
-      int red = hostState?.currentBattleCoin ?? 0;
-      int blue = coHostState?.currentBattleCoin ?? 0;
+      // Battle coins, relative to this round's baseline (see
+      // LivestreamScreenController.roundBaselineRed/Blue) so the score
+      // resets to 0 for a fresh round without needing a Firestore reset of
+      // currentBattleCoin.
+      int red = (hostState?.currentBattleCoin ?? 0) -
+          widget.controller.roundBaselineRed.value;
+      int blue = (coHostState?.currentBattleCoin ?? 0) -
+          widget.controller.roundBaselineBlue.value;
 
       return SafeArea(
         bottom: false,
@@ -139,9 +144,62 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                 ),
               ),
               BuildProgressBar(red: red, blue: blue),
-              BuildStates(red: red, blue: blue, users: users, stream: stream),
+              BuildStates(
+                  red: red,
+                  blue: blue,
+                  users: users,
+                  stream: stream,
+                  controller: widget.controller),
               BuildLastTenSecondView(controller: widget.controller),
+              GiftComboBadge(controller: widget.controller),
             ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// Transient "xN" badge for [LivestreamScreenController.currentGiftComboCount]
+/// — a viewer rapid-firing the same gift. Hidden once the combo count drops
+/// back to 0 (streak window elapsed with no further matching gift).
+class GiftComboBadge extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const GiftComboBadge({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final count = controller.currentGiftComboCount.value;
+      if (count <= 1) return const SizedBox();
+      final gift = controller.currentGiftComboComment.value?.gift;
+      return Align(
+        alignment: Alignment.center,
+        child: AnimatedScale(
+          scale: 1,
+          duration: const Duration(milliseconds: 150),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: .55),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (gift?.image != null)
+                  CustomImage(
+                      size: const Size(24, 24),
+                      image: gift!.image?.addBaseURL()),
+                if (gift?.image != null) const SizedBox(width: 6),
+                Text(
+                  'x$count',
+                  style: TextStyleCustom.unboundedExtraBold800(
+                      color: Colors.white, fontSize: 20),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -208,18 +266,48 @@ class BuildProgressBar extends StatelessWidget {
   }
 }
 
+/// "WIN xN" pill for one side's round-win tally across the current
+/// multi-round match, shown above the score bar throughout the battle.
+/// Shared by both [BuildStates] (same-room) and PartyBattleView
+/// (cross-room).
+class WinPill extends StatelessWidget {
+  final int count;
+  final Color color;
+
+  const WinPill({super.key, required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .85),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '${LKey.win.tr} x$count',
+        style:
+            TextStyleCustom.outFitSemiBold600(color: Colors.white, fontSize: 11),
+      ),
+    );
+  }
+}
+
 class BuildStates extends StatelessWidget {
   final int red;
   final int blue;
   final List<AppUser> users;
   final Livestream stream;
+  final LivestreamScreenController controller;
 
   const BuildStates(
       {super.key,
       required this.red,
       required this.blue,
       required this.users,
-      required this.stream});
+      required this.stream,
+      required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -232,6 +320,21 @@ class BuildStates extends StatelessWidget {
           Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              // round-win tally
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    WinPill(
+                        count: stream.battleRoundWinsHost ?? 0,
+                        color: ColorRes.likeRed),
+                    WinPill(
+                        count: stream.battleRoundWinsCoHost ?? 0,
+                        color: ColorRes.battleProgressColor),
+                  ],
+                ),
+              ),
               // coin view
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -241,7 +344,7 @@ class BuildStates extends StatelessWidget {
                 ],
               ),
               // winner tag
-              if (stream.battleType == BattleType.end)
+              if (stream.battleType == BattleType.end) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -251,6 +354,30 @@ class BuildStates extends StatelessWidget {
                         rightSide: true, winnerTag: !isRedWin),
                   ],
                 ),
+                if (controller.isHost)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: InkWell(
+                      onTap: controller.startNextRound,
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            color: whitePure(context).withValues(alpha: .15),
+                            border: Border.all(
+                                color:
+                                    whitePure(context).withValues(alpha: .3))),
+                        child: Text(
+                          LKey.nextRound.tr,
+                          style: TextStyleCustom.outFitSemiBold600(
+                              color: whitePure(context), fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
               // profile name both user
               if (users.length == 2)
                 Container(

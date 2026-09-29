@@ -153,6 +153,46 @@ class LivestreamScreenController extends BaseController {
   int totalBattleSecond = 0;
 
   RxInt remainingBattleSeconds = 0.obs;
+
+  /// Snapshot of each side's cumulative battle coins at the moment the
+  /// current round started. The round's own live score (shown in the
+  /// progress bar / WIN tallies) is `cumulative - baseline`, so starting a
+  /// "Next Round" via [startNextRound] only needs to update these two local
+  /// values — no Firestore reset of per-user battle coins required, which
+  /// would otherwise mean writing into the opponent's own room's user_state
+  /// subcollection in the cross-room case.
+  RxInt roundBaselineRed = 0.obs;
+  RxInt roundBaselineBlue = 0.obs;
+
+  /// Live gift-combo streak: how many times in a row the most recent gift
+  /// comment repeats the same sender+gift+receiver, each arriving within
+  /// [_giftComboWindow] of the previous one. Derived purely from the shared
+  /// `comments` stream every viewer already listens to (see
+  /// [fetchLiveStreamComments]) — no extra Firestore writes, and every
+  /// device sees the same count since they all fold the same ordered gift
+  /// events. Resets to 0 (and [currentGiftComboComment] to null) once
+  /// [_giftComboWindow] passes with no further matching gift.
+  static const Duration _giftComboWindow = Duration(seconds: 4);
+  RxInt currentGiftComboCount = 0.obs;
+  Rx<LivestreamComment?> currentGiftComboComment = Rx(null);
+  Timer? _giftComboTimer;
+
+  void _registerGiftForCombo(LivestreamComment comment) {
+    final last = currentGiftComboComment.value;
+    final isSameStreak = last != null &&
+        _giftComboTimer != null &&
+        last.senderId == comment.senderId &&
+        last.giftId == comment.giftId &&
+        last.receiverId == comment.receiverId;
+    currentGiftComboCount.value =
+        isSameStreak ? currentGiftComboCount.value + 1 : 1;
+    currentGiftComboComment.value = comment;
+    _giftComboTimer?.cancel();
+    _giftComboTimer = Timer(_giftComboWindow, () {
+      currentGiftComboCount.value = 0;
+      currentGiftComboComment.value = null;
+    });
+  }
   RxBool isViewVisible = true.obs;
   RxBool isRightControlsVisible = false
       .obs; // Controls visibility of right controls (beauty, share, more, like)
@@ -248,6 +288,7 @@ class LivestreamScreenController extends BaseController {
     timer?.cancel();
     minViewerTimeoutTimer?.cancel();
     presenceTimer?.cancel();
+    _giftComboTimer?.cancel();
     videoPlayerController.value?.dispose();
     liveStreamUserStatesListener?.cancel();
     liveStreamCommentsListener?.cancel();
@@ -703,6 +744,9 @@ class LivestreamScreenController extends BaseController {
     int? battleCreatedAt,
     int? battleDuration,
     FieldValue? coHostId,
+    dynamic battleRoundWins,
+    dynamic battleRoundWinsHost,
+    dynamic battleRoundWinsCoHost,
   }) async {
     bool isExist = (await liveStreamDocRef.get()).exists;
     if (!isExist) return;
@@ -717,6 +761,12 @@ class LivestreamScreenController extends BaseController {
         FirebaseConst.battleCreatedAt: battleCreatedAt,
       if (battleDuration != null) FirebaseConst.battleDuration: battleDuration,
       if (coHostId != null) FirebaseConst.coHostIds: coHostId,
+      if (battleRoundWins != null)
+        FirebaseConst.battleRoundWins: battleRoundWins,
+      if (battleRoundWinsHost != null)
+        FirebaseConst.battleRoundWinsHost: battleRoundWinsHost,
+      if (battleRoundWinsCoHost != null)
+        FirebaseConst.battleRoundWinsCoHost: battleRoundWinsCoHost,
     });
   }
 
@@ -1206,6 +1256,9 @@ class LivestreamScreenController extends BaseController {
               continue;
             }
             comments.add(comment);
+            if (comment.commentType == LivestreamCommentType.gift) {
+              _registerGiftForCombo(comment);
+            }
             // Loggers.info('New comment added: ${comment.toJson()}');
             break;
 
@@ -1765,12 +1818,16 @@ class LivestreamScreenController extends BaseController {
       StopLiveStreamSheet(
         onTap: () {
           if (isBattleOn) {
+            roundBaselineRed.value = 0;
+            roundBaselineBlue.value = 0;
             if (liveData.value.opponentRoomId != null) {
               endCrossRoomBattleAndReset();
             } else {
               updateLiveStreamData(
                 battleType: BattleType.initiate,
                 type: LivestreamType.livestream,
+                battleRoundWinsHost: 0,
+                battleRoundWinsCoHost: 0,
               );
             }
             startMinViewerTimeoutCheck();
@@ -1876,11 +1933,67 @@ class LivestreamScreenController extends BaseController {
       showSnackBar(LKey.pkNeedsGuest.tr);
       return;
     }
+    roundBaselineRed.value = 0;
+    roundBaselineBlue.value = 0;
     updateLiveStreamData(
       battleType: BattleType.waiting,
       battleDuration: AppRes.battleDurationInMinutes,
       battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
+      battleRoundWinsHost: 0,
+      battleRoundWinsCoHost: 0,
     );
+  }
+
+  /// Starts a fresh timed round without ending the whole match: keeps the
+  /// running round-win tally (only [onStopButtonTap] / [endCrossRoomBattleAndReset]
+  /// clear it, since those end the whole match), snapshots each side's
+  /// current cumulative battle coins as the new round's baseline, and
+  /// restarts the timer. Only meaningful once a round has actually ended.
+  Future<void> startNextRound() async {
+    if (liveData.value.battleType != BattleType.end) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final opponentRoomId = liveData.value.opponentRoomId;
+    if (opponentRoomId != null) {
+      final myCoins = mySideBattleCoins;
+      final opponentCoins = opponentSideBattleCoins;
+      final myWon = myCoins >= opponentCoins;
+      roundBaselineRed.value = myCoins;
+      roundBaselineBlue.value = opponentCoins;
+      try {
+        final batch = db.batch();
+        batch.update(liveStreamDocRef, {
+          FirebaseConst.battleType: BattleType.waiting.value,
+          FirebaseConst.battleCreatedAt: now,
+          FirebaseConst.battleRoundWins: FieldValue.increment(myWon ? 1 : 0),
+        });
+        batch.update(_roomDocRef(opponentRoomId), {
+          FirebaseConst.battleType: BattleType.waiting.value,
+          FirebaseConst.battleCreatedAt: now,
+          FirebaseConst.battleRoundWins: FieldValue.increment(myWon ? 0 : 1),
+        });
+        await batch.commit();
+      } catch (e) {
+        Loggers.error('Failed to start next cross-room round: $e');
+      }
+    } else {
+      final hostState = liveUsersStates
+          .firstWhereOrNull((state) => state.userId == liveData.value.hostId);
+      final coHostIds = liveData.value.coHostIds ?? const <int>[];
+      final coHostId = coHostIds.isEmpty ? null : coHostIds.first;
+      final coHostState = liveUsersStates
+          .firstWhereOrNull((state) => state.userId == coHostId);
+      final hostCoins = hostState?.currentBattleCoin ?? 0;
+      final coHostCoins = coHostState?.currentBattleCoin ?? 0;
+      final hostWon = hostCoins >= coHostCoins;
+      roundBaselineRed.value = hostCoins;
+      roundBaselineBlue.value = coHostCoins;
+      await updateLiveStreamData(
+        battleType: BattleType.waiting,
+        battleCreatedAt: now,
+        battleRoundWinsHost: hostWon ? FieldValue.increment(1) : null,
+        battleRoundWinsCoHost: hostWon ? null : FieldValue.increment(1),
+      );
+    }
   }
 
   bool get canStartBattle {
@@ -1965,6 +2078,8 @@ class LivestreamScreenController extends BaseController {
     final myRoomId = liveData.value.roomID;
     if (myRoomId == null) return;
     final opponentRoomId = '$fromHostId';
+    roundBaselineRed.value = 0;
+    roundBaselineBlue.value = 0;
     try {
       final batch = db.batch();
       batch.update(liveStreamDocRef, {
@@ -1973,12 +2088,14 @@ class LivestreamScreenController extends BaseController {
         FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
         FirebaseConst.opponentRoomId: opponentRoomId,
         FirebaseConst.pendingBattleInviteFromId: null,
+        FirebaseConst.battleRoundWins: 0,
       });
       batch.update(_roomDocRef(opponentRoomId), {
         FirebaseConst.type: LivestreamType.battle.value,
         FirebaseConst.battleType: BattleType.waiting.value,
         FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
         FirebaseConst.opponentRoomId: myRoomId,
+        FirebaseConst.battleRoundWins: 0,
       });
       await batch.commit();
     } catch (e) {
@@ -2016,6 +2133,7 @@ class LivestreamScreenController extends BaseController {
       await updateLiveStreamData(
         battleType: BattleType.initiate,
         type: LivestreamType.livestream,
+        battleRoundWins: 0,
       );
       await liveStreamDocRef.update({FirebaseConst.opponentRoomId: null});
       if (opponentRoomId != null) {
@@ -2023,6 +2141,7 @@ class LivestreamScreenController extends BaseController {
           FirebaseConst.battleType: BattleType.initiate.value,
           FirebaseConst.type: LivestreamType.livestream.value,
           FirebaseConst.opponentRoomId: null,
+          FirebaseConst.battleRoundWins: 0,
         });
       }
     } catch (e) {

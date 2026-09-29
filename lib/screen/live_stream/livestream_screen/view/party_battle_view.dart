@@ -53,8 +53,10 @@ class _PartyBattleOverlay extends StatelessWidget {
     return Obx(() {
       final myViews = controller.streamViews;
       final opponentViews = controller.opponentStreamViews;
-      final red = controller.mySideBattleCoins;
-      final blue = controller.opponentSideBattleCoins;
+      final red =
+          controller.mySideBattleCoins - controller.roundBaselineRed.value;
+      final blue = controller.opponentSideBattleCoins -
+          controller.roundBaselineBlue.value;
       final stream = controller.liveData.value;
 
       return SafeArea(
@@ -79,6 +81,7 @@ class _PartyBattleOverlay extends StatelessWidget {
               _PartyBattleStats(
                   red: red, blue: blue, controller: controller, stream: stream),
               BuildLastTenSecondView(controller: controller),
+              GiftComboBadge(controller: controller),
             ],
           ),
         ),
@@ -137,7 +140,24 @@ class _PartyBattleStats extends StatelessWidget {
           Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (stream.battleType == BattleType.end)
+              Obx(() {
+                final myWins = controller.liveData.value.battleRoundWins ?? 0;
+                final opponentWins =
+                    controller.opponentLiveData.value?.battleRoundWins ?? 0;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      WinPill(count: myWins, color: ColorRes.likeRed),
+                      WinPill(
+                          count: opponentWins,
+                          color: ColorRes.battleProgressColor),
+                    ],
+                  ),
+                );
+              }),
+              if (stream.battleType == BattleType.end) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -145,6 +165,31 @@ class _PartyBattleStats extends StatelessWidget {
                     _winnerTag(context, rightSide: true, isWinner: !isRedWin),
                   ],
                 ),
+                if (controller.isHost)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: InkWell(
+                      onTap: controller.startNextRound,
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            color:
+                                whitePure(context).withValues(alpha: .15),
+                            border: Border.all(
+                                color: whitePure(context)
+                                    .withValues(alpha: .3))),
+                        child: Text(
+                          LKey.nextRound.tr,
+                          style: TextStyleCustom.outFitSemiBold600(
+                              color: whitePure(context), fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
               if (myHost != null || opponentHost != null)
                 Container(
                   height: 43,
