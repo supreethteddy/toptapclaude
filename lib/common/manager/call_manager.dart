@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:shortzz/common/config/agora_config.dart';
 import 'package:shortzz/common/manager/logger.dart';
@@ -83,29 +85,30 @@ class CallManager extends GetxController {
         isVideo: false,
       );
 
-      // For now, simulate success and optionally push incoming-call notification
-      await Future.delayed(const Duration(milliseconds: 300));
-
+      // The callee is already rung the instant the write above lands, via
+      // IncomingCallWatcher's real-time Firestore listener. The push
+      // notification below is only a best-effort backup for when their app
+      // is backgrounded, so it must run in the background and never block —
+      // let alone silently hang — the caller's own navigation to the call
+      // screen. (Previously this was awaited here, so a slow/stuck push
+      // request left the caller's UI stuck on the chat screen forever with
+      // no error, even though the callee was already ringing.)
       Loggers.info('📞 Sending voice call notification to user: $userId2');
-      final bool pushSent = await _sendIncomingCallPush(
+      unawaited(_sendIncomingCallPush(
         isVideo: false,
         channelId: finalChannelId,
         token: shareTokenWithCallee ? callerToken : null,
         calleeId: userId2,
-      );
-      if (!pushSent) {
-        // The FCM ring to the callee failed (backend push not configured, or
-        // the callee has no device token). Do NOT abort the call: the call
-        // session doc is already written, so the callee is still rung in-app by
-        // IncomingCallWatcher (Firestore) when their app is open, and the caller
-        // must still be able to enter the room and wait for them to answer.
-        Loggers.warning(
-            '📞 Call push to callee failed; continuing via in-app signalling');
-      }
+      ).then((pushSent) {
+        if (!pushSent) {
+          Loggers.warning(
+              '📞 Call push to callee failed; continuing via in-app signalling');
+        }
+      }));
 
       isInCall.value = true;
       callStatus.value = 'connected';
-      Loggers.success('📞 Voice call started: $finalChannelId (push=$pushSent)');
+      Loggers.success('📞 Voice call started: $finalChannelId');
       return true;
     } catch (e) {
       errorMessage.value = e.toString();
@@ -147,26 +150,25 @@ class CallManager extends GetxController {
         isVideo: true,
       );
 
-      // For now, simulate success and optionally push incoming-call notification
-      await Future.delayed(const Duration(milliseconds: 300));
-
+      // See startVoiceCall: the callee is already rung via IncomingCallWatcher
+      // the instant the write above lands, so the push below is a background,
+      // best-effort backup and must never block the caller's own navigation.
       Loggers.info('📹 Sending video call notification to user: $userId2');
-      final bool pushSent = await _sendIncomingCallPush(
+      unawaited(_sendIncomingCallPush(
         isVideo: true,
         channelId: finalChannelId,
         token: shareTokenWithCallee ? callerToken : null,
         calleeId: userId2,
-      );
-      if (!pushSent) {
-        // See startVoiceCall: a failed FCM ring must not abort the call. The
-        // callee is also rung in-app via IncomingCallWatcher (Firestore).
-        Loggers.warning(
-            '📹 Call push to callee failed; continuing via in-app signalling');
-      }
+      ).then((pushSent) {
+        if (!pushSent) {
+          Loggers.warning(
+              '📹 Call push to callee failed; continuing via in-app signalling');
+        }
+      }));
 
       isInCall.value = true;
       callStatus.value = 'connected';
-      Loggers.success('📹 Video call started: $finalChannelId (push=$pushSent)');
+      Loggers.success('📹 Video call started: $finalChannelId');
       return true;
     } catch (e) {
       errorMessage.value = e.toString();

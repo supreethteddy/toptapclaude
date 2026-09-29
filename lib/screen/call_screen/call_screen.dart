@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
+import 'package:shortzz/common/manager/call_manager.dart';
 import 'package:shortzz/common/service/zego_call_service.dart';
 import 'package:shortzz/common/service/call_signaling_service.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
@@ -335,6 +336,7 @@ class _CallScreenState extends State<CallScreen> {
         CallSignalStatus.ended,
       );
       await _callService.endCall();
+      await CallManager().endCall();
       print('✅ Call service ended');
       _popCallScreen();
       print('✅ Navigated back');
@@ -679,6 +681,7 @@ class _CallScreenState extends State<CallScreen> {
     if (_callService.isInCall) {
       unawaited(_callService.endCall());
     }
+    unawaited(CallManager().endCall());
     super.dispose();
   }
 }
