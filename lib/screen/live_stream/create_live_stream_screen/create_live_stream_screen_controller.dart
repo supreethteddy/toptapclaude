@@ -71,7 +71,7 @@ class CreateLiveStreamScreenController extends BaseController {
     // stopPreview() does via destroyCanvasView — blacks out the host's own
     // video on the live screen. So only tear the preview down (and resume the
     // background feed) when we are cancelling out of create-live instead.
-    if (!Get.isRegistered<LivestreamScreenController>()) {
+    if (LivestreamScreenController.activeRoomIds.isEmpty) {
       stopPreview();
       ReelsScreenController.resumeHomeFeed();
     }

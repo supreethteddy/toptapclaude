@@ -126,6 +126,15 @@ class LivestreamScreenController extends BaseController {
 
   LivestreamScreenController(this.liveData, this.isHost, {this.hostPreview});
 
+  /// Room IDs of every [LivestreamScreenController] currently alive, tagged
+  /// one-per-room so several rooms can be mounted at once (needed for
+  /// swiping between live rooms). Call sites that used to ask the old
+  /// untagged singleton "is a LIVE screen open right now" (via
+  /// `Get.isRegistered<LivestreamScreenController>()`) can't do that lookup
+  /// by type alone anymore, since GetX has no "any tag registered" query —
+  /// they check this set instead.
+  static final Set<String> activeRoomIds = {};
+
   int totalBattleSecond = 0;
 
   RxInt remainingBattleSeconds = 0.obs;
@@ -159,6 +168,7 @@ class LivestreamScreenController extends BaseController {
   @override
   void onInit() {
     super.onInit();
+    activeRoomIds.add(liveData.value.roomID ?? '');
     if (liveData.value.isDummyLive == 1) {
       initVideoPlayer();
     } else {
@@ -210,6 +220,7 @@ class LivestreamScreenController extends BaseController {
 
   @override
   void onClose() {
+    activeRoomIds.remove(liveData.value.roomID ?? '');
     WakelockPlus.disable();
     timer?.cancel();
     minViewerTimeoutTimer?.cancel();
@@ -305,7 +316,7 @@ class LivestreamScreenController extends BaseController {
   /// Audience list (eye icon) for everyone.
   void openAudienceSheet() {
     Get.bottomSheet(
-      const MembersSheet(isHost: false),
+      MembersSheet(isHost: false, roomID: liveData.value.roomID ?? ''),
       isScrollControlled: true,
     );
   }
@@ -314,7 +325,10 @@ class LivestreamScreenController extends BaseController {
   void openMembersSheet({int initialTab = MembersSheet.tabRequests}) {
     HapticManager.shared.light();
     Get.bottomSheet(
-      MembersSheet(isHost: true, initialTab: initialTab),
+      MembersSheet(
+          isHost: true,
+          initialTab: initialTab,
+          roomID: liveData.value.roomID ?? ''),
       isScrollControlled: true,
     );
   }
@@ -1315,6 +1329,7 @@ class LivestreamScreenController extends BaseController {
       giftType: type,
       battleViewType: battleViewType,
       streamUsers: availableUsers,
+      roomID: liveData.value.roomID,
     );
   }
 

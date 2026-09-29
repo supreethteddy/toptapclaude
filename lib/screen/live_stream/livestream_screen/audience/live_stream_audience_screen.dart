@@ -22,8 +22,9 @@ class LiveStreamAudienceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller =
-        Get.put(LivestreamScreenController(livestream.obs, isHost));
+    final controller = Get.put(
+        LivestreamScreenController(livestream.obs, isHost),
+        tag: livestream.roomID);
 
     return Scaffold(
       backgroundColor: blackPure(context),

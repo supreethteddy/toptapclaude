@@ -22,10 +22,12 @@ class SendGiftSheetController extends BaseController {
   int? userId;
   List<AppUser> liveUsers;
   GiftType? giftType;
+  String? roomID;
   late LivestreamScreenController livestreamController;
   bool _isSendingGift = false;
 
-  SendGiftSheetController(this.giftType, this.userId, this.liveUsers);
+  SendGiftSheetController(this.giftType, this.userId, this.liveUsers,
+      [this.roomID]);
 
   @override
   void onInit() {
@@ -34,7 +36,7 @@ class SendGiftSheetController extends BaseController {
 
     if (liveUsers.isNotEmpty &&
         (giftType == GiftType.livestream || giftType == GiftType.battle)) {
-      livestreamController = Get.find<LivestreamScreenController>();
+      livestreamController = Get.find<LivestreamScreenController>(tag: roomID);
       if (livestreamController.selectedGiftUser.value == null) {
         livestreamController.selectedGiftUser = liveUsers.first.obs;
       } else {
@@ -145,6 +147,7 @@ class GiftManager {
       GiftType giftType = GiftType.none,
       BattleView battleViewType = BattleView.red,
       List<AppUser> streamUsers = const [],
+      String? roomID,
       required Function(GiftManager giftManager) onCompletion}) async {
     await Get.bottomSheet<GiftManager>(
       SendGiftSheet(
@@ -152,6 +155,7 @@ class GiftManager {
         giftType: giftType,
         battleViewType: battleViewType,
         streamUsers: streamUsers,
+        roomID: roomID,
       ),
       isScrollControlled: true,
     ).then((gift) {

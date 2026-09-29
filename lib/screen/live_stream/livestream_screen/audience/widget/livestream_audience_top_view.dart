@@ -23,7 +23,6 @@ import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/fan_club_widgets.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_goal_progress_widget.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
@@ -308,12 +307,7 @@ class _BuildCenterView extends StatelessWidget {
                     image: AssetRes.icAudience,
                     margin: EdgeInsets.zero,
                     iconColor: whitePure(context),
-                    onTap: () {
-                      Get.bottomSheet(
-                        const MembersSheet(isHost: false),
-                        isScrollControlled: true,
-                      );
-                    },
+                    onTap: controller.openAudienceSheet,
                   ),
               ],
             );

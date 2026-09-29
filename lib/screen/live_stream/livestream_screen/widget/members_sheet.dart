@@ -27,19 +27,25 @@ import 'package:shortzz/utilities/theme_res.dart';
 class MembersSheet extends StatefulWidget {
   final bool isHost;
   final int initialTab;
+  final String roomID;
 
   static const int tabRequests = 0;
   static const int tabInvited = 1;
   static const int tabCoHosts = 2;
 
-  const MembersSheet({super.key, required this.isHost, this.initialTab = 0});
+  const MembersSheet(
+      {super.key,
+      required this.isHost,
+      this.initialTab = 0,
+      required this.roomID});
 
   @override
   State<MembersSheet> createState() => _MembersSheetState();
 }
 
 class _MembersSheetState extends State<MembersSheet> {
-  final controller = Get.find<LivestreamScreenController>();
+  late final controller =
+      Get.find<LivestreamScreenController>(tag: widget.roomID);
   late final PageController pageController =
       PageController(initialPage: widget.initialTab);
   late final RxInt selectedTab = widget.initialTab.obs;

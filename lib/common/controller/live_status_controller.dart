@@ -98,7 +98,7 @@ class LiveStatusController extends GetxController {
     final stream = streamOf(userId);
     if (stream == null) return;
     if (userId == SessionManager.instance.getUserID()) return;
-    if (Get.isRegistered<LivestreamScreenController>()) return;
+    if (LivestreamScreenController.activeRoomIds.isNotEmpty) return;
     await Get.to(
       () => LiveStreamAudienceScreen(livestream: stream, isHost: false),
     );

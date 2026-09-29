@@ -22,18 +22,20 @@ class SendGiftSheet extends StatelessWidget {
   final BattleView battleViewType;
   final int? userId;
   final List<AppUser> streamUsers;
+  final String? roomID;
 
   const SendGiftSheet(
       {super.key,
       this.giftType = GiftType.none,
       this.battleViewType = BattleView.red,
       required this.userId,
-      this.streamUsers = const []});
+      this.streamUsers = const [],
+      this.roomID});
 
   @override
   Widget build(BuildContext context) {
-    final controller =
-        Get.put(SendGiftSheetController(giftType, userId, streamUsers));
+    final controller = Get.put(
+        SendGiftSheetController(giftType, userId, streamUsers, roomID));
 
     return Container(
       height: Get.height / 1.5,
