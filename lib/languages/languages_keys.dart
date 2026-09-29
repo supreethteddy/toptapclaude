@@ -283,6 +283,18 @@ class LKey {
   static const String votes = "votes";
   static const String shareGoingLiveText =
       "I'm about to go LIVE, join me!";
+  static const String beautify = "Beautify";
+  static const String effects = "Effects";
+  static const String promote = "Promote";
+  static const String promoteLiveTitle = "Promote your LIVE";
+  static const String promoteLiveDescription =
+      "Share your LIVE with more people to help you get more viewers.";
+  static const String whiten = "Whiten";
+  static const String rosy = "Rosy";
+  static const String smooth = "Smooth";
+  static const String sharpen = "Sharpen";
+  static const String colorEnhancement = "Color Enhancement";
+  static const String liveSettings = "LIVE Settings";
   static const String findOpponent = "Find Opponent";
   static const String findOpponentEmptyTitle = "No One to Challenge";
   static const String findOpponentEmptyDescription =

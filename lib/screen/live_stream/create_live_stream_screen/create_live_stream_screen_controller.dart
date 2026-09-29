@@ -32,6 +32,17 @@ class CreateLiveStreamScreenController extends BaseController {
   RxBool hasFanClub = false.obs;
   RxString fanClubPerks = ''.obs;
   bool isFrontCamera = true;
+
+  // Beautify (whiten/rosy/smooth/sharpen) and Effects (color enhancement) —
+  // both call into Zego's native pre-publish pipeline, so unlike a Flutter
+  // overlay on the local preview, these are actually visible to viewers.
+  RxBool isBeautifyOn = false.obs;
+  RxInt whitenIntensity = 50.obs;
+  RxInt rosyIntensity = 50.obs;
+  RxInt smoothIntensity = 50.obs;
+  RxInt sharpenIntensity = 50.obs;
+  RxBool isColorEnhancementOn = false.obs;
+  RxDouble colorEnhancementIntensity = 0.5.obs;
   FirebaseFirestore db = FirebaseFirestore.instance;
   ZegoExpressEngine zegoEngine = ZegoExpressEngine.instance;
 
@@ -129,6 +140,11 @@ class CreateLiveStreamScreenController extends BaseController {
   Future<void> _initializeCameraPreview() async {
     try {
       showLoader();
+      // Must run before startPreview/startPublishingStream, or it never takes
+      // effect — see setBeautify/setColorEnhancement below, which is why this
+      // has to happen here rather than lazily when Beautify/Effects is opened.
+      await zegoEngine.startEffectsEnv();
+
       // Enable the front camera and un-mute audio streams
       await zegoEngine.enableCamera(true);
       await zegoEngine.mutePublishStreamAudio(false);
@@ -161,6 +177,170 @@ class CreateLiveStreamScreenController extends BaseController {
   void toggleCamera() {
     isFrontCamera = !isFrontCamera;
     zegoEngine.useFrontCamera(isFrontCamera, channel: ZegoPublishChannel.Main);
+  }
+
+  void toggleBeautify(bool enable) {
+    isBeautifyOn.value = enable;
+    zegoEngine.enableEffectsBeauty(enable);
+    if (enable) _applyBeautyParam();
+  }
+
+  void setBeautyParam({
+    int? whiten,
+    int? rosy,
+    int? smooth,
+    int? sharpen,
+  }) {
+    if (whiten != null) whitenIntensity.value = whiten;
+    if (rosy != null) rosyIntensity.value = rosy;
+    if (smooth != null) smoothIntensity.value = smooth;
+    if (sharpen != null) sharpenIntensity.value = sharpen;
+    if (isBeautifyOn.value) _applyBeautyParam();
+  }
+
+  void _applyBeautyParam() {
+    zegoEngine.setEffectsBeautyParam(ZegoEffectsBeautyParam(
+      whitenIntensity.value,
+      rosyIntensity.value,
+      smoothIntensity.value,
+      sharpenIntensity.value,
+    ));
+  }
+
+  void onBeautifyTap() {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Obx(() => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(LKey.beautify.tr,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Switch(
+                      value: isBeautifyOn.value,
+                      onChanged: toggleBeautify,
+                    ),
+                  ],
+                ),
+                _beautySlider(LKey.whiten.tr, whitenIntensity.value,
+                    (v) => setBeautyParam(whiten: v.round())),
+                _beautySlider(LKey.rosy.tr, rosyIntensity.value,
+                    (v) => setBeautyParam(rosy: v.round())),
+                _beautySlider(LKey.smooth.tr, smoothIntensity.value,
+                    (v) => setBeautyParam(smooth: v.round())),
+                _beautySlider(LKey.sharpen.tr, sharpenIntensity.value,
+                    (v) => setBeautyParam(sharpen: v.round())),
+              ],
+            )),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _beautySlider(
+      String label, int value, ValueChanged<double> onChanged) {
+    return Row(
+      children: [
+        SizedBox(
+            width: 70,
+            child:
+                Text(label, style: const TextStyle(color: Colors.white70))),
+        Expanded(
+          child: Slider(
+            value: value.toDouble(),
+            min: 0,
+            max: 100,
+            activeColor: Colors.orange,
+            onChanged: !isBeautifyOn.value ? null : onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void onEffectsTap() {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Obx(() => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(LKey.effects.tr,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Switch(
+                      value: isColorEnhancementOn.value,
+                      onChanged: toggleColorEnhancement,
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    SizedBox(
+                        width: 110,
+                        child: Text(LKey.colorEnhancement.tr,
+                            style:
+                                const TextStyle(color: Colors.white70))),
+                    Expanded(
+                      child: Slider(
+                        value: colorEnhancementIntensity.value,
+                        min: 0,
+                        max: 1,
+                        activeColor: Colors.orange,
+                        onChanged: !isColorEnhancementOn.value
+                            ? null
+                            : setColorEnhancementIntensity,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  void toggleColorEnhancement(bool enable) {
+    isColorEnhancementOn.value = enable;
+    _applyColorEnhancement();
+  }
+
+  void setColorEnhancementIntensity(double value) {
+    colorEnhancementIntensity.value = value;
+    if (isColorEnhancementOn.value) _applyColorEnhancement();
+  }
+
+  void _applyColorEnhancement() {
+    zegoEngine.enableColorEnhancement(
+      isColorEnhancementOn.value,
+      ZegoColorEnhancementParams(
+        colorEnhancementIntensity.value,
+        1.0, // Protect natural skin tone at full strength.
+        0.0,
+      ),
+    );
   }
 
   /// Switches between broadcasting with the camera on (default) and
@@ -465,6 +645,93 @@ class CreateLiveStreamScreenController extends BaseController {
   Future<void> shareGoingLive() async {
     await SharePlus.instance.share(
       ShareParams(text: LKey.shareGoingLiveText.tr, subject: 'TopTap LIVE'),
+    );
+  }
+
+  /// TopTap has no ad platform to back a real paid "Promote" like TikTok's,
+  /// so this is an honest stand-in: it drives the same free, organic reach
+  /// lever that's actually available — inviting more people to watch.
+  void onPromoteTap() {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.local_fire_department, color: Colors.orange),
+                const SizedBox(width: 12),
+                Text(LKey.promoteLiveTitle.tr,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(LKey.promoteLiveDescription.tr,
+                style: const TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                Get.back();
+                shareGoingLive();
+              },
+              child: Container(
+                width: double.infinity,
+                height: 50,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(LKey.share.tr,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void onSettingsTap() {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(LKey.liveSettings.tr,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            Obx(() => SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(LKey.restrictUserRequests.tr,
+                      style: const TextStyle(color: Colors.white)),
+                  value: isRestricted.value,
+                  onChanged: (value) => isRestricted.value = value,
+                )),
+          ],
+        ),
+      ),
     );
   }
 

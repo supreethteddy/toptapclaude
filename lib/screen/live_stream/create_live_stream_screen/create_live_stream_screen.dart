@@ -193,6 +193,31 @@ class CreateLiveStreamScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
+                          Obx(() => _buildFeatureButton(
+                                icon: Icons.auto_fix_high,
+                                label: LKey.beautify.tr,
+                                isActive: controller.isBeautifyOn.value,
+                                onTap: controller.onBeautifyTap,
+                              )),
+                          Obx(() => _buildFeatureButton(
+                                icon: Icons.auto_awesome,
+                                label: LKey.effects.tr,
+                                isActive: controller.isColorEnhancementOn.value,
+                                onTap: controller.onEffectsTap,
+                              )),
+                          _buildFeatureButton(
+                            icon: Icons.settings_outlined,
+                            label: LKey.settings.tr,
+                            onTap: controller.onSettingsTap,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
                           // _buildFeatureButton(
                           //   icon: Icons.music_note,
                           //   label: 'Music',
@@ -216,6 +241,19 @@ class CreateLiveStreamScreen extends StatelessWidget {
                             icon: Icons.ios_share,
                             label: LKey.share.tr,
                             onTap: controller.shareGoingLive,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildFeatureButton(
+                            icon: Icons.local_fire_department,
+                            label: LKey.promote.tr,
+                            onTap: controller.onPromoteTap,
                           ),
                         ],
                       ),
