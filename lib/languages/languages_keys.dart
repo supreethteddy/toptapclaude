@@ -104,6 +104,8 @@ class LKey {
   static const String website = "Website";
   static const String instagram = "Instagram";
   static const String whatsapp = "WhatsApp";
+  static const String whatsappBusiness = "WA Business";
+  static const String instagramStory = "Story";
   static const String telegram = "Telegram";
   static const String facebook = "Facebook";
   static const String download = "Download";
@@ -300,6 +302,17 @@ class LKey {
   static const String rosy = "Rosy";
   static const String smooth = "Smooth";
   static const String sharpen = "Sharpen";
+  static const String beauty = "Beauty";
+  static const String makeup = "Makeup";
+  static const String shape = "Shape";
+  static const String eye = "Eye";
+  static const String nose = "Nose";
+  static const String contrast = "Contrast";
+  static const String foundation = "Foundation";
+  static const String brighten = "Brighten";
+  static const String tooth = "Tooth";
+  static const String makeupComingSoonDescription =
+      "Makeup effects are coming soon.";
   static const String colorEnhancement = "Color Enhancement";
   static const String filters = "Filters";
   static const String none = "None";
