@@ -1,5 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:deepar_flutter_plus/deepar_flutter_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
@@ -10,6 +15,7 @@ import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
 import 'package:shortzz/common/service/zego_engine_service.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
+import 'package:shortzz/config/deepar/local_deepar_filters.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
@@ -46,6 +52,44 @@ class CreateLiveStreamScreenController extends BaseController {
   FirebaseFirestore db = FirebaseFirestore.instance;
   ZegoExpressEngine zegoEngine = ZegoExpressEngine.instance;
 
+  // DeepAR filters for LIVE (Android only — see DeepArZegoBridge.kt). Off by
+  // default: everyone keeps using Zego's own camera + native beauty sliders
+  // above until a filter other than "None" is explicitly picked, so this
+  // never touches the already-working default path.
+  final DeepArControllerPlus deepArController = DeepArControllerPlus();
+  final Rx<DeepARFilters> selectedLiveFilter = Rx(deepArNoneEffect);
+  RxBool isDeepArLiveActive = false.obs;
+  bool _isDeepArLiveBusy = false;
+  static const MethodChannel _deepArZegoBridgeChannel =
+      MethodChannel('toptap/deepar_zego_bridge');
+
+  bool get _hasDeepArLicenseForCurrentPlatform => Platform.isAndroid
+      ? (_setting?.deeparAndroidKey?.trim().isNotEmpty ?? false)
+      : (_setting?.deeparIOSKey?.trim().isNotEmpty ?? false);
+
+  /// Same merge logic as CameraScreenController.availableDeepArFilters (the
+  /// post/story camera) — local bundled presets plus anything the admin has
+  /// uploaded via Setting.deepARFilters, deduplicated by filter file.
+  List<DeepARFilters> get availableLiveFilters {
+    final Map<String, DeepARFilters> uniqueMap = {};
+    void addFilter(DeepARFilters filter) {
+      final key = (filter.filterFile?.isNotEmpty == true)
+          ? filter.filterFile!
+          : '${filter.id}_${filter.title}';
+      uniqueMap.putIfAbsent(key, () => filter);
+    }
+
+    addFilter(deepArNoneEffect);
+    for (final filter in _setting?.deepARFilters ?? []) {
+      addFilter(filter);
+    }
+    for (final filter in localDeepArBeautyFilters) {
+      if (filter.id == deepArNoneEffect.id) continue;
+      addFilter(filter);
+    }
+    return uniqueMap.values.toList(growable: false);
+  }
+
   Rx<User?> get myUser => SessionManager.instance.getUser().obs;
 
   Setting? get _setting => SessionManager.instance.getSettings();
@@ -74,6 +118,14 @@ class CreateLiveStreamScreenController extends BaseController {
     if (LivestreamScreenController.activeRoomIds.isEmpty) {
       stopPreview();
       ReelsScreenController.resumeHomeFeed();
+      // Only torn down when cancelling out of create-live, for the same
+      // reason as stopPreview() above — if we actually went live, the host
+      // screen keeps relying on DeepAR feeding Zego's custom capture for
+      // the rest of the stream.
+      if (isDeepArLiveActive.value) {
+        unawaited(_deepArZegoBridgeChannel.invokeMethod('stop'));
+        unawaited(deepArController.destroy());
+      }
     }
   }
 
@@ -177,6 +229,88 @@ class CreateLiveStreamScreenController extends BaseController {
   void toggleCamera() {
     isFrontCamera = !isFrontCamera;
     zegoEngine.useFrontCamera(isFrontCamera, channel: ZegoPublishChannel.Main);
+  }
+
+  /// Picking a filter switches the whole capture pipeline from Zego's own
+  /// camera to DeepAR's (Android only) — see DeepArZegoBridge.kt for why
+  /// that has to happen at the native level rather than in Flutter. Picking
+  /// "None" reverses it, handing the camera back to Zego untouched.
+  Future<void> onLiveFilterSelected(DeepARFilters filter) async {
+    if (_isDeepArLiveBusy) return;
+    if (filter.id == deepArNoneEffect.id) {
+      await _disableDeepArLive();
+      return;
+    }
+    if (!Platform.isAndroid) {
+      showSnackBar('Filters during LIVE are only available on Android right now.');
+      return;
+    }
+    if (!_hasDeepArLicenseForCurrentPlatform) {
+      showSnackBar('Filters are not configured for this app yet.');
+      return;
+    }
+    await _enableDeepArLive(filter);
+  }
+
+  Future<void> _enableDeepArLive(DeepARFilters filter) async {
+    _isDeepArLiveBusy = true;
+    showLoader();
+    try {
+      if (!deepArController.isInitialized) {
+        final result = await deepArController.initialize(
+          androidLicenseKey: _setting?.deeparAndroidKey,
+          iosLicenseKey: _setting?.deeparIOSKey,
+          resolution: Resolution.high,
+        );
+        if (!result.success) {
+          showSnackBar('Could not start filters: ${result.message}');
+          return;
+        }
+      }
+
+      final filterPath = filter.filterFile ?? '';
+      if (filterPath.isNotEmpty) {
+        await deepArController.switchEffect(filterPath);
+      } else {
+        await deepArController.switchEffectWithSlot(slot: 'effect', path: 'none');
+      }
+
+      final size = deepArController.imageSize;
+      if (size == null) {
+        showSnackBar('Could not start filters: unknown camera size.');
+        return;
+      }
+
+      // Stop Zego's own camera before custom-capture frames start arriving
+      // — see enableCustomVideoCapture's documented call order.
+      await zegoEngine.enableCamera(false);
+      await deepArController.enableRawFrameOutput(
+          width: size.width.toInt(), height: size.height.toInt());
+      await _deepArZegoBridgeChannel.invokeMethod('start');
+
+      selectedLiveFilter.value = filter;
+      isDeepArLiveActive.value = true;
+    } catch (e) {
+      Loggers.error('Failed to enable DeepAR for LIVE: $e');
+      showSnackBar('Could not start filters. Staying on the normal camera.');
+      await _disableDeepArLive();
+    } finally {
+      stopLoader();
+      _isDeepArLiveBusy = false;
+    }
+  }
+
+  Future<void> _disableDeepArLive() async {
+    selectedLiveFilter.value = deepArNoneEffect;
+    if (!isDeepArLiveActive.value) return;
+    isDeepArLiveActive.value = false;
+    try {
+      await _deepArZegoBridgeChannel.invokeMethod('stop');
+    } catch (e) {
+      Loggers.error('Failed to stop DeepAR/Zego bridge: $e');
+    }
+    // Hand the camera back to Zego's own capture.
+    await zegoEngine.enableCamera(true);
   }
 
   void toggleBeautify(bool enable) {
@@ -315,11 +449,89 @@ class CreateLiveStreamScreenController extends BaseController {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Text(LKey.filters.tr,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  isDeepArLiveActive.value
+                      ? (selectedLiveFilter.value.title ?? LKey.none.tr)
+                      : LKey.none.tr,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 92,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: availableLiveFilters.length,
+                    itemBuilder: (context, index) {
+                      final filter = availableLiveFilters[index];
+                      final isSelected = filter.id == selectedLiveFilter.value.id;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: InkWell(
+                          onTap: () => onLiveFilterSelected(filter),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                height: 56,
+                                width: 56,
+                                clipBehavior: Clip.antiAlias,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Colors.orange
+                                        : Colors.white24,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  color: Colors.white12,
+                                ),
+                                child: _liveFilterThumbnail(filter.image),
+                              ),
+                              const SizedBox(height: 4),
+                              SizedBox(
+                                width: 60,
+                                child: Text(
+                                  filter.title ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.orange
+                                          : Colors.white70,
+                                      fontSize: 10),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             )),
       ),
       isScrollControlled: true,
     );
+  }
+
+  Widget _liveFilterThumbnail(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return const Icon(Icons.block, color: Colors.white38, size: 28);
+    }
+    final uri = Uri.tryParse(imagePath);
+    final isNetwork = uri != null && uri.hasScheme && uri.host.isNotEmpty;
+    return isNetwork
+        ? Image.network(imagePath, fit: BoxFit.cover)
+        : Image.asset(imagePath, fit: BoxFit.cover);
   }
 
   void toggleColorEnhancement(bool enable) {
@@ -850,10 +1062,10 @@ class CreateLiveStreamScreenController extends BaseController {
       return;
     }
 
-    if (localView.value == null) {
+    if (localView.value == null && !isDeepArLiveActive.value) {
       Loggers.info('Local view is null, checking camera initialization...');
       await initZegoEngine();
-      if (localView.value == null) {
+      if (localView.value == null && !isDeepArLiveActive.value) {
         showSnackBar('Local View not found');
         return;
       }
@@ -945,7 +1157,9 @@ class CreateLiveStreamScreenController extends BaseController {
       Loggers.success('Livestream started successfully!');
 
       // Navigate to live stream host screen
-      Widget? hostPreview = localView.value;
+      Widget? hostPreview = isDeepArLiveActive.value
+          ? DeepArPreviewPlus(deepArController)
+          : localView.value;
       Loggers.info('Navigating to host screen...');
 
       Get.off(() => LivestreamHostScreen(

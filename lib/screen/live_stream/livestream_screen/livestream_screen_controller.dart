@@ -305,6 +305,15 @@ class LivestreamScreenController extends BaseController {
     battleStartPlayer.dispose();
     winAudioPlayer.dispose();
     stopListenEvent();
+    // Best-effort: if this host went live using a DeepAR filter (see
+    // CreateLiveStreamScreenController), make sure Zego's custom-capture
+    // flag from that session doesn't outlive it. Harmless no-op otherwise —
+    // the native bridge is a guarded no-op when never started.
+    if (isHost) {
+      unawaited(const MethodChannel('toptap/deepar_zego_bridge')
+          .invokeMethod('stop')
+          .catchError((_) {}));
+    }
     unawaited(logoutRoom());
     if (!isHost) {
       unawaited(_leaveAudience());

@@ -82,6 +82,12 @@ class DeepArControllerPlus {
   ///For [iOS], please call the function after [DeepArPreviewPlus] widget has been built.
   double get aspectRatio => _aspectRatio ?? 1.0;
 
+  /// The actual negotiated camera/render dimensions after [initialize]
+  /// succeeds (null before that). Needed by callers that must configure a
+  /// downstream pipeline (e.g. a raw-frame consumer) with DeepAR's real
+  /// output size rather than guessing from the requested [Resolution].
+  Size? get imageSize => _imageSize;
+
   ///Return true if the recording is in progress.
   bool get isRecording => _isRecording;
 

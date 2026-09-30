@@ -301,6 +301,8 @@ class LKey {
   static const String smooth = "Smooth";
   static const String sharpen = "Sharpen";
   static const String colorEnhancement = "Color Enhancement";
+  static const String filters = "Filters";
+  static const String none = "None";
   static const String liveSettings = "LIVE Settings";
   static const String findOpponent = "Find Opponent";
   static const String findOpponentEmptyTitle = "No One to Challenge";
