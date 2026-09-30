@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/widget/black_gradient_shadow.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
@@ -131,10 +130,7 @@ class LiveStreamBottomView extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Likes received (moved here from the host name row, L-03).
-          if (isVisible) _buildLikesReceived(context, stream),
-          if (isVisible) const SizedBox(width: 6),
-          if (isVisible && !isAudience) _buildHostButton(context),
+          if (isVisible && !isAudience) _HostLinkAndGuestIcons(controller: controller),
           if (isVisible && isAudience) _buildGuestRequestButton(context, stream),
           Expanded(
             child: AnimatedOpacity(
@@ -235,34 +231,6 @@ class LiveStreamBottomView extends StatelessWidget {
         ],
       );
     });
-  }
-
-  Widget _buildLikesReceived(BuildContext context, Livestream stream) {
-    final likes = stream.likeCount ?? 0;
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 9),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.favorite, color: ColorRes.likeRed, size: 15),
-          const SizedBox(width: 4),
-          Text(
-            likes.numberFormat,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   /// Audience: "join as guest" request (client item L-13). Hidden while a
@@ -398,47 +366,6 @@ class LiveStreamBottomView extends StatelessWidget {
         ),
       );
     });
-  }
-
-  Widget _buildHostButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => controller.openMembersSheet(),
-      child: Obx(() {
-        final pending = controller.requestList.length;
-        return Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.people, color: Colors.white, size: 18),
-              if (pending > 0) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  decoration: BoxDecoration(
-                    color: ColorRes.likeRed,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$pending',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      }),
-    );
   }
 
   Widget _buildRightControls(BuildContext context) {
@@ -744,6 +671,87 @@ class LiveStreamBottomView extends StatelessWidget {
   }
 }
 
+
+/// TikTok's bottom-left chain-link + friends icon pair: chain opens the
+/// cross-room "link with another host" flow (same screen the "..." menu's
+/// "Find Opponent" item already opens), friends jumps straight to inviting a
+/// viewer on screen as a guest (the Invited tab of the same MembersSheet
+/// _GuestsButton below opens, just defaulted to a different tab).
+class _HostLinkAndGuestIcons extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const _HostLinkAndGuestIcons({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _circleIconButton(
+          onTap: () => Get.to(() => FindOpponentScreen(myLive: controller)),
+          child: Image.asset(AssetRes.icLink,
+              color: Colors.white, height: 18, width: 18),
+        ),
+        const SizedBox(width: 6),
+        Obx(() {
+          final pending = controller.invitedList.length;
+          return _circleIconButton(
+            onTap: () => controller.openMembersSheet(
+              initialTab: MembersSheet.tabInvited,
+            ),
+            badgeCount: pending,
+            child: const Icon(Icons.people, color: Colors.white, size: 18),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _circleIconButton({
+    required VoidCallback onTap,
+    required Widget child,
+    int badgeCount = 0,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            height: 36,
+            width: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
+            ),
+            child: child,
+          ),
+          if (badgeCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: ColorRes.likeRed,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$badgeCount',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Guest requests / invites entry point (client items L-01, L-13).
 class _GuestsButton extends StatelessWidget {

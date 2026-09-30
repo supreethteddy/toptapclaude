@@ -80,6 +80,13 @@ class LivestreamScreenController extends BaseController {
   bool _isLoggingOut = false;
   bool _hasHandledRemoteEnd = false;
 
+  /// Last like count we've already animated for (see listenLiveStreamData
+  /// and onLikeButtonTap's optimistic call) — a class field rather than a
+  /// listener-local variable so a tap's immediate local heart burst is
+  /// correctly recognised as "already shown" once the Firestore echo of
+  /// that same increment comes back, instead of firing a second burst.
+  int _lastAnimatedLikeCount = 0;
+
   StreamSubscription<DocumentSnapshot<Livestream>>? liveStreamDocListener;
   StreamSubscription<QuerySnapshot<LivestreamUserState?>>?
       liveStreamUserStatesListener;
@@ -1053,7 +1060,7 @@ class LivestreamScreenController extends BaseController {
   }
 
   void listenLiveStreamData() {
-    int likeCount = liveData.value.likeCount ?? 0;
+    _lastAnimatedLikeCount = liveData.value.likeCount ?? 0;
 
     liveStreamDocListener = liveStreamDocRef
         .withConverter<Livestream>(
@@ -1121,11 +1128,16 @@ class LivestreamScreenController extends BaseController {
         // Update LiveData
         liveData.value = stream;
 
-        // Trigger like animation if changed
+        // Trigger like animation on forward progress only (never on a
+        // smaller count than we've already shown). Guards two things: the
+        // echo of a like this device already animated optimistically (see
+        // onLikeButtonTap) shouldn't fire a second burst, and an
+        // intermediate snapshot arriving out of order during rapid
+        // multi-tapping shouldn't regress the counter and re-trigger.
         final newLikeCount = stream.likeCount ?? 0;
-        if (likeCount != newLikeCount) {
+        if (newLikeCount > _lastAnimatedLikeCount) {
           onLikeTap?.call();
-          likeCount = newLikeCount;
+          _lastAnimatedLikeCount = newLikeCount;
         }
 
         // Cross-room PK Battle: an incoming invite to accept/decline.
@@ -1369,9 +1381,15 @@ class LivestreamScreenController extends BaseController {
   }
 
   void onLikeButtonTap() async {
+    HapticManager.shared.light();
+    // Optimistic local heart burst — don't make the tapper wait for the
+    // Firestore round-trip. _lastAnimatedLikeCount is bumped in lockstep so
+    // listenLiveStreamData recognises the eventual Firestore echo of this
+    // same increment as already-shown, rather than firing a second burst.
+    onLikeTap?.call();
+    _lastAnimatedLikeCount++;
     bool isExist = (await liveStreamDocRef.get()).exists;
     if (isExist) {
-      HapticManager.shared.light();
       liveStreamDocRef.update({
         FirebaseConst.likeCount: FieldValue.increment(1),
       });

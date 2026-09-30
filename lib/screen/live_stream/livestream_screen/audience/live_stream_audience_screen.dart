@@ -64,6 +64,15 @@ class LiveStreamAudienceScreen extends StatelessWidget {
                 }
               }),
 
+              // Tap anywhere to like (TikTok parity): sits above the video
+              // but below the interactive controls below, which still get
+              // first pick of any tap that lands on them.
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: controller.onLikeButtonTap,
+                child: const SizedBox.expand(),
+              ),
+
               KeyboardAvoider(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

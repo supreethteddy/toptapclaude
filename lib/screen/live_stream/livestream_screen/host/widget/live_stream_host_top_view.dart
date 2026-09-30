@@ -18,10 +18,10 @@ import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
 /// Host top toolbar:
-/// [avatar] [username + daily rank] [LIVE title ✎]   [goal] [👁 viewers] [⏻]
+/// [avatar] [username + likes + daily rank] [LIVE title ✎]   [goal] [👁 viewers] [⏻]
 ///
-/// Likes received live in the bottom bar (see LiveStreamBottomView) and the
-/// PK / guests controls live in the host control row.
+/// Likes received live here next to the name (matching TikTok's pink pill);
+/// the PK / guests controls live in the host control row.
 class LiveStreamHostTopView extends StatelessWidget {
   final LivestreamScreenController controller;
 
@@ -68,6 +68,8 @@ class LiveStreamHostTopView extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            const SizedBox(width: 6),
+                            LikesCountPill(controller: controller),
                             const SizedBox(width: 6),
                             LiveRankChip(controller: controller),
                             const SizedBox(width: 6),
@@ -224,6 +226,45 @@ class _HostAvatar extends StatelessWidget {
             : const Icon(Icons.person, color: Colors.white, size: 20),
       ),
     );
+  }
+}
+
+/// Total likes received this LIVE, as a pink pill next to the host name —
+/// matches TikTok's placement (top-left, by the name) rather than the
+/// bottom action bar this used to live in. Shared by host and audience top
+/// views. Purely a live counter; tapping anywhere on the video is what
+/// actually sends a like (see the full-screen GestureDetector added to
+/// LivestreamHostScreen/LiveStreamAudienceScreen).
+class LikesCountPill extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const LikesCountPill({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final likes = controller.liveData.value.likeCount ?? 0;
+      return Container(
+        height: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .18),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.favorite, color: ColorRes.likeRed, size: 12),
+            const SizedBox(width: 3),
+            Text(
+              likes.numberFormat,
+              style: TextStyleCustom.outFitSemiBold600(
+                  color: Colors.white, fontSize: 10),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 

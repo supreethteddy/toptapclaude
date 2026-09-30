@@ -206,15 +206,7 @@ class _BuildCenterView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    // "X likes" (Figma "Live1"): same data source/formatting
-                    // as the likes pill in LiveStreamBottomView.
-                    Text(
-                      '${(stream.likeCount ?? 0).numberFormat} ${LKey.likes.tr}',
-                      style: TextStyleCustom.outFitRegular400(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
-                    ),
+                    LikesCountPill(controller: controller),
                     const SizedBox(width: 6),
                     _HostFollowPill(
                       hostUserId: stream.hostId,
