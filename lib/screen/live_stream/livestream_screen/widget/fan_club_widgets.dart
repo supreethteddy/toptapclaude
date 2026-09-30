@@ -84,7 +84,18 @@ class FanClubMembersSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    // Same always-white-sheet-on-theme-following-text mismatch as
+    // MembersSheet (see the comment there): pin the text theme to the
+    // light-mode values so NoDataView's empty state and MemberProfileCard's
+    // full-name line don't render invisible white-on-white in dark mode.
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textTheme: Theme.of(context).textTheme.copyWith(
+              titleSmall: const TextStyle(color: ColorRes.likeRed),
+              titleMedium: const TextStyle(color: ColorRes.green1),
+            ),
+      ),
+      child: Container(
       margin: EdgeInsets.only(top: AppBar().preferredSize.height * 2),
       decoration: ShapeDecoration(
         color: whitePure(context),
@@ -132,6 +143,7 @@ class FanClubMembersSheet extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

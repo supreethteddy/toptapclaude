@@ -73,50 +73,66 @@ class _MembersSheetState extends State<MembersSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(top: AppBar().preferredSize.height * 2),
-      decoration: ShapeDecoration(
-        color: whitePure(context),
-        shape: const SmoothRectangleBorder(
-          borderRadius: SmoothBorderRadius.vertical(
-              top: SmoothRadius(cornerRadius: 30, cornerSmoothing: 1)),
-        ),
+    // This sheet's own background is always pure white (see `whitePure`
+    // usage below) regardless of the app's light/dark theme, but
+    // `NoDataView`'s empty-state text and `MemberProfileCard`'s full-name
+    // line both color themselves via `textLightGrey`/`textDarkGrey`, which
+    // follow the ambient theme — in dark mode that resolves to white,
+    // rendering invisible against this always-white sheet (seen as a
+    // completely blank Invited/Co-hosts list). Pin the text theme to the
+    // light-mode values here so everything stays legible in both modes.
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textTheme: Theme.of(context).textTheme.copyWith(
+              titleSmall: const TextStyle(color: ColorRes.likeRed),
+              titleMedium: const TextStyle(color: ColorRes.green1),
+            ),
       ),
-      child: Column(
-        children: [
-          BottomSheetTopView(
-              title: widget.isHost ? LKey.guests.tr : LKey.members.tr,
-              sideBtnVisibility: false),
-          if (widget.isHost)
-            Obx(() {
-              final pending = controller.requestList.length;
-              return CustomTabSwitcher(
-                items: [
-                  pending > 0
-                      ? '${LKey.requests.tr} ($pending)'
-                      : LKey.requests.tr,
-                  LKey.invited.tr,
-                  LKey.coHosts.tr,
-                ],
-                onTap: onSelectedTab,
-                selectedIndex: selectedTab,
-                margin: const EdgeInsets.symmetric(horizontal: 10),
-                backgroundColor: bgLightGrey(context),
-                selectedFontColor: themeAccentSolid(context),
-              );
-            }),
-          Obx(
-            () => selectedTab.value == MembersSheet.tabCoHosts
-                ? const SizedBox()
-                : CustomSearchTextField(
-                    backgroundColor: bgLightGrey(context),
-                    onChanged: (value) => query.value = value,
-                  ),
+      child: Container(
+        margin: EdgeInsets.only(top: AppBar().preferredSize.height * 2),
+        decoration: ShapeDecoration(
+          color: whitePure(context),
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.vertical(
+                top: SmoothRadius(cornerRadius: 30, cornerSmoothing: 1)),
           ),
-          Expanded(
-            child: !widget.isHost ? _buildAudienceList() : _buildHostPages(),
-          ),
-        ],
+        ),
+        child: Column(
+          children: [
+            BottomSheetTopView(
+                title: widget.isHost ? LKey.guests.tr : LKey.members.tr,
+                sideBtnVisibility: false),
+            if (widget.isHost)
+              Obx(() {
+                final pending = controller.requestList.length;
+                return CustomTabSwitcher(
+                  items: [
+                    pending > 0
+                        ? '${LKey.requests.tr} ($pending)'
+                        : LKey.requests.tr,
+                    LKey.invited.tr,
+                    LKey.coHosts.tr,
+                  ],
+                  onTap: onSelectedTab,
+                  selectedIndex: selectedTab,
+                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                  backgroundColor: bgLightGrey(context),
+                  selectedFontColor: themeAccentSolid(context),
+                );
+              }),
+            Obx(
+              () => selectedTab.value == MembersSheet.tabCoHosts
+                  ? const SizedBox()
+                  : CustomSearchTextField(
+                      backgroundColor: bgLightGrey(context),
+                      onChanged: (value) => query.value = value,
+                    ),
+            ),
+            Expanded(
+              child: !widget.isHost ? _buildAudienceList() : _buildHostPages(),
+            ),
+          ],
+        ),
       ),
     );
   }
