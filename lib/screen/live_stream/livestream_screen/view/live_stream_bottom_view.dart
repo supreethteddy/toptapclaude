@@ -62,7 +62,17 @@ class LiveStreamBottomView extends StatelessWidget {
                 ),
               ),
             ),
-            Column(
+            // Samsung One UI's gesture-nav bar intercepts touches in a taller
+            // zone near the physical bottom edge than stock Android, which
+            // silently swallowed taps on the host controls row below (flip
+            // camera/mic/video/PK/etc, all confirmed clickable on other
+            // phones) since nothing here previously inset for the bottom
+            // system gesture area. SafeArea pushes just this control overlay
+            // up above that zone; the video background elsewhere stays
+            // edge-to-edge.
+            SafeArea(
+              top: false,
+              child: Column(
               children: [
                 // Comments Section
                 Expanded(
@@ -116,6 +126,7 @@ class LiveStreamBottomView extends StatelessWidget {
                 }),
                 const SizedBox(height: 0),
               ],
+              ),
             ),
           ],
         ),
