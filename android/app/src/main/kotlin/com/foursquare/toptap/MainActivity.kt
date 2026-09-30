@@ -16,6 +16,11 @@ class MainActivity : FlutterActivity() {
     // instead of Zego's own camera capture. See DeepArZegoBridge.kt.
     private val deepArZegoBridgeChannel = "toptap/deepar_zego_bridge"
 
+    // Share-sheet native targets that a URL scheme can't reach on its own
+    // (explicit WhatsApp Business targeting, a real Instagram Story intent).
+    // See NativeShareBridge.kt.
+    private val nativeShareChannel = "toptap/native_share"
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         flutterEngine.plugins.add(PathProviderPlugin())
@@ -40,6 +45,23 @@ class MainActivity : FlutterActivity() {
                 "stop" -> {
                     DeepArZegoBridge.stop()
                     result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            nativeShareChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "shareToWhatsAppBusiness" -> {
+                    val text = call.argument<String>("text") ?: ""
+                    result.success(NativeShareBridge.shareToWhatsAppBusiness(this, text))
+                }
+                "shareToInstagramStory" -> {
+                    val imagePath = call.argument<String>("imagePath") ?: ""
+                    result.success(NativeShareBridge.shareToInstagramStory(this, imagePath))
                 }
                 else -> result.notImplemented()
             }

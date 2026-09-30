@@ -308,11 +308,27 @@ class ShareSheetWidget extends StatelessWidget {
                                     post: post),
                           ),
                           ShareGridItem(
+                            image: AssetRes.icWhatsapp,
+                            label: LKey.whatsappBusiness.tr,
+                            onTap: () => controller
+                                .onShareSheetBottomBtnTap(
+                                    ShareOption.whatsappBusiness, link,
+                                    post: post),
+                          ),
+                          ShareGridItem(
                             image: AssetRes.icInstagram,
                             label: LKey.instagram.tr,
                             onTap: () => controller
                                 .onShareSheetBottomBtnTap(
                                     ShareOption.instagram, link,
+                                    post: post),
+                          ),
+                          ShareGridItem(
+                            image: AssetRes.icInstagram,
+                            label: LKey.instagramStory.tr,
+                            onTap: () => controller
+                                .onShareSheetBottomBtnTap(
+                                    ShareOption.instagramStory, link,
                                     post: post),
                           ),
                           ShareGridItem(
@@ -464,8 +480,10 @@ class CustomAssetWithBgButton extends StatelessWidget {
 enum ShareOption {
   download,
   whatsapp,
+  whatsappBusiness,
   share,
   instagram,
+  instagramStory,
   telegram,
   facebook,
   report,
@@ -483,7 +501,9 @@ enum ShareOption {
       case ShareOption.facebook:
         return "https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(link)}";
       case ShareOption.download:
+      case ShareOption.whatsappBusiness:
       case ShareOption.share:
+      case ShareOption.instagramStory:
       case ShareOption.report:
       case ShareOption.more:
       case ShareOption.copy:

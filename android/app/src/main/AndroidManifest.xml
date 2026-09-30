@@ -4,6 +4,7 @@
         <!-- Explicit apps you know in advance about: -->
         <package android:name="com.instagram.android" />
         <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
         <package android:name="org.telegram.messenger" />
     </queries>
 
@@ -117,7 +118,21 @@
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
             android:theme="@style/UCropTheme" />
-        
+
+        <!-- Grants Instagram (or any external app) read access to a cached
+             post thumbnail so it can be attached to a Story via a content://
+             URI — required by NativeShareBridge.shareToInstagramStory, since
+             other apps can't read our private file:// paths directly. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

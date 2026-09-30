@@ -45,6 +45,13 @@ class ShareSheetWidgetController extends BaseController {
   Function()? onCallBack;
   final RetrytechPlugin _retrytechPlugin = RetrytechPlugin();
 
+  // WhatsApp Business (explicit package targeting) and Instagram Story (the
+  // real ADD_TO_STORY intent, not the generic ACTION_SEND the plain
+  // "Instagram" button uses) — Android-only native code, see
+  // NativeShareBridge.kt. Neither has an iOS equivalent implemented here.
+  static const MethodChannel _nativeShareChannel =
+      MethodChannel('toptap/native_share');
+
   Setting? get setting => SessionManager.instance.getSettings();
 
   ShareSheetWidgetController(this.post, this.onCallBack, this.title);
@@ -154,6 +161,60 @@ class ShareSheetWidgetController extends BaseController {
       case ShareOption.whatsapp:
         await _handleUrlLaunch(type.value('$title $link'),
             fallbackUrl: AppRes.whatsappPlayStoreLink);
+        break;
+
+      case ShareOption.whatsappBusiness:
+        if (!Platform.isAndroid) {
+          Get.back();
+          showSnackBar('WhatsApp Business sharing is Android only for now.');
+          break;
+        }
+        bool sent = false;
+        try {
+          sent = await _nativeShareChannel.invokeMethod(
+                  'shareToWhatsAppBusiness', {'text': '$title $link'}) ==
+              true;
+        } on PlatformException catch (e) {
+          Loggers.error('shareToWhatsAppBusiness failed: $e');
+        }
+        Get.back();
+        if (sent) {
+          increaseShareCount(postId);
+        } else {
+          await AppRes.whatsappBusinessPlayStoreLink.lunchUrl;
+        }
+        break;
+
+      case ShareOption.instagramStory:
+        if (!Platform.isAndroid) {
+          Get.back();
+          showSnackBar('Instagram Story sharing is Android only for now.');
+          break;
+        }
+        final thumbnailUrl = post?.thumbnail?.addBaseURL() ?? '';
+        if (thumbnailUrl.isEmpty) {
+          Get.back();
+          showSnackBar('No image available to share to your Story.');
+          break;
+        }
+        bool storySent = false;
+        try {
+          final localThumb =
+              (await DefaultCacheManager().downloadFile(thumbnailUrl))
+                  .file
+                  .path;
+          storySent = await _nativeShareChannel.invokeMethod(
+                  'shareToInstagramStory', {'imagePath': localThumb}) ==
+              true;
+        } on PlatformException catch (e) {
+          Loggers.error('shareToInstagramStory failed: $e');
+        }
+        Get.back();
+        if (storySent) {
+          increaseShareCount(postId);
+        } else {
+          await AppRes.instagramPlayStoreLink.lunchUrl;
+        }
         break;
 
       case ShareOption.instagram:

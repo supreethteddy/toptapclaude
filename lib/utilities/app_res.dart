@@ -140,6 +140,8 @@ class AppRes {
   // Play store link
   static const String whatsappPlayStoreLink =
       "https://play.google.com/store/apps/details?id=com.whatsapp&hl=en_IN";
+  static const String whatsappBusinessPlayStoreLink =
+      "https://play.google.com/store/apps/details?id=com.whatsapp.w4b&hl=en_IN";
   static const String instagramPlayStoreLink =
       "https://play.google.com/store/apps/details?id=com.instagram.android&hl=en_IN";
   static const String telegramPlayStoreLink =
