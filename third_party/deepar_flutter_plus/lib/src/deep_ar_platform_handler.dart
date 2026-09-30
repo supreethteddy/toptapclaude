@@ -284,6 +284,15 @@ class DeepArPlatformHandler {
     return _channel.invokeMethod("showStats", {"enabled": enabled});
   }
 
+  /// Android only — makes DeepAR's frameAvailable(Image) callback start
+  /// firing so a native listener elsewhere in the app (not this plugin) can
+  /// forward processed frames on, e.g. into a streaming SDK's custom video
+  /// capture. No iOS counterpart.
+  Future<void> enableOffscreenRendering(int width, int height) {
+    return _channel.invokeMethod(
+        "enable_offscreen_rendering", {"width": width, "height": height});
+  }
+
   Future<void> showStatsIos(int view, bool enabled) {
     return _avCameraChannel(view)
         .invokeMethod("showStats", {"enabled": enabled});

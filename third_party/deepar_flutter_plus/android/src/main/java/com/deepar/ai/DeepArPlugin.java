@@ -42,11 +42,25 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.view.TextureRegistry;
 import ai.deepar.ar.DeepAR;
+import ai.deepar.ar.DeepARPixelFormat;
 
 /**
  * DeepArPlugin
  */
 public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAware, PluginRegistry.RequestPermissionsResultListener {
+    /// Lets a separate, app-level native module (not this plugin) receive
+    /// DeepAR's processed output frames without this plugin needing to know
+    /// anything about where they end up — e.g. forwarding them into a
+    /// streaming SDK's custom video capture. Only populated after
+    /// setOffscreenRendering has been enabled via the "enable_offscreen_rendering"
+    /// method call below; frameAvailable(Image) is otherwise never invoked by
+    /// the native DeepAR SDK.
+    public interface RawFrameListener {
+        void onFrame(Image image);
+    }
+
+    public static volatile RawFrameListener rawFrameListener;
+
     /// The MethodChannel that will the communication between Flutter and native Android
     ///
     /// This local reference serves to register the plugin with the Flutter Engine and unregister it
@@ -306,6 +320,27 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
                             return null;
                         },
                         "STOPPING_RECORDING"
+                );
+                break;
+
+            case "enable_offscreen_rendering":
+                // Makes frameAvailable(Image) start firing (it's otherwise
+                // never invoked) so a native listener can forward DeepAR's
+                // processed frames elsewhere (see RawFrameListener above).
+                // RGBA_8888 is the only pixel format this SDK's offscreen
+                // rendering supports.
+                final int rawFrameWidth = (int) arguments.get("width");
+                final int rawFrameHeight = (int) arguments.get("height");
+                executeDeepARAction(
+                        result,
+                        "enableOffscreenRendering",
+                        1500,
+                        () -> {
+                            deepAR.setOffscreenRendering(rawFrameWidth, rawFrameHeight,
+                                    DeepARPixelFormat.RGBA_8888);
+                            return null;
+                        },
+                        "enableOffscreenRendering called successfully"
                 );
                 break;
 
@@ -790,6 +825,20 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
 
     @Override
     public void frameAvailable(Image image) {
+        // DeepAR owns this Image (it's acquired from its own internal
+        // offscreen ImageReader) and is assumed to close it itself right
+        // after notifying listeners here — this SDK ships as a compiled AAR
+        // with no source to confirm that against, so deliberately never
+        // call image.close() from here: double-closing would throw
+        // IllegalStateException from inside DeepAR's own callback dispatch.
+        RawFrameListener listener = rawFrameListener;
+        if (listener != null) {
+            try {
+                listener.onFrame(image);
+            } catch (Exception e) {
+                Log.e(TAG, "RawFrameListener.onFrame failed: " + e);
+            }
+        }
     }
 
     @Override

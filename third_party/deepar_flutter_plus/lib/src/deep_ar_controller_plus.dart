@@ -546,6 +546,21 @@ class DeepArControllerPlus {
             _deepArPlatformHandler.fireTriggerIos(_textureId!, trigger));
   }
 
+  /// Android only. Makes DeepAR start producing raw processed frames via its
+  /// native frameAvailable(Image) callback (otherwise never invoked), for a
+  /// native listener elsewhere in the host app to consume — e.g. bridging
+  /// into a streaming SDK's custom video capture. No-op on iOS.
+  Future<void> enableRawFrameOutput({
+    required int width,
+    required int height,
+  }) async {
+    await platformRun(
+      androidFunction: () =>
+          _deepArPlatformHandler.enableOffscreenRendering(width, height),
+      iOSFunction: () async {},
+    );
+  }
+
   ///Display debugging stats on screen.
   Future<void> showStats({required bool enabled}) async {
     await platformRun(
