@@ -28,4 +28,10 @@ final List<DeepARFilters> localDeepArBeautyFilters = [
     image: AssetRes.icCamera,
     filterFile: '${AssetRes.deepAr}beauty/look2.deepar',
   ),
+  DeepARFilters(
+    id: -5,
+    title: 'Vendetta',
+    image: AssetRes.icPro,
+    filterFile: '${AssetRes.deepAr}beauty/vendetta.deepar',
+  ),
 ];
