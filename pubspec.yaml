@@ -162,6 +162,7 @@ flutter:
     - assets/ar/ # Add this for custom AR effects
     - assets/deep_ar/beauty/
     - assets/deep_ar/thumbnails/
+    - assets/gifts/eagle/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

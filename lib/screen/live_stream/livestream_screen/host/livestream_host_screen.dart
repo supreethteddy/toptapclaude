@@ -10,6 +10,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/live_video_pla
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/party_battle_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/battle_start_countdown_overlay.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_animation_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_background_blur_image.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -96,7 +97,12 @@ class LivestreamHostScreen extends StatelessWidget {
                 }
                 return const SizedBox();
               },
-            )
+            ),
+
+            Obx(() => GiftAnimationOverlay(
+                  trigger: controller.eagleGiftAnimationTrigger.value,
+                  frameAssets: LivestreamScreenController.eagleGiftFrames,
+                )),
           ],
         ),
       ),

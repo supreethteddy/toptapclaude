@@ -184,6 +184,22 @@ class LivestreamScreenController extends BaseController {
   Rx<LivestreamComment?> currentGiftComboComment = Rx(null);
   Timer? _giftComboTimer;
 
+  /// Full-screen "epic gift" animation, bundled locally since there's no
+  /// backend field to attach an animation asset to a gift (Gift only carries
+  /// a static `image` URL — see settings_model.dart) and no admin UI to add
+  /// one from this session. Hardcoded to this backend's one existing gift
+  /// (id 18); bumping the trigger int (rather than a bool) lets the same
+  /// gift be sent again immediately and still replay from frame 0, and every
+  /// viewer bumps it identically since it's driven by the same shared
+  /// comments snapshot listener each of them already runs (see
+  /// fetchLiveStreamComments), not a per-device local action.
+  static const int eagleGiftId = 18;
+  RxInt eagleGiftAnimationTrigger = 0.obs;
+  static final List<String> eagleGiftFrames = List.generate(
+    66,
+    (i) => 'assets/gifts/eagle/eagle_${(i + 1).toString().padLeft(3, '0')}.png',
+  );
+
   void _registerGiftForCombo(LivestreamComment comment) {
     final last = currentGiftComboComment.value;
     final isSameStreak = last != null &&
@@ -1288,6 +1304,9 @@ class LivestreamScreenController extends BaseController {
             comments.add(comment);
             if (comment.commentType == LivestreamCommentType.gift) {
               _registerGiftForCombo(comment);
+              if (comment.giftId == eagleGiftId) {
+                eagleGiftAnimationTrigger.value++;
+              }
             }
             // Loggers.info('New comment added: ${comment.toJson()}');
             break;
