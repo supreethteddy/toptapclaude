@@ -13,25 +13,25 @@ final List<DeepARFilters> localDeepArBeautyFilters = [
   DeepARFilters(
     id: -2,
     title: 'Natural Glow',
-    image: AssetRes.icStar,
+    image: '${AssetRes.deepAr}thumbnails/natural_glow.png',
     filterFile: '${AssetRes.deepAr}beauty/base_beauty.deepar',
   ),
   DeepARFilters(
     id: -3,
     title: 'Rose Blush',
-    image: AssetRes.icFilter,
+    image: '${AssetRes.deepAr}thumbnails/rose_blush.png',
     filterFile: '${AssetRes.deepAr}beauty/look1.deepar',
   ),
   DeepARFilters(
     id: -4,
     title: 'Evening Glam',
-    image: AssetRes.icCamera,
+    image: '${AssetRes.deepAr}thumbnails/evening_glam.png',
     filterFile: '${AssetRes.deepAr}beauty/look2.deepar',
   ),
   DeepARFilters(
     id: -5,
     title: 'Vendetta',
-    image: AssetRes.icPro,
+    image: '${AssetRes.deepAr}thumbnails/vendetta.png',
     filterFile: '${AssetRes.deepAr}beauty/vendetta.deepar',
   ),
 ];
