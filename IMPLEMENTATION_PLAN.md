@@ -93,6 +93,10 @@ DB::transaction(function () use ($request, $user, $gift, $dataUser) {
 
 **Rollback plan if approved**: single git commit on the Laravel repo (or direct file edit on the VPS with a `.bak` copy kept, if that repo isn't under version control there — needs checking at approval time), PHP-FPM reload only (no downtime, no schema change).
 
+**Status: deployed and verified (2026-10-01).** The Laravel app on the VPS is not under version control, so the original file was backed up to `/root/WalletController.php.bak-20261001-173804` before editing. The fix was applied as proposed above (close to verbatim — the receiver-side `increment()` calls don't need `lockForUpdate()` since a single-column increment is already an atomic `UPDATE` in MySQL; only the sender's check-then-deduct needed the lock), syntax-checked with `php -l`, deployed to the live path, and `php8.3-fpm` reloaded.
+
+Verified with a real concurrency test against the live endpoint using two pre-existing QA test accounts (`qahost1` id 55, `QAViewer8569` id 56 — not real users): sender's balance was set to 1 coin, then two simultaneous `sendGift` calls (1-coin gift) were fired at `http://127.0.0.1/api/misc/sendGift`. Result: exactly one succeeded (`gift sent successfully!`), the other was correctly rejected (`no enough coins in your wallet!`); final state was sender=0 coins / `coin_gifted_lifetime`+1, receiver=+1 coin / `coin_collected_lifetime`+1 — no double-spend, no double-credit, no negative balance. Test balances were restored to 100/100 afterward. `laravel.log` showed no new errors from the change.
+
 ## Verification approach (per phase, matching this session's established pattern)
 
 1. `flutter analyze` after each Flutter phase, confirm the 323-issue baseline is unchanged.
