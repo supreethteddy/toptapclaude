@@ -40,11 +40,18 @@ class LiveStreamBottomView extends StatelessWidget {
           alignment: Alignment.bottomCenter,
           children: [
             const BlackGradientShadow(height: 200),
-            // Floating Right Controls (positioned absolutely)
+            // Floating Right Controls (positioned absolutely). bottom was
+            // 80 from when this panel only showed on demand (an up-arrow
+            // toggle, since removed) and so was rarely on screen at the same
+            // time as the always-visible share icon just below it in
+            // _buildBottomControlsRow - with the panel now always shown that
+            // low an offset put its "more options" dot icon right on top of
+            // share. Raised clear of both that row and the host controls
+            // row beneath it.
             Obx(
               () => Positioned(
                 right: 15,
-                bottom: 80,
+                bottom: 160,
                 child: AnimatedSlide(
                   duration: const Duration(milliseconds: 300),
                   offset: controller.isRightControlsVisible.value
@@ -285,10 +292,6 @@ class LiveStreamBottomView extends StatelessWidget {
             ),
             if (state?.type == LivestreamUserType.host)
               _GuestsButton(controller: controller),
-            if (state?.type == LivestreamUserType.host &&
-                stream.type != LivestreamType.battle &&
-                stream.battleType == BattleType.initiate)
-              _PkButton(controller: controller),
             if (state?.type == LivestreamUserType.host)
               IconButton(
                 tooltip: 'About Me',
@@ -747,53 +750,3 @@ class _GuestsButton extends StatelessWidget {
   }
 }
 
-/// PK battle entry point (client item L-12). Always visible for the host;
-/// explains what is missing when no guest is on screen yet.
-class _PkButton extends StatelessWidget {
-  final LivestreamScreenController controller;
-
-  const _PkButton({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final ready = controller.canStartBattle;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: GestureDetector(
-          onTap: controller.startBattle,
-          child: Container(
-            height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              gradient: ready
-                  ? const LinearGradient(
-                      colors: [Color(0xFFFF3D6E), Color(0xFF7C4DFF)])
-                  : null,
-              color: ready ? null : Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.white.withOpacity(0.35)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(AssetRes.icBattleVs,
-                    height: 14, width: 14, color: Colors.white),
-                const SizedBox(width: 4),
-                Text(
-                  LKey.pk.tr,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    });
-  }
-}
