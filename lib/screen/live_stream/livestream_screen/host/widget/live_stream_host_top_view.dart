@@ -69,13 +69,29 @@ class LiveStreamHostTopView extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            LikesCountPill(controller: controller),
-                            const SizedBox(width: 6),
-                            LiveRankChip(controller: controller),
-                            const SizedBox(width: 6),
-                            HourlyRankChip(controller: controller),
-                            const SizedBox(width: 6),
-                            LeagueBadge(controller: controller),
+                            // Four fixed-width chips after a flexible
+                            // username: on a narrow screen their combined
+                            // natural width can still exceed what's left,
+                            // which overflowed the row outright before this
+                            // was made scrollable (none of them can shrink
+                            // without clipping their own text/icon).
+                            Flexible(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    LikesCountPill(controller: controller),
+                                    const SizedBox(width: 6),
+                                    LiveRankChip(controller: controller),
+                                    const SizedBox(width: 6),
+                                    HourlyRankChip(controller: controller),
+                                    const SizedBox(width: 6),
+                                    LeagueBadge(controller: controller),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 2),
