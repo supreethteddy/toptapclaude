@@ -62,6 +62,16 @@ class Livestream {
   // [pendingBattleInviteFromId] is awaiting accept/decline.
   int? pendingBattleInviteFromId;
 
+  // When the invite above was sent (ms epoch) — lets both the inviter's and
+  // invitee's device independently compute whether it's past
+  // AppRes.battleInviteExpiryInSecond without needing a server timer.
+  int? battleInviteSentAt;
+
+  // Same shape as [pendingBattleInviteFromId], written after a battle has
+  // ended rather than before one starts — the other host requested a
+  // rematch and it's awaiting accept/decline on THIS room's doc.
+  int? pendingRematchFromId;
+
   // PK Battle rounds: how many rounds each side has won across the current
   // multi-round match. Cleared only when the whole match ends (Stop), not
   // between individual rounds (Next Round). Cross-room battles use
@@ -108,6 +118,8 @@ class Livestream {
     this.poll,
     this.opponentRoomId,
     this.pendingBattleInviteFromId,
+    this.battleInviteSentAt,
+    this.pendingRematchFromId,
     this.battleRoundWins,
     this.battleRoundWinsHost,
     this.battleRoundWinsCoHost,
@@ -151,6 +163,8 @@ class Livestream {
         : null;
     opponentRoomId = json['opponent_room_id'];
     pendingBattleInviteFromId = json['pending_battle_invite_from_id'];
+    battleInviteSentAt = json['battle_invite_sent_at'];
+    pendingRematchFromId = json['pending_rematch_from_id'];
     battleRoundWins = json['battle_round_wins'];
     battleRoundWinsHost = json['battle_round_wins_host'];
     battleRoundWinsCoHost = json['battle_round_wins_cohost'];
@@ -190,6 +204,8 @@ class Livestream {
     data['poll'] = poll?.toJson();
     data['opponent_room_id'] = opponentRoomId;
     data['pending_battle_invite_from_id'] = pendingBattleInviteFromId;
+    data['battle_invite_sent_at'] = battleInviteSentAt;
+    data['pending_rematch_from_id'] = pendingRematchFromId;
     data['battle_round_wins'] = battleRoundWins;
     data['battle_round_wins_host'] = battleRoundWinsHost;
     data['battle_round_wins_cohost'] = battleRoundWinsCoHost;

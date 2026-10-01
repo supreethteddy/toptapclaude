@@ -325,9 +325,15 @@ class LKey {
   static const String battleInviteSent = "PK invite sent!";
   static const String battleInviteFailed =
       "Couldn't send that invite. Try again.";
+  static const String battleInviteExpired =
+      "That invite has expired.";
   static const String battleInviteTitle = "Incoming PK Battle";
   static const String battleInviteDescription =
       "@name wants to battle you. Accept?";
+  static const String rematchRequestSent = "Rematch request sent!";
+  static const String rematchRequestTitle = "Rematch?";
+  static const String rematchRequestDescription =
+      "@name wants a rematch. Accept?";
   static const String inviteViewers = "Viewers you can invite";
   static const String noViewersToInvite = "No viewers to invite yet";
   static const String dailyRanking = "Daily Ranking";
@@ -354,6 +360,8 @@ class LKey {
       "Hosts in @division appear here as soon as they receive gifts this week.";
   static const String win = "WIN";
   static const String nextRound = "Next Round";
+  static const String rematch = "Rematch";
+  static const String opponentReconnecting = "Opponent reconnecting…";
   static const String round = "Round";
   static const String firstGiftBonus = "First Gift x@multiplier gifting points";
   static const String contributorRanking = "Contributor Ranking";
@@ -378,6 +386,7 @@ class LKey {
   static const String mentionSomeone = "Mention someone";
   static const String victory = "Victory";
   static const String defeat = "Defeat";
+  static const String battleDraw = "Draw";
   static const String streamedFor = "Streamed For";
   static const String followersGained = "Followers Gained";
   static const String totalCoinsCollected = "Total Coins Collected";

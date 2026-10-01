@@ -11,6 +11,7 @@ import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
@@ -396,7 +397,12 @@ class BuildStates extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isRedWin = red >= blue;
+    // Was `red >= blue`, which silently counted a tie as a red win — fixed
+    // using the same shared, unit-tested outcome function as the cross-room
+    // view (party_battle_view.dart) and `_recordBattleHistory`.
+    final outcome = determineBattleOutcome(red, blue);
+    bool isDraw = outcome == BattleOutcome.draw;
+    bool isRedWin = outcome == BattleOutcome.sideAWins;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -439,9 +445,9 @@ class BuildStates extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildWinnerTag(context,
-                        rightSide: false, winnerTag: isRedWin),
+                        rightSide: false, winnerTag: isRedWin, isDraw: isDraw),
                     _buildWinnerTag(context,
-                        rightSide: true, winnerTag: !isRedWin),
+                        rightSide: true, winnerTag: !isRedWin, isDraw: isDraw),
                   ],
                 ),
                 if (controller.isHost && controller.canStartNextRound)
@@ -529,7 +535,12 @@ class BuildStates extends StatelessWidget {
   }
 
   Widget _buildWinnerTag(BuildContext context,
-      {required bool rightSide, required bool winnerTag}) {
+      {required bool rightSide,
+      required bool winnerTag,
+      bool isDraw = false}) {
+    final tagColor = isDraw
+        ? Colors.grey
+        : (winnerTag ? ColorRes.green : ColorRes.likeRed);
     return Expanded(
       child: Container(
         height: 31,
@@ -540,7 +551,7 @@ class BuildStates extends StatelessWidget {
         decoration: BoxDecoration(
             gradient: LinearGradient(
                 colors: [
-              winnerTag ? ColorRes.green : ColorRes.likeRed,
+              tagColor,
               Colors.transparent,
             ],
                 begin: !rightSide
@@ -550,9 +561,14 @@ class BuildStates extends StatelessWidget {
                     ? AlignmentDirectional.centerStart
                     : AlignmentDirectional.centerEnd)),
         child: Text(
-          (winnerTag ? LKey.victory.tr : LKey.defeat.tr).toUpperCase(),
+          (isDraw
+                  ? LKey.battleDraw.tr
+                  : (winnerTag ? LKey.victory.tr : LKey.defeat.tr))
+              .toUpperCase(),
           style: TextStyleCustom.unboundedBlack900(
-              color: winnerTag ? ColorRes.green1 : ColorRes.likeRed,
+              color: isDraw
+                  ? Colors.grey
+                  : (winnerTag ? ColorRes.green1 : ColorRes.likeRed),
               fontSize: 17),
         ),
       ),

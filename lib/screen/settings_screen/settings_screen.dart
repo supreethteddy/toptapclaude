@@ -8,6 +8,7 @@ import 'package:shortzz/common/widget/custom_toggle.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/accessibility_settings_screen/accessibility_settings_screen.dart';
+import 'package:shortzz/screen/battle_history_screen/battle_history_screen.dart';
 import 'package:shortzz/screen/notification_screen/notification_screen.dart';
 import 'package:shortzz/screen/blocked_user_screen/blocked_user_screen.dart';
 import 'package:shortzz/screen/content_preferences_screen/content_preferences_screen.dart';
@@ -208,6 +209,15 @@ class SettingsScreen extends StatelessWidget {
                     onTap: () {
                       Get.to(
                         () => const CreateLiveStreamScreen(),
+                      );
+                    },
+                  ),
+                  SettingIconTextWithArrow(
+                    icon: AssetRes.icBattleVs,
+                    title: "Battle History",
+                    onTap: () {
+                      Get.to(
+                        () => const BattleHistoryScreen(),
                       );
                     },
                   ),

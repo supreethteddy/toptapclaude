@@ -5,6 +5,7 @@ import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/battle_view.dart';
@@ -125,7 +126,14 @@ class _PartyBattleStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isRedWin = red >= blue;
+    // Was `red >= blue`, which silently counted a tie as a red win — the
+    // post-battle tag would say "VICTORY"/"DEFEAT" on a genuinely equal
+    // score, contradicting `_recordBattleHistory`'s outcome check (and the
+    // spec's "declare DRAW if equal"). determineBattleOutcome is the same
+    // shared, unit-tested function that side uses.
+    final outcome = determineBattleOutcome(red, blue);
+    bool isDraw = outcome == BattleOutcome.draw;
+    bool isRedWin = outcome == BattleOutcome.sideAWins;
     AppUser? myHost =
         controller.firestoreController.users.firstWhereOrNull(
             (user) => user.userId == controller.liveData.value.hostId);
@@ -164,12 +172,31 @@ class _PartyBattleStats extends StatelessWidget {
                 );
               }),
               FirstGiftBonusBanner(controller: controller),
+              Obx(() => controller.isOpponentReconnecting.value
+                  ? Container(
+                      margin:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: .55),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        LKey.opponentReconnecting.tr,
+                        style: TextStyleCustom.outFitMedium500(
+                            color: Colors.white, fontSize: 11),
+                      ),
+                    )
+                  : const SizedBox()),
               if (stream.battleType == BattleType.end) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _winnerTag(context, rightSide: false, isWinner: isRedWin),
-                    _winnerTag(context, rightSide: true, isWinner: !isRedWin),
+                    _winnerTag(context,
+                        rightSide: false, isWinner: isRedWin, isDraw: isDraw),
+                    _winnerTag(context,
+                        rightSide: true, isWinner: !isRedWin, isDraw: isDraw),
                   ],
                 ),
                 if (controller.isHost && controller.canStartNextRound)
@@ -190,6 +217,30 @@ class _PartyBattleStats extends StatelessWidget {
                                     .withValues(alpha: .3))),
                         child: Text(
                           LKey.nextRound.tr,
+                          style: TextStyleCustom.outFitSemiBold600(
+                              color: whitePure(context), fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  )
+                // Whole match concluded (no rounds left), not just one
+                // round — this is where a rematch (a brand-new battle) makes
+                // sense, as opposed to "Next Round" which continues the
+                // current match.
+                else if (controller.isHost && !controller.canStartNextRound)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: InkWell(
+                      onTap: controller.requestRematch,
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            color: ColorRes.likeRed),
+                        child: Text(
+                          LKey.rematch.tr,
                           style: TextStyleCustom.outFitSemiBold600(
                               color: whitePure(context), fontSize: 14),
                         ),
@@ -226,7 +277,11 @@ class _PartyBattleStats extends StatelessWidget {
   }
 
   Widget _winnerTag(BuildContext context,
-      {required bool rightSide, required bool isWinner}) {
+      {required bool rightSide,
+      required bool isWinner,
+      bool isDraw = false}) {
+    final tagColor =
+        isDraw ? Colors.grey : (isWinner ? ColorRes.green : ColorRes.likeRed);
     return Expanded(
       child: Container(
         height: 31,
@@ -237,7 +292,7 @@ class _PartyBattleStats extends StatelessWidget {
         decoration: BoxDecoration(
             gradient: LinearGradient(
                 colors: [
-              isWinner ? ColorRes.green : ColorRes.likeRed,
+              tagColor,
               Colors.transparent,
             ],
                 begin: !rightSide
@@ -247,9 +302,14 @@ class _PartyBattleStats extends StatelessWidget {
                     ? AlignmentDirectional.centerStart
                     : AlignmentDirectional.centerEnd)),
         child: Text(
-          (isWinner ? LKey.victory.tr : LKey.defeat.tr).toUpperCase(),
+          (isDraw
+                  ? LKey.battleDraw.tr
+                  : (isWinner ? LKey.victory.tr : LKey.defeat.tr))
+              .toUpperCase(),
           style: TextStyleCustom.unboundedBlack900(
-              color: isWinner ? ColorRes.green1 : ColorRes.likeRed,
+              color: isDraw
+                  ? Colors.grey
+                  : (isWinner ? ColorRes.green1 : ColorRes.likeRed),
               fontSize: 17),
         ),
       ),

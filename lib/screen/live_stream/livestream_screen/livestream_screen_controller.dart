@@ -13,6 +13,8 @@ import 'package:shortzz/common/extensions/user_extension.dart';
 import 'package:shortzz/common/manager/firebase_notification_manager.dart';
 import 'package:shortzz/common/manager/haptic_manager.dart';
 import 'package:shortzz/common/manager/logger.dart';
+import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
+import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/notification_service.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
@@ -104,6 +106,7 @@ class LivestreamScreenController extends BaseController {
       <LivestreamUserState>[].obs;
   RxList<StreamView> opponentStreamViews = <StreamView>[].obs;
   int? _lastHandledInviteFromId;
+  int? _lastHandledRematchFromId;
 
   TextEditingController textCommentController = TextEditingController();
 
@@ -312,6 +315,7 @@ class LivestreamScreenController extends BaseController {
     minViewerTimeoutTimer?.cancel();
     presenceTimer?.cancel();
     _giftComboTimer?.cancel();
+    _battleInviteExpiryTimer?.cancel();
     videoPlayerController.value?.dispose();
     liveStreamUserStatesListener?.cancel();
     liveStreamCommentsListener?.cancel();
@@ -1176,6 +1180,18 @@ class LivestreamScreenController extends BaseController {
           _lastHandledInviteFromId = null;
         }
 
+        // Rematch: same shape as the invite above, just checked after a
+        // battle has already ended rather than before one starts.
+        if (isHost &&
+            stream.pendingRematchFromId != null &&
+            stream.pendingRematchFromId != _lastHandledRematchFromId) {
+          _lastHandledRematchFromId = stream.pendingRematchFromId;
+          _showIncomingRematchDialog(stream.pendingRematchFromId!);
+        }
+        if (stream.pendingRematchFromId == null) {
+          _lastHandledRematchFromId = null;
+        }
+
         // Cross-room PK Battle: start/stop watching the opponent room as
         // opponentRoomId comes and goes.
         if (stream.opponentRoomId != _watchedOpponentRoomId) {
@@ -1458,6 +1474,17 @@ class LivestreamScreenController extends BaseController {
         if (type == GiftType.battle) {
           coinPrice = await _claimFirstGiftBonusIfEligible(coinPrice);
         }
+        // Battle score and real coin value are deliberately different
+        // numbers: battleGiftTiers lets specific gifts (Rose/Heart/Coffee/
+        // Galaxy) be worth a fixed, configured point value in a PK Battle
+        // (e.g. Galaxy = 1000) independent of what they actually cost in
+        // coins. Everything else (liveCoin, the ranking/league controllers
+        // below) still uses the real coinPrice, including the first-gift
+        // bonus applied above — only the battle scoreboard itself reads
+        // battlePoints. A gift with no tier mapping falls back to coinPrice
+        // 1:1, so this is a no-op for every gift not explicitly configured.
+        final battlePoints =
+            battlePointsForGift(gift.id, fallbackCoins: coinPrice);
 
         _sendCommentToFirestore(
           type: LivestreamCommentType.gift,
@@ -1466,8 +1493,8 @@ class LivestreamScreenController extends BaseController {
         );
         updateUserStateToFirestore(
           user?.userId,
-          battleCoin: type == GiftType.battle ? coinPrice : null,
-          currentBattleCoin: type == GiftType.battle ? coinPrice : null,
+          battleCoin: type == GiftType.battle ? battlePoints : null,
+          currentBattleCoin: type == GiftType.battle ? battlePoints : null,
           liveCoin: type == GiftType.livestream ? coinPrice : null,
         );
         // Daily + hourly ranking: every coin received in a LIVE counts for
@@ -1911,6 +1938,11 @@ class LivestreamScreenController extends BaseController {
           if (isBattleOn) {
             roundBaselineRed.value = 0;
             roundBaselineBlue.value = 0;
+            // Manual stop has no intermediate BattleType.end "frozen" state
+            // the way a natural timer-expiry does — it jumps straight to
+            // reset, so history has to be captured right here or the data
+            // is gone.
+            unawaited(_recordBattleHistory(endReason: 'manual_stop'));
             if (liveData.value.opponentRoomId != null) {
               endCrossRoomBattleAndReset();
             } else {
@@ -2061,7 +2093,11 @@ class LivestreamScreenController extends BaseController {
     if (opponentRoomId != null) {
       final myCoins = mySideBattleCoins;
       final opponentCoins = opponentSideBattleCoins;
-      final myWon = myCoins >= opponentCoins;
+      // A tied round previously always credited MY side with the round win
+      // (`myWon = myCoins >= opponentCoins`) — neither side should score a
+      // round win on a genuine tie.
+      final isRoundDraw = myCoins == opponentCoins;
+      final myWon = !isRoundDraw && myCoins > opponentCoins;
       roundBaselineRed.value = myCoins;
       roundBaselineBlue.value = opponentCoins;
       try {
@@ -2076,7 +2112,8 @@ class LivestreamScreenController extends BaseController {
         batch.update(_roomDocRef(opponentRoomId), {
           FirebaseConst.battleType: BattleType.waiting.value,
           FirebaseConst.battleCreatedAt: now,
-          FirebaseConst.battleRoundWins: FieldValue.increment(myWon ? 0 : 1),
+          FirebaseConst.battleRoundWins:
+              FieldValue.increment((!isRoundDraw && !myWon) ? 1 : 0),
           FirebaseConst.battleCurrentRound: nextRound,
           FirebaseConst.firstGiftBonusClaimed: false,
         });
@@ -2093,14 +2130,16 @@ class LivestreamScreenController extends BaseController {
           .firstWhereOrNull((state) => state.userId == coHostId);
       final hostCoins = hostState?.currentBattleCoin ?? 0;
       final coHostCoins = coHostState?.currentBattleCoin ?? 0;
-      final hostWon = hostCoins >= coHostCoins;
+      final isRoundDraw = hostCoins == coHostCoins;
+      final hostWon = !isRoundDraw && hostCoins > coHostCoins;
       roundBaselineRed.value = hostCoins;
       roundBaselineBlue.value = coHostCoins;
       await updateLiveStreamData(
         battleType: BattleType.waiting,
         battleCreatedAt: now,
         battleRoundWinsHost: hostWon ? FieldValue.increment(1) : null,
-        battleRoundWinsCoHost: hostWon ? null : FieldValue.increment(1),
+        battleRoundWinsCoHost:
+            (!isRoundDraw && !hostWon) ? FieldValue.increment(1) : null,
         battleCurrentRound: nextRound,
         firstGiftBonusClaimed: false,
       );
@@ -2131,11 +2170,29 @@ class LivestreamScreenController extends BaseController {
   DocumentReference _roomDocRef(String roomId) =>
       db.collection(FirebaseConst.liveStreams).doc(roomId);
 
+  /// Transaction-guarded so two hosts inviting each other at the same
+  /// instant (or someone double-tapping Challenge) can't both land a write —
+  /// previously this was a bare `.update()`, so a second invite always
+  /// silently clobbered whatever the target's doc already had.
   Future<void> sendBattleInvite(int opponentHostId) async {
     if (!isHost) return;
     try {
-      await _roomDocRef('$opponentHostId').update({
-        FirebaseConst.pendingBattleInviteFromId: myUserId,
+      final targetRef = _roomDocRef('$opponentHostId');
+      await db.runTransaction((transaction) async {
+        final snapshot = await transaction.get(targetRef);
+        final data = snapshot.data() as Map<String, dynamic>?;
+        if (data == null) {
+          throw Exception('Target room no longer exists');
+        }
+        final target = Livestream.fromJson(data);
+        if (target.type == LivestreamType.battle ||
+            target.pendingBattleInviteFromId != null) {
+          throw Exception('Target is already busy');
+        }
+        transaction.update(targetRef, {
+          FirebaseConst.pendingBattleInviteFromId: myUserId,
+          FirebaseConst.battleInviteSentAt: DateTime.now().millisecondsSinceEpoch,
+        });
       });
       showSnackBar(LKey.battleInviteSent.tr);
     } catch (e) {
@@ -2144,14 +2201,34 @@ class LivestreamScreenController extends BaseController {
     }
   }
 
+  Timer? _battleInviteExpiryTimer;
+
   void _showIncomingBattleInviteDialog(int fromHostId) {
     if (liveData.value.type == LivestreamType.battle) {
       // Already battling (or mid-invite) — quietly decline further invites.
       declineBattleInvite();
       return;
     }
+    // Enforce the expiry on the invitee's side too, not just by the
+    // inviter clearing it later — a dialog sitting open past the window
+    // shouldn't still be acceptable.
+    final sentAt = liveData.value.battleInviteSentAt;
+    if (sentAt != null) {
+      final elapsedSeconds =
+          (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
+      if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
+        declineBattleInvite();
+        return;
+      }
+    }
     final inviter = firestoreController.users
         .firstWhereOrNull((user) => user.userId == fromHostId);
+    _battleInviteExpiryTimer?.cancel();
+    _battleInviteExpiryTimer =
+        Timer(const Duration(seconds: AppRes.battleInviteExpiryInSecond), () {
+      if (Get.isDialogOpen ?? false) Get.back();
+      declineBattleInvite();
+    });
     Get.dialog(
       AlertDialog(
         title: Text(LKey.battleInviteTitle.tr),
@@ -2160,6 +2237,7 @@ class LivestreamScreenController extends BaseController {
         actions: [
           TextButton(
             onPressed: () {
+              _battleInviteExpiryTimer?.cancel();
               Get.back();
               declineBattleInvite();
             },
@@ -2167,6 +2245,7 @@ class LivestreamScreenController extends BaseController {
           ),
           TextButton(
             onPressed: () {
+              _battleInviteExpiryTimer?.cancel();
               Get.back();
               acceptBattleInvite(fromHostId);
             },
@@ -2181,10 +2260,145 @@ class LivestreamScreenController extends BaseController {
   Future<void> declineBattleInvite() async {
     await liveStreamDocRef.update({
       FirebaseConst.pendingBattleInviteFromId: null,
+      FirebaseConst.battleInviteSentAt: null,
     });
   }
 
   Future<void> acceptBattleInvite(int fromHostId) async {
+    if (!isHost) return;
+    // Re-check freshness at accept time, not just at dialog-open time — a
+    // dialog can sit on screen while the invite expires underneath it.
+    final sentAt = liveData.value.battleInviteSentAt;
+    if (sentAt != null) {
+      final elapsedSeconds =
+          (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
+      if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
+        showSnackBar(LKey.battleInviteExpired.tr);
+        await declineBattleInvite();
+        return;
+      }
+    }
+    final myRoomId = liveData.value.roomID;
+    if (myRoomId == null) return;
+    final opponentRoomId = '$fromHostId';
+    roundBaselineRed.value = 0;
+    roundBaselineBlue.value = 0;
+    try {
+      // A transaction (not a plain batch) so the invite can't be accepted
+      // twice, or accepted after the inviter already cancelled/expired it,
+      // or accepted while the opponent raced into a different battle in the
+      // meantime — all reads happen first, then both writes commit atomically
+      // only if every check still holds against the latest server state.
+      await db.runTransaction((transaction) async {
+        final mySnapshot = await transaction.get(liveStreamDocRef);
+        final opponentSnapshot =
+            await transaction.get(_roomDocRef(opponentRoomId));
+        final myData = mySnapshot.data() as Map<String, dynamic>?;
+        final opponentData = opponentSnapshot.data() as Map<String, dynamic>?;
+        if (myData == null || opponentData == null) {
+          throw Exception('Room no longer exists');
+        }
+        final myLatest = Livestream.fromJson(myData);
+        final opponentLatest = Livestream.fromJson(opponentData);
+        if (myLatest.pendingBattleInviteFromId != fromHostId) {
+          throw Exception('Invite no longer pending');
+        }
+        if (opponentLatest.type == LivestreamType.battle) {
+          throw Exception('Opponent already in a battle');
+        }
+        final now = DateTime.now().millisecondsSinceEpoch;
+        transaction.update(liveStreamDocRef, {
+          FirebaseConst.type: LivestreamType.battle.value,
+          FirebaseConst.battleType: BattleType.waiting.value,
+          FirebaseConst.battleCreatedAt: now,
+          FirebaseConst.opponentRoomId: opponentRoomId,
+          FirebaseConst.pendingBattleInviteFromId: null,
+          FirebaseConst.battleInviteSentAt: null,
+          FirebaseConst.battleRoundWins: 0,
+          FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
+          FirebaseConst.battleCurrentRound: 1,
+          FirebaseConst.firstGiftBonusClaimed: false,
+        });
+        transaction.update(_roomDocRef(opponentRoomId), {
+          FirebaseConst.type: LivestreamType.battle.value,
+          FirebaseConst.battleType: BattleType.waiting.value,
+          FirebaseConst.battleCreatedAt: now,
+          FirebaseConst.opponentRoomId: myRoomId,
+          FirebaseConst.battleRoundWins: 0,
+          FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
+          FirebaseConst.battleCurrentRound: 1,
+          FirebaseConst.firstGiftBonusClaimed: false,
+        });
+      });
+    } catch (e) {
+      Loggers.error('Failed to accept PK invite: $e');
+      showSnackBar(LKey.battleInviteFailed.tr);
+    }
+  }
+
+  /// Only meaningful right after a cross-room battle has ended — the two
+  /// rooms are still linked via [opponentRoomId] at that point (nothing is
+  /// cleared until [endCrossRoomBattleAndReset] runs), so this reuses that
+  /// same link rather than needing the opponent to be re-discovered via
+  /// [FindOpponentScreen].
+  Future<void> requestRematch() async {
+    final opponentRoomId = liveData.value.opponentRoomId;
+    if (opponentRoomId == null) {
+      showSnackBar(LKey.battleInviteFailed.tr);
+      return;
+    }
+    try {
+      await _roomDocRef(opponentRoomId).update({
+        FirebaseConst.pendingRematchFromId: myUserId,
+      });
+      showSnackBar(LKey.rematchRequestSent.tr);
+    } catch (e) {
+      Loggers.error('Failed to request rematch: $e');
+      showSnackBar(LKey.battleInviteFailed.tr);
+    }
+  }
+
+  void _showIncomingRematchDialog(int fromHostId) {
+    final requester = firestoreController.users
+        .firstWhereOrNull((user) => user.userId == fromHostId);
+    Get.dialog(
+      AlertDialog(
+        title: Text(LKey.rematchRequestTitle.tr),
+        content: Text(LKey.rematchRequestDescription
+            .trParams({'name': requester?.username ?? 'A creator'})),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+              declineRematch();
+            },
+            child: Text(LKey.refuse.tr),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              acceptRematch(fromHostId);
+            },
+            child: Text(LKey.accept.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> declineRematch() async {
+    await liveStreamDocRef.update({
+      FirebaseConst.pendingRematchFromId: null,
+    });
+  }
+
+  /// Same batch shape as [acceptBattleInvite] (fresh battleCreatedAt, zeroed
+  /// round wins, round 1) — a rematch is a brand-new battle/battleId, the
+  /// previous match's result is already safe in `battle_history` via
+  /// [_recordBattleHistory], called before this room's old battle fields
+  /// get overwritten here.
+  Future<void> acceptRematch(int fromHostId) async {
     if (!isHost) return;
     final myRoomId = liveData.value.roomID;
     if (myRoomId == null) return;
@@ -2198,7 +2412,7 @@ class LivestreamScreenController extends BaseController {
         FirebaseConst.battleType: BattleType.waiting.value,
         FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
         FirebaseConst.opponentRoomId: opponentRoomId,
-        FirebaseConst.pendingBattleInviteFromId: null,
+        FirebaseConst.pendingRematchFromId: null,
         FirebaseConst.battleRoundWins: 0,
         FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
         FirebaseConst.battleCurrentRound: 1,
@@ -2216,8 +2430,97 @@ class LivestreamScreenController extends BaseController {
       });
       await batch.commit();
     } catch (e) {
-      Loggers.error('Failed to accept PK invite: $e');
+      Loggers.error('Failed to accept rematch: $e');
       showSnackBar(LKey.battleInviteFailed.tr);
+    }
+  }
+
+  /// Freezes the current score and writes one immutable history document
+  /// before anything gets reset. Must be called while all the battle fields
+  /// (opponentRoomId, battleCreatedAt, round wins, per-side coin totals)
+  /// are still populated — i.e. before `endCrossRoomBattleAndReset` or the
+  /// same-room equivalent wipes them. Safe to call from either host's
+  /// device independently: both sides compute the same battleId
+  /// (deterministic from the two room ids + battleCreatedAt, sorted so
+  /// order doesn't matter) and Firestore's `set` is idempotent on a fixed
+  /// document id, so a double-write from both hosts racing to end the
+  /// battle just overwrites with the same data rather than creating a
+  /// duplicate record.
+  Future<void> _recordBattleHistory({required String endReason}) async {
+    try {
+      final stream = liveData.value;
+      final myHostId = stream.hostId ?? myUserId;
+      final myRoomId = stream.roomID;
+      if (myRoomId == null) return;
+      final isCrossRoom = stream.opponentRoomId != null;
+
+      late final int opponentHostId;
+      late final List<String> roomIds;
+      late final Map<String, int> finalScores;
+      late final Map<String, int> roundsWon;
+
+      if (isCrossRoom) {
+        opponentHostId = int.tryParse(stream.opponentRoomId!) ?? -1;
+        if (opponentHostId == -1) return;
+        roomIds = [myRoomId, stream.opponentRoomId!]..sort();
+        finalScores = {
+          '$myHostId': mySideBattleCoins,
+          '$opponentHostId': opponentSideBattleCoins,
+        };
+        roundsWon = {
+          '$myHostId': stream.battleRoundWins ?? 0,
+          '$opponentHostId': opponentLiveData.value?.battleRoundWins ?? 0,
+        };
+      } else {
+        final coHostIds = stream.coHostIds ?? const <int>[];
+        if (coHostIds.isEmpty) return;
+        opponentHostId = coHostIds.first;
+        roomIds = [myRoomId];
+        final hostState = liveUsersStates
+            .firstWhereOrNull((state) => state.userId == myHostId);
+        final coHostState = liveUsersStates
+            .firstWhereOrNull((state) => state.userId == opponentHostId);
+        finalScores = {
+          '$myHostId': hostState?.currentBattleCoin ?? 0,
+          '$opponentHostId': coHostState?.currentBattleCoin ?? 0,
+        };
+        roundsWon = {
+          '$myHostId': stream.battleRoundWinsHost ?? 0,
+          '$opponentHostId': stream.battleRoundWinsCoHost ?? 0,
+        };
+      }
+
+      final myScore = finalScores['$myHostId'] ?? 0;
+      final opponentScore = finalScores['$opponentHostId'] ?? 0;
+      final outcome = determineBattleOutcome(myScore, opponentScore);
+      final isDraw = outcome == BattleOutcome.draw;
+      final winnerHostId =
+          isDraw ? null : (outcome == BattleOutcome.sideAWins ? myHostId : opponentHostId);
+
+      final sortedIds = [myHostId, opponentHostId]..sort();
+      final battleId = '${sortedIds[0]}_${sortedIds[1]}_${stream.battleCreatedAt ?? 0}';
+
+      final result = BattleResult(
+        battleId: battleId,
+        isCrossRoom: isCrossRoom,
+        participantHostIds: [myHostId, opponentHostId],
+        roomIds: roomIds,
+        finalScores: finalScores,
+        roundsWon: roundsWon,
+        winnerHostId: winnerHostId,
+        isDraw: isDraw,
+        totalRounds: stream.battleTotalRounds ?? AppRes.battleTotalRounds,
+        battleCreatedAt: stream.battleCreatedAt,
+        battleEndedAt: DateTime.now().millisecondsSinceEpoch,
+        endReason: endReason,
+      );
+
+      await db
+          .collection(FirebaseConst.battleHistory)
+          .doc(battleId)
+          .set(result.toJson());
+    } catch (e) {
+      Loggers.error('Failed to record battle history: $e');
     }
   }
 
@@ -2273,15 +2576,36 @@ class LivestreamScreenController extends BaseController {
     opponentLiveDocListener = _roomDocRef(opponentRoomId)
         .snapshots()
         .listen((snapshot) {
-      if (!snapshot.exists) return;
+      if (!snapshot.exists) {
+        _onOpponentLooksGone();
+        return;
+      }
       final data = snapshot.data() as Map<String, dynamic>?;
-      if (data == null) return;
+      if (data == null) {
+        _onOpponentLooksGone();
+        return;
+      }
       final stream = Livestream.fromJson(data);
       opponentLiveData.value = stream;
       // Their client plays MY stream the same way — I just need to know
       // their host id to subscribe to their published stream.
       if (opponentStreamViews.isEmpty && stream.hostId != null) {
         _playOpponentStream(stream.hostId!);
+      }
+
+      // Reconnect handling: their doc leaving `battle` (crash, manual end,
+      // or their own room deleted outright above) while we're still mid-
+      // battle is the only disconnect signal available in a Firestore-only
+      // architecture — there's no presence/heartbeat channel to tell "clean
+      // stop" apart from "crashed", so both get the same grace-period
+      // treatment rather than silently hanging forever (the pre-existing
+      // behavior: `if (!snapshot.exists) return;` never auto-ended
+      // anything).
+      if (liveData.value.type == LivestreamType.battle &&
+          stream.type != LivestreamType.battle) {
+        _onOpponentLooksGone();
+      } else {
+        _cancelOpponentReconnectGrace();
       }
     }, onError: (e) => Loggers.error('Opponent room listener failed: $e'));
 
@@ -2315,8 +2639,41 @@ class LivestreamScreenController extends BaseController {
     }
   }
 
+  /// Shown as a banner over the battle arena while [_opponentReconnectGraceTimer]
+  /// is running — "Opponent reconnecting…" rather than the stream silently
+  /// freezing or hanging with no feedback.
+  RxBool isOpponentReconnecting = false.obs;
+  Timer? _opponentReconnectGraceTimer;
+
+  void _onOpponentLooksGone() {
+    if (_opponentReconnectGraceTimer != null) return; // grace already running
+    isOpponentReconnecting.value = true;
+    _opponentReconnectGraceTimer =
+        Timer(const Duration(seconds: 15), () {
+      _opponentReconnectGraceTimer = null;
+      isOpponentReconnecting.value = false;
+      // Still not a battle after the grace window — treat it as abandoned:
+      // record what happened (final scores as they stood) and reset, same
+      // as a manual Stop, so this room doesn't hang in a dead battle state
+      // forever.
+      if (liveData.value.type == LivestreamType.battle) {
+        unawaited(
+            _recordBattleHistory(endReason: 'opponent_disconnected'));
+        unawaited(endCrossRoomBattleAndReset());
+      }
+    });
+  }
+
+  void _cancelOpponentReconnectGrace() {
+    if (_opponentReconnectGraceTimer == null) return;
+    _opponentReconnectGraceTimer?.cancel();
+    _opponentReconnectGraceTimer = null;
+    isOpponentReconnecting.value = false;
+  }
+
   void _stopWatchingOpponent() {
     _watchedOpponentRoomId = null;
+    _cancelOpponentReconnectGrace();
     opponentLiveDocListener?.cancel();
     opponentUserStatesListener?.cancel();
     opponentLiveDocListener = null;
@@ -2482,6 +2839,11 @@ class LivestreamScreenController extends BaseController {
         winAudioPlayer.seek(const Duration(seconds: 0));
         winAudioPlayer.play();
         timer?.cancel();
+        // Record the result while every battle field is still live, before
+        // either end path below (or the later host-dismiss reset) touches
+        // anything — this is the actual "freeze scoring" moment, not
+        // whenever the host happens to dismiss the result screen.
+        unawaited(_recordBattleHistory(endReason: 'timer_expired'));
         if (liveData.value.opponentRoomId != null) {
           _endCrossRoomBattleType();
         } else {

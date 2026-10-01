@@ -60,6 +60,11 @@ class AppRes {
   static const int firstGiftBonusWindowInSecond = 30;
   static const int firstGiftBonusMultiplier = 3;
 
+  /// How long a PK Battle invite stays valid before the inviter's own side
+  /// auto-clears it and a late accept is rejected. Previously unenforced —
+  /// the invite dialog had no expiry at all.
+  static const int battleInviteExpiryInSecond = 15;
+
   // Pagination limit
   static const int paginationLimit = 20;
   static const int chatPaginationLimit = 40;

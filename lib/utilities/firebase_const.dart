@@ -24,6 +24,7 @@ class FirebaseConst {
 
   // LiveStream
   static const String liveStreams = 'livestreams';
+  static const String battleHistory = 'battle_history';
   static const String comments = 'comments';
   static const String userState = 'user_state';
   static const String type = 'type';
@@ -50,6 +51,7 @@ class FirebaseConst {
   static const String opponentRoomId = 'opponent_room_id';
   static const String pendingBattleInviteFromId =
       'pending_battle_invite_from_id';
+  static const String battleInviteSentAt = 'battle_invite_sent_at';
 
   // PK Battle rounds: how many rounds each side has won across the current
   // multi-round match (cleared only when the whole match ends, not between
@@ -65,4 +67,10 @@ class FirebaseConst {
   static const String battleTotalRounds = 'battle_total_rounds';
   static const String battleCurrentRound = 'battle_current_round';
   static const String firstGiftBonusClaimed = 'first_gift_bonus_claimed';
+
+  // Rematch: same request/accept shape as pendingBattleInviteFromId, written
+  // onto the OTHER host's room doc once a battle has ended, so their
+  // existing listenLiveStreamData snapshot listener (already running) picks
+  // it up the same way an initial battle invite is picked up.
+  static const String pendingRematchFromId = 'pending_rematch_from_id';
 }
