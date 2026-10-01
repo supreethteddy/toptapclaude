@@ -13,6 +13,7 @@ import 'package:shortzz/common/extensions/user_extension.dart';
 import 'package:shortzz/common/manager/firebase_notification_manager.dart';
 import 'package:shortzz/common/manager/haptic_manager.dart';
 import 'package:shortzz/common/manager/logger.dart';
+import 'package:shortzz/common/utilities/beautify_controls_mixin.dart';
 import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
@@ -51,8 +52,10 @@ import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
 
-class LivestreamScreenController extends BaseController {
+class LivestreamScreenController extends BaseController
+    with BeautifyControlsMixin {
   FirebaseFirestore db = FirebaseFirestore.instance;
+  @override
   ZegoExpressEngine zegoEngine = ZegoExpressEngine.instance;
 
   final firestoreController = Get.find<FirebaseFirestoreController>();

@@ -40,34 +40,6 @@ class LiveStreamBottomView extends StatelessWidget {
           alignment: Alignment.bottomCenter,
           children: [
             const BlackGradientShadow(height: 200),
-            // Floating Right Controls (positioned absolutely). bottom was
-            // 80 from when this panel only showed on demand (an up-arrow
-            // toggle, since removed) and so was rarely on screen at the same
-            // time as the always-visible share icon just below it in
-            // _buildBottomControlsRow - with the panel now always shown that
-            // low an offset put its "more options" dot icon right on top of
-            // share. Raised clear of both that row and the host controls
-            // row beneath it.
-            Obx(
-              () => Positioned(
-                right: 15,
-                bottom: 160,
-                child: AnimatedSlide(
-                  duration: const Duration(milliseconds: 300),
-                  offset: controller.isRightControlsVisible.value
-                      ? Offset.zero
-                      : const Offset(0, 1),
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 200),
-                    opacity:
-                        controller.isRightControlsVisible.value ? 1.0 : 0.0,
-                    child: controller.isRightControlsVisible.value
-                        ? _buildRightControls(context)
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-              ),
-            ),
             // Samsung One UI's gesture-nav bar intercepts touches in a taller
             // zone near the physical bottom edge than stock Android, which
             // silently swallowed taps on the host controls row below (flip
@@ -132,6 +104,32 @@ class LiveStreamBottomView extends StatelessWidget {
                 }),
                 const SizedBox(height: 0),
               ],
+              ),
+            ),
+            // Floating Right Controls (positioned absolutely). Listed last so
+            // it paints - and hit-tests - above the comments feed above: that
+            // Obx's ListView sits inside an Expanded, so even with zero
+            // comments it still claims the full height Expanded gives it and
+            // was silently swallowing taps meant for these buttons when it
+            // was painted after (on top of) them instead.
+            Obx(
+              () => Positioned(
+                right: 15,
+                bottom: 160,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 300),
+                  offset: controller.isRightControlsVisible.value
+                      ? Offset.zero
+                      : const Offset(0, 1),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity:
+                        controller.isRightControlsVisible.value ? 1.0 : 0.0,
+                    child: controller.isRightControlsVisible.value
+                        ? _buildRightControls(context)
+                        : const SizedBox.shrink(),
+                  ),
+                ),
               ),
             ),
           ],
@@ -330,9 +328,7 @@ class LiveStreamBottomView extends StatelessWidget {
         _buildControlButton(
           context,
           icon: Icons.face_retouching_natural,
-          onTap: () {
-            _showBeautyFilters(context);
-          },
+          onTap: controller.onBeautifyTap,
         ),
         if (!isAudience) ...[
           const SizedBox(height: 30),
@@ -437,117 +433,6 @@ class LiveStreamBottomView extends StatelessWidget {
           border: Border.all(color: Colors.white.withOpacity(0.3)),
         ),
         child: Icon(icon, color: Colors.white, size: 18),
-      ),
-    );
-  }
-
-  void _showBeautyFilters(BuildContext context) {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.grey[900],
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Beauty Filters',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 20),
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              children: [
-                _buildFilterOption('Smooth', Icons.blur_on, () {
-                  Get.back();
-                }),
-                _buildFilterOption('Brighten', Icons.brightness_high, () {
-                  Get.back();
-                }),
-                _buildFilterOption('Eyes', Icons.remove_red_eye, () {
-                  Get.back();
-                }),
-                _buildFilterOption('Face', Icons.face, () {
-                  Get.back();
-                }),
-                _buildFilterOption('Lips', Icons.favorite, () {
-                  Get.back();
-                }),
-                _buildFilterOption('Reset', Icons.refresh, () {
-                  Get.back();
-                }),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[700],
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => Get.back(),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorRes.themeColor,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () {
-                      Get.back();
-                    },
-                    child: const Text('Apply'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterOption(String title, IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[800],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.2)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
