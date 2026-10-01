@@ -163,6 +163,7 @@ flutter:
     - assets/deep_ar/beauty/
     - assets/deep_ar/thumbnails/
     - assets/gifts/eagle/
+    - assets/gifts/battle_tiers/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
