@@ -60,7 +60,9 @@ class LivestreamScreenController extends BaseController {
   Timer? timer;
   Timer? minViewerTimeoutTimer;
   Timer? presenceTimer;
-  Function? onLikeTap;
+  // Offset is where the burst should originate (the actual tap point); null
+  // means "no specific tap to anchor to" (a like echoed in from Firestore).
+  void Function(Offset?)? onLikeTap;
 
   Setting? get setting => SessionManager.instance.getSettings();
 
@@ -1167,7 +1169,7 @@ class LivestreamScreenController extends BaseController {
         // multi-tapping shouldn't regress the counter and re-trigger.
         final newLikeCount = stream.likeCount ?? 0;
         if (newLikeCount > _lastAnimatedLikeCount) {
-          onLikeTap?.call();
+          onLikeTap?.call(null);
           _lastAnimatedLikeCount = newLikeCount;
         }
 
@@ -1426,13 +1428,14 @@ class LivestreamScreenController extends BaseController {
     streamViews.refresh();
   }
 
-  void onLikeButtonTap() async {
+  void onLikeButtonTap([Offset? tapPosition]) async {
     HapticManager.shared.light();
     // Optimistic local heart burst — don't make the tapper wait for the
     // Firestore round-trip. _lastAnimatedLikeCount is bumped in lockstep so
     // listenLiveStreamData recognises the eventual Firestore echo of this
     // same increment as already-shown, rather than firing a second burst.
-    onLikeTap?.call();
+    // tapPosition anchors the burst at wherever the viewer actually tapped.
+    onLikeTap?.call(tapPosition);
     _lastAnimatedLikeCount++;
     bool isExist = (await liveStreamDocRef.get()).exists;
     if (isExist) {

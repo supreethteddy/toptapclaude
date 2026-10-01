@@ -6,7 +6,7 @@ import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
 class LiveStreamLikeButton extends StatefulWidget {
-  final Function(Function())? onLikeTap;
+  final Function(void Function(Offset?))? onLikeTap;
 
   const LiveStreamLikeButton({super.key, required this.onLikeTap});
 
@@ -24,7 +24,15 @@ class _LiveStreamLikeButtonState extends State<LiveStreamLikeButton>
     super.initState();
   }
 
-  void _addReaction() {
+  /// [position] is where the burst should originate, in this widget's own
+  /// coordinate space (it fills the whole screen, so that's effectively
+  /// screen coordinates) - the exact spot the viewer tapped. Null means
+  /// there's no tap to anchor to (e.g. a like arriving from Firestore that
+  /// another viewer sent), so it falls back to a fixed corner.
+  void _addReaction([Offset? position]) {
+    final size = MediaQuery.sizeOf(context);
+    final origin = position ?? Offset(size.width - 40, size.height - 160);
+
     final reactionController =
         AnimationController(vsync: this, duration: const Duration(seconds: 2));
 
@@ -33,6 +41,7 @@ class _LiveStreamLikeButtonState extends State<LiveStreamLikeButton>
 
     final reaction = ReactionAnimation(
       controller: reactionController,
+      origin: origin,
       xAxisAnimation: reactionController.drive(TweenSequence([
         TweenSequenceItem(
             tween: Tween<double>(begin: 0.0, end: xAxisValue), weight: 20),
@@ -73,30 +82,35 @@ class _LiveStreamLikeButtonState extends State<LiveStreamLikeButton>
   Widget build(BuildContext context) {
     // No static tappable icon any more - liking happens by tapping anywhere
     // on screen (see LivestreamHostScreen/LiveStreamAudienceScreen). This
-    // widget now only exists to own _addReaction and render the floating
-    // burst it triggers, so with no reaction in flight it renders nothing.
+    // widget fills the whole screen (see its Positioned.fill call site) so
+    // each burst can be positioned at the tap that triggered it, rather than
+    // always originating from one fixed spot.
     return Stack(
       children: [
         ..._reactions.map((reaction) {
           final double rotationAngle =
               (reaction.xAxisAnimation.value / 20) * pi / 6;
-          return AnimatedBuilder(
-            animation: reaction.controller,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(reaction.xAxisAnimation.value,
-                    -170.0 * reaction.reactionAnimation.value),
-                child: Transform.rotate(
-                  angle: rotationAngle,
-                  child: FadeTransition(
-                    opacity: reaction.opacityAnimation,
-                    child: Transform.scale(
-                        scale: reaction.sizeAnimation.value, child: child),
+          return Positioned(
+            left: reaction.origin.dx - 21.5,
+            top: reaction.origin.dy - 21.5,
+            child: AnimatedBuilder(
+              animation: reaction.controller,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(reaction.xAxisAnimation.value,
+                      -170.0 * reaction.reactionAnimation.value),
+                  child: Transform.rotate(
+                    angle: rotationAngle,
+                    child: FadeTransition(
+                      opacity: reaction.opacityAnimation,
+                      child: Transform.scale(
+                          scale: reaction.sizeAnimation.value, child: child),
+                    ),
                   ),
-                ),
-              );
-            },
-            child: _likeWidget,
+                );
+              },
+              child: _likeWidget,
+            ),
           );
         }),
       ],
@@ -123,6 +137,7 @@ class _LiveStreamLikeButtonState extends State<LiveStreamLikeButton>
 
 class ReactionAnimation {
   final AnimationController controller;
+  final Offset origin;
   final Animation<double> xAxisAnimation;
   final Animation<double> opacityAnimation;
   final Animation<double> sizeAnimation;
@@ -130,6 +145,7 @@ class ReactionAnimation {
 
   ReactionAnimation({
     required this.controller,
+    required this.origin,
     required this.xAxisAnimation,
     required this.opacityAnimation,
     required this.sizeAnimation,

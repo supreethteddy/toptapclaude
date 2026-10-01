@@ -9,7 +9,6 @@ import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/find_opponent_screen/find_opponent_screen.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_comment_view.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_like_button.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_text_field.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/livestream_exist_message_bar.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/fan_club_widgets.dart';
@@ -148,29 +147,12 @@ class LiveStreamBottomView extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               opacity: isVisible ? 1 : 0,
               alwaysIncludeSemantics: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: IgnorePointer(
-                      ignoring: !isVisible,
-                      child: LiveStreamTextFieldView(
-                        isAudience: isAudience,
-                        controller: controller,
-                      ),
-                    ),
-                  ),
-                  // The heart icon itself is gone (tap-anywhere-on-screen,
-                  // wired in LivestreamHostScreen/LiveStreamAudienceScreen,
-                  // is the only way to trigger a like now), but this widget
-                  // still owns the floating heart-burst animation, so it
-                  // stays mounted to receive that trigger - see
-                  // LiveStreamLikeButton's onLikeTap registration.
-                  LiveStreamLikeButton(
-                    onLikeTap: (p0) {
-                      controller.onLikeTap = p0;
-                    },
-                  ),
-                ],
+              child: IgnorePointer(
+                ignoring: !isVisible,
+                child: LiveStreamTextFieldView(
+                  isAudience: isAudience,
+                  controller: controller,
+                ),
               ),
             ),
           ),

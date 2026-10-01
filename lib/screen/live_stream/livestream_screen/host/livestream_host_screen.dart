@@ -12,6 +12,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/party_battle_v
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/battle_start_countdown_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_animation_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_background_blur_image.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_like_button.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
 class LivestreamHostScreen extends StatelessWidget {
@@ -73,8 +74,22 @@ class LivestreamHostScreen extends StatelessWidget {
             // pick of any tap that lands on them.
             GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: controller.onLikeButtonTap,
+              onTapUp: (details) =>
+                  controller.onLikeButtonTap(details.localPosition),
               child: const SizedBox.expand(),
+            ),
+
+            // Floating heart bursts, anchored at wherever the GestureDetector
+            // above was tapped (see LiveStreamLikeButton). Ignoring pointers
+            // so it never steals a tap from the controls stacked on top.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: LiveStreamLikeButton(
+                  onLikeTap: (p0) {
+                    controller.onLikeTap = p0;
+                  },
+                ),
+              ),
             ),
 
             KeyboardAvoider(
