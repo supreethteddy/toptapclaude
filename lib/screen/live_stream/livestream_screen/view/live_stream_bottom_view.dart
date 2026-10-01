@@ -159,65 +159,21 @@ class LiveStreamBottomView extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  // The heart icon itself is gone (tap-anywhere-on-screen,
+                  // wired in LivestreamHostScreen/LiveStreamAudienceScreen,
+                  // is the only way to trigger a like now), but this widget
+                  // still owns the floating heart-burst animation, so it
+                  // stays mounted to receive that trigger - see
+                  // LiveStreamLikeButton's onLikeTap registration.
                   LiveStreamLikeButton(
                     onLikeTap: (p0) {
                       controller.onLikeTap = p0;
                     },
-                    onTap: controller.onLikeButtonTap,
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          if (stream.type != LivestreamType.battle)
-            GestureDetector(
-              onTap: controller.toggleView,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
-                ),
-                child: AnimatedRotation(
-                  duration: const Duration(milliseconds: 200),
-                  turns: isVisible ? 0 : 0.5,
-                  child: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-              ),
-            ),
-          if (stream.type != LivestreamType.battle) const SizedBox(width: 8),
-          // Right: Fixed Up Arrow Toggle Button
-          if (isVisible)
-            GestureDetector(
-              onTap: () {
-                controller.isRightControlsVisible.value =
-                    !controller.isRightControlsVisible.value;
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
-                ),
-                child: AnimatedRotation(
-                  duration: const Duration(milliseconds: 200),
-                  turns: controller.isRightControlsVisible.value ? 0.5 : 0,
-                  child: const Icon(
-                    Icons.keyboard_arrow_up,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-              ),
-            ),
           // Share (Figma "Live1"): moved out of the collapsible right-controls
           // panel so it's always visible, far right of the bottom bar. Same
           // `_shareStream` logic as before, just a white outline icon here.

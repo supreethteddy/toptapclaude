@@ -7,10 +7,8 @@ import 'package:shortzz/utilities/theme_res.dart';
 
 class LiveStreamLikeButton extends StatefulWidget {
   final Function(Function())? onLikeTap;
-  final VoidCallback onTap;
 
-  const LiveStreamLikeButton(
-      {super.key, required this.onLikeTap, required this.onTap});
+  const LiveStreamLikeButton({super.key, required this.onLikeTap});
 
   @override
   State<LiveStreamLikeButton> createState() => _LiveStreamLikeButtonState();
@@ -73,6 +71,10 @@ class _LiveStreamLikeButtonState extends State<LiveStreamLikeButton>
 
   @override
   Widget build(BuildContext context) {
+    // No static tappable icon any more - liking happens by tapping anywhere
+    // on screen (see LivestreamHostScreen/LiveStreamAudienceScreen). This
+    // widget now only exists to own _addReaction and render the floating
+    // burst it triggers, so with no reaction in flight it renders nothing.
     return Stack(
       children: [
         ..._reactions.map((reaction) {
@@ -97,7 +99,6 @@ class _LiveStreamLikeButtonState extends State<LiveStreamLikeButton>
             child: _likeWidget,
           );
         }),
-        InkWell(onTap: widget.onTap, child: _likeWidget),
       ],
     );
   }

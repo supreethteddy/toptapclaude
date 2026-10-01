@@ -220,8 +220,10 @@ class LivestreamScreenController extends BaseController {
     });
   }
   RxBool isViewVisible = true.obs;
-  RxBool isRightControlsVisible = false
-      .obs; // Controls visibility of right controls (beauty, share, more, like)
+  // Always visible now that the up-arrow toggle button is gone - this panel
+  // (beauty filter shortcut, host-only more-options menu) has no other way
+  // to be shown.
+  RxBool isRightControlsVisible = true.obs;
   RxBool canPopStreamRoute = false.obs;
 
   List<LivestreamUserState> memberList = <LivestreamUserState>[];
@@ -2041,10 +2043,6 @@ class LivestreamScreenController extends BaseController {
   togglePlayerAudioToggle() {
     videoPlayerController.value?.setVolume(isPlayerMute.value ? 1 : 0);
     isPlayerMute.value = !isPlayerMute.value;
-  }
-
-  void toggleView() {
-    isViewVisible.value = !isViewVisible.value;
   }
 
   void startBattle() {
