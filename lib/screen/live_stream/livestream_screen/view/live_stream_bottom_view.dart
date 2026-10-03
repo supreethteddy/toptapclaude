@@ -85,7 +85,7 @@ class LiveStreamBottomView extends StatelessWidget {
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
                       opacity: isVisible ? 1 : 0,
-                      child: _buildHostControls(),
+                      child: _buildHostControls(context),
                     ),
                   );
                 }),
@@ -246,7 +246,12 @@ class LiveStreamBottomView extends StatelessWidget {
     );
   }
 
-  Widget _buildHostControls() {
+  // Restyled to TikTok's uniform dark-circle icon language (same look as
+  // the Share/Link/Guests-request buttons elsewhere in this bar) instead of
+  // plain borderless Material IconButtons. About Me and the comments
+  // on/off toggle moved into the "..." sheet below — nothing removed, just
+  // decluttering the always-visible row down to what TikTok keeps visible.
+  Widget _buildHostControls(BuildContext context) {
     return Obx(() {
       int? userId = controller.myUser.value?.id;
       LivestreamUserState? state = controller.liveUsersStates.firstWhereOrNull(
@@ -269,10 +274,12 @@ class LiveStreamBottomView extends StatelessWidget {
           children: [
             if ((LivestreamUserType.coHost == state?.type ||
                     LivestreamUserType.guest == state?.type) &&
-                stream.type == LivestreamType.livestream)
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () {
+                stream.type == LivestreamType.livestream) ...[
+              _buildControlButton(
+                context,
+                icon: Icons.close,
+                iconColor: Colors.red,
+                onTap: () {
                   if (isBattleRunning) {
                     controller.showSnackBar('Cannot leave during battle');
                   } else {
@@ -280,51 +287,36 @@ class LiveStreamBottomView extends StatelessWidget {
                   }
                 },
               ),
-            IconButton(
-              icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
-              onPressed: controller.toggleFlipCamera,
+              const SizedBox(width: 10),
+            ],
+            _buildControlButton(
+              context,
+              icon: Icons.flip_camera_ios,
+              onTap: controller.toggleFlipCamera,
             ),
-            IconButton(
-              icon: Icon(
-                isMute ? Icons.mic_off : Icons.mic,
-                color: isMute ? Colors.red : Colors.white,
-              ),
-              onPressed: () => controller.toggleMic(isMute),
+            const SizedBox(width: 10),
+            _buildControlButton(
+              context,
+              icon: isMute ? Icons.mic_off : Icons.mic,
+              iconColor: isMute ? Colors.red : Colors.white,
+              onTap: () => controller.toggleMic(isMute),
             ),
-            IconButton(
-              icon: Icon(
-                isVideoOn ? Icons.videocam : Icons.videocam_off,
-                color: isVideoOn ? Colors.white : Colors.red,
-              ),
-              onPressed: () => controller.toggleVideo(isVideoOn),
+            const SizedBox(width: 10),
+            _buildControlButton(
+              context,
+              icon: isVideoOn ? Icons.videocam : Icons.videocam_off,
+              iconColor: isVideoOn ? Colors.white : Colors.red,
+              onTap: () => controller.toggleVideo(isVideoOn),
             ),
             if (state?.type == LivestreamUserType.host &&
-                stream.type != LivestreamType.battle)
+                stream.type != LivestreamType.battle) ...[
+              const SizedBox(width: 10),
               _PkMatchButton(controller: controller),
-            if (state?.type == LivestreamUserType.host)
+            ],
+            if (state?.type == LivestreamUserType.host) ...[
+              const SizedBox(width: 10),
               _GuestsButton(controller: controller),
-            if (state?.type == LivestreamUserType.host)
-              IconButton(
-                tooltip: 'About Me',
-                icon: const Icon(
-                  Icons.person_outline,
-                  color: Colors.white,
-                ),
-                onPressed: controller.showAboutMeDialog,
-              ),
-            if (state?.type == LivestreamUserType.host)
-              IconButton(
-                tooltip: stream.commentsEnabled
-                    ? 'Turn comments off'
-                    : 'Turn comments on',
-                icon: Icon(
-                  stream.commentsEnabled
-                      ? Icons.mode_comment_outlined
-                      : Icons.comments_disabled_outlined,
-                  color: stream.commentsEnabled ? Colors.white : Colors.red,
-                ),
-                onPressed: controller.toggleCommentsEnabled,
-              ),
+            ],
           ],
         ),
       );
@@ -373,6 +365,31 @@ class LiveStreamBottomView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (controller.isHost) ...[
+                ListTile(
+                  leading: const Icon(Icons.person_outline),
+                  title: const Text('About Me'),
+                  onTap: () {
+                    Get.back();
+                    controller.showAboutMeDialog();
+                  },
+                ),
+                Obx(() {
+                  final enabled =
+                      controller.liveData.value.commentsEnabled;
+                  return ListTile(
+                    leading: Icon(enabled
+                        ? Icons.mode_comment_outlined
+                        : Icons.comments_disabled_outlined),
+                    title: Text(
+                        enabled ? 'Turn comments off' : 'Turn comments on'),
+                    onTap: () {
+                      Get.back();
+                      controller.toggleCommentsEnabled();
+                    },
+                  );
+                }),
+              ],
               ListTile(
                 leading: const Icon(Icons.card_giftcard),
                 title: Text(LKey.giftGoals.tr),
@@ -435,6 +452,7 @@ class LiveStreamBottomView extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required VoidCallback onTap,
+    Color iconColor = Colors.white,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -445,7 +463,7 @@ class LiveStreamBottomView extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white.withOpacity(0.3)),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        child: Icon(icon, color: iconColor, size: 18),
       ),
     );
   }
@@ -537,10 +555,14 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Tinted pink/cyan to match the two-tone "connect" icons TikTok
+        // uses for its left-side PK-match / co-host entry points — every
+        // other icon in this bar stays plain white, same as TikTok's own
+        // right-side icons.
         _circleIconButton(
           onTap: () => Get.to(() => FindOpponentScreen(myLive: controller)),
           child: Image.asset(AssetRes.icLink,
-              color: Colors.white, height: 18, width: 18),
+              color: const Color(0xFFFE2C55), height: 18, width: 18),
         ),
         const SizedBox(width: 6),
         Obx(() {
@@ -550,7 +572,8 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
               initialTab: MembersSheet.tabInvited,
             ),
             badgeCount: pending,
-            child: const Icon(Icons.people, color: Colors.white, size: 18),
+            child:
+                const Icon(Icons.people, color: Color(0xFF25F4EE), size: 18),
           );
         }),
       ],

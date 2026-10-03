@@ -17,11 +17,18 @@ import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
-/// Host top toolbar:
-/// [avatar] [username + likes + daily rank] [LIVE title ✎]   [goal] [👁 viewers] [⏻]
+/// Host top toolbar, three stacked rows (matches TikTok's layout: a clean
+/// name/likes/viewer-count row, with rank/league badges on their own row
+/// underneath so they're never squeezed out by the username):
+///   Row 1: [avatar] [username] [♥ likes]  ...  [👁 viewers] [⏻]
+///   Row 2: [daily rank] [hourly rank] [league] [goal] [gift goal] [poll] [top contributors]
+///   Row 3: [LIVE title ✎]
 ///
-/// Likes received live here next to the name (matching TikTok's pink pill);
-/// the PK / guests controls live in the host control row.
+/// Row 2 used to share Row 1 with the username, squeezed behind it in a
+/// Flexible/SingleChildScrollView — on a real device that silently clipped
+/// the League badge off-screen the moment the username took any room at
+/// all. Giving it a dedicated row fixes that without dropping any of the
+/// features that had piled up there across phases.
 class LiveStreamHostTopView extends StatelessWidget {
   final LivestreamScreenController controller;
 
@@ -45,17 +52,17 @@ class LiveStreamHostTopView extends StatelessWidget {
             ignoring: !isVisible,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _HostAvatar(controller: controller),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _HostAvatar(controller: controller),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
                           children: [
                             Flexible(
                               child: Text(
@@ -69,140 +76,132 @@ class LiveStreamHostTopView extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            // Four fixed-width chips after a flexible
-                            // username: on a narrow screen their combined
-                            // natural width can still exceed what's left,
-                            // which overflowed the row outright before this
-                            // was made scrollable (none of them can shrink
-                            // without clipping their own text/icon).
-                            Flexible(
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    LikesCountPill(controller: controller),
-                                    const SizedBox(width: 6),
-                                    LiveRankChip(controller: controller),
-                                    const SizedBox(width: 6),
-                                    HourlyRankChip(controller: controller),
-                                    const SizedBox(width: 6),
-                                    LeagueBadge(controller: controller),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            LikesCountPill(controller: controller),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        GestureDetector(
-                          onTap: controller.showEditLiveTitleDialog,
-                          behavior: HitTestBehavior.opaque,
+                      ),
+                      const SizedBox(width: 6),
+
+                      // Viewer count -> opens the audience list.
+                      GestureDetector(
+                        onTap: () {
+                          HapticManager.shared.light();
+                          controller.openAudienceSheet();
+                        },
+                        child: Container(
+                          height: 28,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25)),
+                          ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  (stream.description ?? '').trim().isEmpty
-                                      ? 'Add LIVE title'
-                                      : stream.description!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyleCustom.outFitRegular400(
-                                    color: Colors.white70,
-                                    fontSize: 11,
-                                  ),
-                                ),
+                              Image.asset(
+                                AssetRes.icEye_2,
+                                height: 15,
+                                width: 15,
+                                color: Colors.white,
                               ),
-                              const SizedBox(width: 3),
-                              const Icon(
-                                Icons.edit,
-                                color: Colors.white70,
-                                size: 12,
+                              const SizedBox(width: 4),
+                              Text(
+                                watchingCount.numberFormat,
+                                style: TextStyleCustom.outFitMedium500(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-
-                  // Goal chip lives in the toolbar row (client request L-02).
-                  Flexible(
-                    flex: 0,
-                    child: LiveGoalProgressWidget(
-                        controller: controller, compact: true),
-                  ),
-                  if (stream.hasLiveGoal == true) const SizedBox(width: 6),
-                  Flexible(
-                    flex: 0,
-                    child: PinnedGiftGoalChip(controller: controller),
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    flex: 0,
-                    child: LivePollBanner(controller: controller),
-                  ),
-                  const SizedBox(width: 6),
-
-                  // Top-3 contributor badges for THIS LIVE session
-                  // (Figma "Live1"), next to the viewer count. Tap opens the
-                  // full Contributor Ranking sheet.
-                  ContributorTopBadges(controller: controller),
-                  const SizedBox(width: 6),
-
-                  // Viewer count -> opens the audience list.
-                  GestureDetector(
-                    onTap: () {
-                      HapticManager.shared.light();
-                      controller.openAudienceSheet();
-                    },
-                    child: Container(
-                      height: 28,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25)),
                       ),
+                      const SizedBox(width: 6),
+
+                      // Stop button
+                      GestureDetector(
+                        onTap: controller.onStopButtonTap,
+                        child: Container(
+                          height: 30,
+                          width: 30,
+                          decoration: const BoxDecoration(
+                            color: ColorRes.likeRed,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.power_settings_new,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+
+                  // Rank / league / goal / poll / contributor chips — all the
+                  // same features as before (Figma "Live1", client items
+                  // L-02 goal chip among them), just on their own row now so
+                  // none of them get clipped behind the username above.
+                  Padding(
+                    padding: const EdgeInsets.only(left: 48),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(
-                            AssetRes.icEye_2,
-                            height: 15,
-                            width: 15,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            watchingCount.numberFormat,
-                            style: TextStyleCustom.outFitMedium500(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
+                          LiveRankChip(controller: controller),
+                          const SizedBox(width: 6),
+                          HourlyRankChip(controller: controller),
+                          const SizedBox(width: 6),
+                          LeagueBadge(controller: controller),
+                          const SizedBox(width: 6),
+                          LiveGoalProgressWidget(
+                              controller: controller, compact: true),
+                          if (stream.hasLiveGoal == true)
+                            const SizedBox(width: 6),
+                          PinnedGiftGoalChip(controller: controller),
+                          const SizedBox(width: 6),
+                          LivePollBanner(controller: controller),
+                          const SizedBox(width: 6),
+
+                          // Top-3 contributor badges for THIS LIVE session.
+                          // Tap opens the full Contributor Ranking sheet.
+                          ContributorTopBadges(controller: controller),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-
-                  // Stop button
-                  GestureDetector(
-                    onTap: controller.onStopButtonTap,
-                    child: Container(
-                      height: 30,
-                      width: 30,
-                      decoration: const BoxDecoration(
-                        color: ColorRes.likeRed,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.power_settings_new,
-                        color: Colors.white,
-                        size: 18,
+                  const SizedBox(height: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 48),
+                    child: GestureDetector(
+                      onTap: controller.showEditLiveTitleDialog,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              (stream.description ?? '').trim().isEmpty
+                                  ? 'Add LIVE title'
+                                  : stream.description!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyleCustom.outFitRegular400(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          const Icon(
+                            Icons.edit,
+                            color: Colors.white70,
+                            size: 12,
+                          ),
+                        ],
                       ),
                     ),
                   ),
