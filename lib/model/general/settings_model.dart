@@ -62,6 +62,16 @@ class Setting {
   int? liveTimeout;
   int? liveBattle;
   int? liveDummyShow;
+  // LIVE participant / PK / guest-gifting knobs (admin "Livestream" card).
+  // Null when the backend predates them — callers fall back to AppRes.
+  int? maxLiveCohosts;
+  int? maxLiveGuests;
+  int? guestGiftHostSharePercent;
+  int? pkBattleDurationMinutes;
+  int? pkLikePoints;
+  int? pkInviteExpirySeconds;
+  int? liveGuestRequestsEnabled;
+  int? pkBattleRounds;
   String? zegoAppId;
   String? zegoAppSign;
   int? isCompress;
@@ -126,6 +136,14 @@ class Setting {
     this.liveTimeout,
     this.liveBattle,
     this.liveDummyShow,
+    this.maxLiveCohosts,
+    this.maxLiveGuests,
+    this.guestGiftHostSharePercent,
+    this.pkBattleDurationMinutes,
+    this.pkLikePoints,
+    this.pkInviteExpirySeconds,
+    this.liveGuestRequestsEnabled,
+    this.pkBattleRounds,
     this.zegoAppId,
     this.zegoAppSign,
     this.isCompress,
@@ -191,6 +209,14 @@ class Setting {
         liveTimeout: json["live_timeout"],
         liveBattle: json["live_battle"],
         liveDummyShow: json["live_dummy_show"],
+        maxLiveCohosts: json["max_live_cohosts"],
+        maxLiveGuests: json["max_live_guests"],
+        guestGiftHostSharePercent: json["guest_gift_host_share_percent"],
+        pkBattleDurationMinutes: json["pk_battle_duration_minutes"],
+        pkLikePoints: json["pk_like_points"],
+        pkInviteExpirySeconds: json["pk_invite_expiry_seconds"],
+        liveGuestRequestsEnabled: json["live_guest_requests_enabled"],
+        pkBattleRounds: json["pk_battle_rounds"],
         zegoAppId: json["zego_app_id"],
         zegoAppSign: json["zego_app_sign"],
         isCompress: json["is_compress"],
@@ -289,6 +315,14 @@ class Setting {
         "live_timeout": liveTimeout,
         "live_battle": liveBattle,
         "live_dummy_show": liveDummyShow,
+        "max_live_cohosts": maxLiveCohosts,
+        "max_live_guests": maxLiveGuests,
+        "guest_gift_host_share_percent": guestGiftHostSharePercent,
+        "pk_battle_duration_minutes": pkBattleDurationMinutes,
+        "pk_like_points": pkLikePoints,
+        "pk_invite_expiry_seconds": pkInviteExpirySeconds,
+        "live_guest_requests_enabled": liveGuestRequestsEnabled,
+        "pk_battle_rounds": pkBattleRounds,
         "zego_app_id": zegoAppId,
         "zego_app_sign": zegoAppSign,
         "is_compress": isCompress,

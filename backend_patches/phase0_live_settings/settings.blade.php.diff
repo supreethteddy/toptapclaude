@@ -1,0 +1,90 @@
+--- /root/settings.blade.php.bak-20261003-074602	2026-10-03 07:46:02.616810097 +0000
++++ resources/views/settings.blade.php	2026-10-03 07:46:02.668810391 +0000
+@@ -596,6 +596,87 @@
+                                         </div>
+                                     </div>
+                                 </div>
++                                <h5>{{ __('CO-HOST / GUEST CALL / PK MATCH') }}</h5>
++                                <span class="fs-6">* Co-host Mode is capped at Max. Co-hosts + the host in frame (3 = 4 people). PK Match is only offered in Co-host Mode: 2 eligible = 1v1, 4 eligible = 2v2. Guest Call participants never take part in PK.</span><br>
++                                <span class="fs-6">* Guest gift host share is the percent of every gift sent to a Guest/Co-host that goes to the LIVE host (20 = guest 80% / host 20%).</span>
++                                <hr>
++                                <div class="row">
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for="max_live_cohosts"
++                                                class="form-label">{{ __('Max. Co-hosts (excluding host)') }}</label>
++                                            <input type="number" step="1" min="0" max="3" class="form-control"
++                                                id="max_live_cohosts" name="max_live_cohosts"
++                                                value="{{ $setting->max_live_cohosts }}">
++                                        </div>
++                                    </div>
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for="max_live_guests"
++                                                class="form-label">{{ __('Max. Guest Call participants') }}</label>
++                                            <input type="number" step="1" min="0" max="9" class="form-control"
++                                                id="max_live_guests" name="max_live_guests"
++                                                value="{{ $setting->max_live_guests }}">
++                                        </div>
++                                    </div>
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for="guest_gift_host_share_percent"
++                                                class="form-label">{{ __('Guest gift host share (%)') }}</label>
++                                            <input type="number" step="1" min="0" max="100" class="form-control"
++                                                id="guest_gift_host_share_percent" name="guest_gift_host_share_percent"
++                                                value="{{ $setting->guest_gift_host_share_percent }}">
++                                        </div>
++                                    </div>
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for="pk_battle_duration_minutes"
++                                                class="form-label">{{ __('PK Match duration (minutes)') }}</label>
++                                            <input type="number" step="1" min="1" class="form-control"
++                                                id="pk_battle_duration_minutes" name="pk_battle_duration_minutes"
++                                                value="{{ $setting->pk_battle_duration_minutes }}">
++                                        </div>
++                                    </div>
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for="pk_battle_rounds"
++                                                class="form-label">{{ __('PK Match rounds') }}</label>
++                                            <input type="number" step="1" min="1" class="form-control"
++                                                id="pk_battle_rounds" name="pk_battle_rounds"
++                                                value="{{ $setting->pk_battle_rounds }}">
++                                        </div>
++                                    </div>
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for="pk_like_points"
++                                                class="form-label">{{ __('PK points per like') }}</label>
++                                            <input type="number" step="1" min="0" class="form-control"
++                                                id="pk_like_points" name="pk_like_points"
++                                                value="{{ $setting->pk_like_points }}">
++                                        </div>
++                                    </div>
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for="pk_invite_expiry_seconds"
++                                                class="form-label">{{ __('Invite / PK challenge expiry (seconds)') }}</label>
++                                            <input type="number" step="1" min="10" class="form-control"
++                                                id="pk_invite_expiry_seconds" name="pk_invite_expiry_seconds"
++                                                value="{{ $setting->pk_invite_expiry_seconds }}">
++                                        </div>
++                                    </div>
++                                    <div class="col-md-4 mb-3">
++                                        <div class="mb-0 bg-secondary-lighten border p-2 rounded-3">
++                                            <label for=""
++                                                class="form-label">{{ __('Viewers can request to join as Guest') }}</label>
++                                            <div class="mb-0">
++                                                <input name="live_guest_requests_enabled" type="checkbox" id="switchGuestRequests"
++                                                    {{ $setting->live_guest_requests_enabled == 1 ? 'checked' : '' }}
++                                                    data-switch="primary" />
++                                                <label for="switchGuestRequests"></label>
++                                            </div>
++                                        </div>
++                                    </div>
++                                </div>
+                                 {{-- Watermark --}}
+                                 <h5>{{ __('ZEGO CLOUD SETTINGS') }}</h5>
+                                 <hr>

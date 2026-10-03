@@ -1,0 +1,24 @@
+--- /root/SettingsController.php.bak-20261003-074602	2026-10-03 07:46:02.611810069 +0000
++++ app/Http/Controllers/SettingsController.php	2026-10-03 07:46:02.664810368 +0000
+@@ -828,6 +828,21 @@
+         $setting->min_followers_for_live = $request->min_followers_for_live;
+         $setting->live_min_viewers = $request->live_min_viewers;
+         $setting->live_timeout = $request->live_timeout;
++
++        // LIVE participant / PK / guest-gifting limits. Every one of these is
++        // read by the app from fetchSettings; the (int) casts keep a blank form
++        // field from saving as '' and the percent is clamped because it feeds
++        // a coin split (see WalletController::sendGift).
++        $setting->max_live_cohosts = max(0, (int) $request->max_live_cohosts);
++        $setting->max_live_guests = max(0, (int) $request->max_live_guests);
++        $setting->guest_gift_host_share_percent =
++            min(100, max(0, (int) $request->guest_gift_host_share_percent));
++        $setting->pk_battle_duration_minutes = max(1, (int) $request->pk_battle_duration_minutes);
++        $setting->pk_like_points = max(0, (int) $request->pk_like_points);
++        $setting->pk_invite_expiry_seconds = max(10, (int) $request->pk_invite_expiry_seconds);
++        $setting->live_guest_requests_enabled = $request->live_guest_requests_enabled ? 1 : 0;
++        $setting->pk_battle_rounds = max(1, (int) $request->pk_battle_rounds);
++
+         $setting->zego_app_sign = $request->zego_app_sign;
+         $setting->zego_app_id = $request->zego_app_id;
+ 

@@ -1,0 +1,14 @@
+--- /root/settings.js.bak-20261003-074602	2026-10-03 07:46:02.619810114 +0000
++++ public/assets/script/settings.js	2026-10-03 07:46:02.671810408 +0000
+@@ -203,9 +203,11 @@
+             var formdata = collectFormData(formId);
+             var live_battle = $("#switchPKBattle").prop("checked") == true ? 1 : 0;
+             var live_dummy_show = $("#switchDummyLiveShow").prop("checked") == true ? 1 : 0;
++            var live_guest_requests_enabled = $("#switchGuestRequests").prop("checked") == true ? 1 : 0;
+ 
+             formdata.append('live_battle', live_battle);
+             formdata.append('live_dummy_show', live_dummy_show);
++            formdata.append('live_guest_requests_enabled', live_guest_requests_enabled);
+ 
+             var url = `${domainUrl}saveLiveStreamSettings`;
+             try {
