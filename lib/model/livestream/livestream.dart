@@ -95,6 +95,32 @@ class Livestream {
   int? battleCurrentRound;
   bool? firstGiftBonusClaimed;
 
+  // Same-room co-host PK Match invitation (Co-host Mode only — never a
+  // Guest Call participant). Unlike the cross-room invite above, both sides
+  // of the negotiation live on this one room doc: the host proposes teams,
+  // every non-host player named in them must accept before the host's own
+  // device promotes this into an active battle ([pkTeamAIds]/[pkTeamBIds]
+  // below). `null` means no invite is pending.
+  int? pkInviteFromId;
+  List<int>? pkInviteTeamAIds;
+  List<int>? pkInviteTeamBIds;
+  // null = every gift counts toward the match score.
+  List<int>? pkInviteEligibleGiftIds;
+  int? pkInviteDurationMin;
+  int? pkInviteSentAt;
+  // Starts empty; each non-host player on a team appends their own id once
+  // they accept. The host is not included — sending the invite is their
+  // consent.
+  List<int>? pkInviteAcceptedIds;
+
+  // The negotiated teams for the PK Match currently in progress (or just
+  // ended), promoted from the pk_invite_* fields above once every required
+  // player accepted. The source of truth for team membership/scoring/like
+  // attribution — never inferred from on-screen tile order.
+  List<int>? pkTeamAIds;
+  List<int>? pkTeamBIds;
+  List<int>? pkEligibleGiftIds;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -135,6 +161,16 @@ class Livestream {
     this.battleTotalRounds,
     this.battleCurrentRound,
     this.firstGiftBonusClaimed,
+    this.pkInviteFromId,
+    this.pkInviteTeamAIds,
+    this.pkInviteTeamBIds,
+    this.pkInviteEligibleGiftIds,
+    this.pkInviteDurationMin,
+    this.pkInviteSentAt,
+    this.pkInviteAcceptedIds,
+    this.pkTeamAIds,
+    this.pkTeamBIds,
+    this.pkEligibleGiftIds,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -184,6 +220,31 @@ class Livestream {
     battleTotalRounds = json['battle_total_rounds'];
     battleCurrentRound = json['battle_current_round'];
     firstGiftBonusClaimed = json['first_gift_bonus_claimed'];
+    pkInviteFromId = json['pk_invite_from_id'];
+    pkInviteTeamAIds = (json['pk_invite_team_a_ids'] as List<dynamic>?)
+        ?.map((e) => (e as num).toInt())
+        .toList();
+    pkInviteTeamBIds = (json['pk_invite_team_b_ids'] as List<dynamic>?)
+        ?.map((e) => (e as num).toInt())
+        .toList();
+    pkInviteEligibleGiftIds =
+        (json['pk_invite_eligible_gift_ids'] as List<dynamic>?)
+            ?.map((e) => (e as num).toInt())
+            .toList();
+    pkInviteDurationMin = json['pk_invite_duration_min'];
+    pkInviteSentAt = json['pk_invite_sent_at'];
+    pkInviteAcceptedIds = (json['pk_invite_accepted_ids'] as List<dynamic>?)
+        ?.map((e) => (e as num).toInt())
+        .toList();
+    pkTeamAIds = (json['pk_team_a_ids'] as List<dynamic>?)
+        ?.map((e) => (e as num).toInt())
+        .toList();
+    pkTeamBIds = (json['pk_team_b_ids'] as List<dynamic>?)
+        ?.map((e) => (e as num).toInt())
+        .toList();
+    pkEligibleGiftIds = (json['pk_eligible_gift_ids'] as List<dynamic>?)
+        ?.map((e) => (e as num).toInt())
+        .toList();
   }
 
   Map<String, dynamic> toJson() {
@@ -227,6 +288,16 @@ class Livestream {
     data['battle_total_rounds'] = battleTotalRounds;
     data['battle_current_round'] = battleCurrentRound;
     data['first_gift_bonus_claimed'] = firstGiftBonusClaimed;
+    data['pk_invite_from_id'] = pkInviteFromId;
+    data['pk_invite_team_a_ids'] = pkInviteTeamAIds;
+    data['pk_invite_team_b_ids'] = pkInviteTeamBIds;
+    data['pk_invite_eligible_gift_ids'] = pkInviteEligibleGiftIds;
+    data['pk_invite_duration_min'] = pkInviteDurationMin;
+    data['pk_invite_sent_at'] = pkInviteSentAt;
+    data['pk_invite_accepted_ids'] = pkInviteAcceptedIds;
+    data['pk_team_a_ids'] = pkTeamAIds;
+    data['pk_team_b_ids'] = pkTeamBIds;
+    data['pk_eligible_gift_ids'] = pkEligibleGiftIds;
     return data;
   }
 

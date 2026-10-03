@@ -26,6 +26,8 @@ import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/live_invite.dart';
+import 'package:shortzz/model/livestream/pk_eligibility.dart';
+import 'package:shortzz/model/livestream/pk_invite.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_comment.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
@@ -47,6 +49,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/widget/hourly_ranki
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/league_standings_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/pk_match_setup_sheet.dart';
 import 'package:shortzz/screen/report_sheet/report_sheet.dart';
 import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/asset_res.dart';
@@ -121,6 +124,21 @@ class LivestreamScreenController extends BaseController
   RxList<StreamView> opponentStreamViews = <StreamView>[].obs;
   int? _lastHandledInviteFromId;
   int? _lastHandledRematchFromId;
+
+  // Same-room PK Match invite: deduped by (fromId, sentAt) rather than just
+  // fromId, since the same host re-sending after a decline must re-trigger
+  // the dialog on the invitee's side.
+  int? _lastHandledPkInviteFromId;
+  int? _lastHandledPkInviteSentAt;
+  Timer? _pkInviteExpiryTimer;
+  // True from the moment I (the host) send a PK Match invite until it
+  // either starts a battle or is cleared — lets the listener tell a decline
+  // apart from any other reason pk_invite_from_id might be null.
+  bool _awaitingPkInviteResponse = false;
+  // Guards the host's own "everyone accepted, start the battle" transaction
+  // against firing twice from two rapid snapshot events while it's in
+  // flight.
+  bool _pkMatchStartInFlight = false;
 
   TextEditingController textCommentController = TextEditingController();
 
@@ -252,6 +270,29 @@ class LivestreamScreenController extends BaseController
   bool get guestRequestsEnabled =>
       (setting?.liveGuestRequestsEnabled ?? 1) == 1;
 
+  /// Who is actually on screen right now — PK eligibility only counts
+  /// co-hosts that are publishing, same check [canStartBattle] used to make.
+  Set<int> get _publishingUserIds => streamViews
+      .map((view) => int.tryParse(view.streamId))
+      .whereType<int>()
+      .toSet();
+
+  /// Whether a PK Match is currently offerable, and to whom — derived fresh
+  /// from the room doc + who's actually streaming, never cached.
+  PkEligibility get pkMatchEligibility => pkEligibilityFor(
+        hostId: liveData.value.hostId,
+        coHostIds: liveData.value.coHostIds ?? const [],
+        guestIds: liveData.value.guestIds ?? const [],
+        publishingIds: _publishingUserIds,
+        battleEnabled: (setting?.liveBattle ?? 1) == 1,
+      );
+
+  /// Single round per the client's confirmed decision; only the length of
+  /// that round is admin-configurable.
+  int get pkMatchDurationMinutes => setting?.pkBattleDurationMinutes ?? 5;
+  int get pkMatchTotalRounds => setting?.pkBattleRounds ?? 1;
+  int get pkMatchInviteExpirySeconds => setting?.pkInviteExpirySeconds ?? 60;
+
   /// Seats still open for a given stage role, counting reservations held by
   /// invitees who accepted but haven't published yet (see pendingSeatIds).
   int seatsLeftFor(LivestreamUserType role) {
@@ -378,6 +419,7 @@ class LivestreamScreenController extends BaseController
     presenceTimer?.cancel();
     _giftComboTimer?.cancel();
     _battleInviteExpiryTimer?.cancel();
+    _pkInviteExpiryTimer?.cancel();
     videoPlayerController.value?.dispose();
     liveStreamUserStatesListener?.cancel();
     liveStreamCommentsListener?.cancel();
@@ -520,6 +562,15 @@ class LivestreamScreenController extends BaseController
           initialTab: initialTab,
           roomID: liveData.value.roomID ?? ''),
       isScrollControlled: true,
+    );
+  }
+
+  void openPkMatchSetupSheet() {
+    HapticManager.shared.light();
+    Get.bottomSheet(
+      PkMatchSetupSheet(roomID: liveData.value.roomID ?? ''),
+      isScrollControlled: true,
+      enableDrag: false,
     );
   }
 
@@ -1293,6 +1344,41 @@ class LivestreamScreenController extends BaseController
         }
         if (stream.pendingRematchFromId == null) {
           _lastHandledRematchFromId = null;
+        }
+
+        // Same-room PK Match: shown to whichever non-host player(s) the
+        // host named in the invite, never to the host themselves (they
+        // already consented by sending it).
+        if (!isHost &&
+            stream.pkInviteFromId != null &&
+            (stream.pkInviteFromId != _lastHandledPkInviteFromId ||
+                stream.pkInviteSentAt != _lastHandledPkInviteSentAt) &&
+            _isOnPkInviteTeam(stream, myUserId)) {
+          _lastHandledPkInviteFromId = stream.pkInviteFromId;
+          _lastHandledPkInviteSentAt = stream.pkInviteSentAt;
+          _showIncomingPkMatchDialog(stream);
+        }
+        if (stream.pkInviteFromId == null) {
+          _lastHandledPkInviteFromId = null;
+          _lastHandledPkInviteSentAt = null;
+        }
+
+        // Host: the invite I sent disappeared without the match starting —
+        // the invitee declined, or it expired on their side.
+        if (isHost && _awaitingPkInviteResponse && stream.pkInviteFromId == null) {
+          _awaitingPkInviteResponse = false;
+          if (stream.type != LivestreamType.battle) {
+            showSnackBar(LKey.pkMatchDeclined.tr);
+          }
+        }
+
+        // Host: every required player has accepted — start the match.
+        if (isHost &&
+            stream.pkInviteFromId == myUserId &&
+            !_pkMatchStartInFlight &&
+            _allPkInviteesAccepted(stream)) {
+          _pkMatchStartInFlight = true;
+          unawaited(_startPkMatch(stream));
         }
 
         // Cross-room PK Battle: start/stop watching the opponent room as
@@ -2699,6 +2785,281 @@ class LivestreamScreenController extends BaseController
     } catch (e) {
       Loggers.error('Failed to accept PK invite: $e');
       showSnackBar(LKey.battleInviteFailed.tr);
+    }
+  }
+
+  // ───────────────────────── Same-room PK Match ─────────────────────────
+  // Co-host-vs-co-host within this one room, as opposed to the cross-room
+  // host-vs-host battle above. 1v1 only for now — 2v2 team assignment and
+  // arena rendering ship in a later increment; pkMatchEligibility already
+  // reports PkMode.twoVsTwo when it applies, the UI just doesn't act on it
+  // yet.
+
+  String pkIneligibleMessage(PkIneligibleReason? reason) {
+    switch (reason) {
+      case PkIneligibleReason.hostAlone:
+        return LKey.pkMatchHostAlone.tr;
+      case PkIneligibleReason.needEvenTeams:
+        return LKey.pkMatchNeedEvenTeams.tr;
+      case PkIneligibleReason.tooMany:
+        return LKey.pkMatchTooManyCoHosts.tr;
+      case PkIneligibleReason.battleDisabled:
+        return LKey.pkMatchBattleDisabled.tr;
+      case PkIneligibleReason.hostNotPublishing:
+      case null:
+        return LKey.pkMatchStartFailed.tr;
+    }
+  }
+
+  bool _isOnPkInviteTeam(Livestream stream, int userId) =>
+      (stream.pkInviteTeamAIds?.contains(userId) ?? false) ||
+      (stream.pkInviteTeamBIds?.contains(userId) ?? false);
+
+  bool _allPkInviteesAccepted(Livestream stream) => allPkInviteesAccepted(
+        required: requiredPkInviteeIds(
+          teamA: stream.pkInviteTeamAIds ?? const [],
+          teamB: stream.pkInviteTeamBIds ?? const [],
+          hostId: stream.pkInviteFromId,
+        ),
+        acceptedIds: stream.pkInviteAcceptedIds ?? const <int>[],
+      );
+
+  bool _isPkInviteExpired(Livestream stream) => isPkInviteExpired(
+        sentAt: stream.pkInviteSentAt,
+        nowMs: DateTime.now().millisecondsSinceEpoch,
+        expirySeconds: pkMatchInviteExpirySeconds,
+      );
+
+  Map<String, dynamic> _clearPkInviteFields() => {
+        FirebaseConst.pkInviteFromId: null,
+        FirebaseConst.pkInviteTeamAIds: null,
+        FirebaseConst.pkInviteTeamBIds: null,
+        FirebaseConst.pkInviteEligibleGiftIds: null,
+        FirebaseConst.pkInviteDurationMin: null,
+        FirebaseConst.pkInviteSentAt: null,
+        FirebaseConst.pkInviteAcceptedIds: null,
+      };
+
+  /// Host-only. [eligibleGiftIds] null means every gift counts toward the
+  /// match score.
+  Future<void> sendPkMatchInvite({List<int>? eligibleGiftIds}) async {
+    if (!isHost) return;
+    final eligibility = pkMatchEligibility;
+    if (eligibility.mode != PkMode.oneVsOne) {
+      showSnackBar(pkIneligibleMessage(eligibility.reason));
+      return;
+    }
+    final hostId = liveData.value.hostId;
+    if (hostId == null) return;
+    final opponentId =
+        eligibility.eligibleIds.firstWhereOrNull((id) => id != hostId);
+    if (opponentId == null) return;
+    final teamA = [hostId];
+    final teamB = [opponentId];
+    final validationError = validatePkTeams(
+      eligibility: eligibility,
+      hostId: hostId,
+      teamA: teamA,
+      teamB: teamB,
+    );
+    if (validationError != null) {
+      Loggers.error('PK match invite rejected locally: $validationError');
+      showSnackBar(LKey.pkMatchStartFailed.tr);
+      return;
+    }
+    try {
+      await db.runTransaction((transaction) async {
+        final snap = await transaction.get(liveStreamDocRef);
+        final data = snap.data() as Map<String, dynamic>?;
+        if (data == null) throw Exception('Room no longer exists');
+        final latest = Livestream.fromJson(data);
+        if (latest.type == LivestreamType.battle) {
+          throw Exception('Already in a battle');
+        }
+        if (latest.pkInviteFromId != null && !_isPkInviteExpired(latest)) {
+          throw Exception('A PK match invite is already pending');
+        }
+        final now = DateTime.now().millisecondsSinceEpoch;
+        transaction.update(liveStreamDocRef, {
+          FirebaseConst.pkInviteFromId: hostId,
+          FirebaseConst.pkInviteTeamAIds: teamA,
+          FirebaseConst.pkInviteTeamBIds: teamB,
+          FirebaseConst.pkInviteEligibleGiftIds: eligibleGiftIds,
+          FirebaseConst.pkInviteDurationMin: pkMatchDurationMinutes,
+          FirebaseConst.pkInviteSentAt: now,
+          FirebaseConst.pkInviteAcceptedIds: <int>[],
+        });
+      });
+      _awaitingPkInviteResponse = true;
+      showSnackBar(LKey.pkMatchInviteSent.tr);
+    } catch (e) {
+      Loggers.error('Failed to send PK match invite: $e');
+      showSnackBar(LKey.pkMatchInviteFailed.tr);
+    }
+  }
+
+  void _showIncomingPkMatchDialog(Livestream stream) {
+    if (stream.type == LivestreamType.battle) {
+      unawaited(declinePkMatchInvite());
+      return;
+    }
+    if (_isPkInviteExpired(stream)) {
+      unawaited(declinePkMatchInvite());
+      return;
+    }
+    final fromHostId = stream.pkInviteFromId;
+    final sentAt = stream.pkInviteSentAt;
+    if (fromHostId == null || sentAt == null) return;
+    final inviter = firestoreController.users
+        .firstWhereOrNull((user) => user.userId == fromHostId);
+    final durationMin = stream.pkInviteDurationMin ?? pkMatchDurationMinutes;
+    final remainingMs = (sentAt + pkMatchInviteExpirySeconds * 1000) -
+        DateTime.now().millisecondsSinceEpoch;
+    _pkInviteExpiryTimer?.cancel();
+    _pkInviteExpiryTimer = Timer(
+      Duration(milliseconds: remainingMs.clamp(0, 1 << 31)),
+      () {
+        if (Get.isDialogOpen ?? false) Get.back();
+        unawaited(declinePkMatchInvite());
+      },
+    );
+    Get.dialog(
+      AlertDialog(
+        title: Text(LKey.pkMatchInviteTitle.tr),
+        content: Text(LKey.pkMatchInviteDescription.trParams({
+          'name': inviter?.username ?? 'The host',
+          'duration': '$durationMin',
+        })),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _pkInviteExpiryTimer?.cancel();
+              Get.back();
+              unawaited(declinePkMatchInvite());
+            },
+            child: Text(LKey.refuse.tr),
+          ),
+          TextButton(
+            onPressed: () {
+              _pkInviteExpiryTimer?.cancel();
+              Get.back();
+              unawaited(acceptPkMatchInvite());
+            },
+            child: Text(LKey.accept.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> declinePkMatchInvite() async {
+    try {
+      await liveStreamDocRef.update(_clearPkInviteFields());
+    } catch (e) {
+      Loggers.error('Failed to decline PK match invite: $e');
+    }
+  }
+
+  Future<void> acceptPkMatchInvite() async {
+    final stream = liveData.value;
+    final fromHostId = stream.pkInviteFromId;
+    if (fromHostId == null) return;
+    if (_isPkInviteExpired(stream)) {
+      showSnackBar(LKey.pkMatchInviteExpired.tr);
+      unawaited(declinePkMatchInvite());
+      return;
+    }
+    try {
+      await db.runTransaction((transaction) async {
+        final snap = await transaction.get(liveStreamDocRef);
+        final data = snap.data() as Map<String, dynamic>?;
+        if (data == null) throw Exception('Room no longer exists');
+        final latest = Livestream.fromJson(data);
+        if (latest.pkInviteFromId != fromHostId || _isPkInviteExpired(latest)) {
+          throw Exception('Invite no longer pending');
+        }
+        transaction.update(liveStreamDocRef, {
+          FirebaseConst.pkInviteAcceptedIds: FieldValue.arrayUnion([myUserId]),
+        });
+      });
+    } catch (e) {
+      Loggers.error('Failed to accept PK match invite: $e');
+      showSnackBar(LKey.pkMatchStartFailed.tr);
+    }
+  }
+
+  /// Host-only, triggered once every required player has accepted. Re-reads
+  /// and re-validates everything fresh inside the transaction rather than
+  /// trusting the snapshot that triggered it — a co-host could have left or
+  /// been removed in the gap between the last accept and this running.
+  Future<void> _startPkMatch(Livestream invite) async {
+    String? failureReason;
+    try {
+      await db.runTransaction((transaction) async {
+        final snap = await transaction.get(liveStreamDocRef);
+        final data = snap.data() as Map<String, dynamic>?;
+        if (data == null) return;
+        final latest = Livestream.fromJson(data);
+        // Already cleared or already started by another trigger - nothing
+        // left for this one to do.
+        if (latest.pkInviteFromId != myUserId ||
+            latest.type == LivestreamType.battle) {
+          return;
+        }
+        final teamA = latest.pkInviteTeamAIds ?? const <int>[];
+        final teamB = latest.pkInviteTeamBIds ?? const <int>[];
+        final hostId = latest.hostId;
+        final eligibility = pkEligibilityFor(
+          hostId: hostId,
+          coHostIds: latest.coHostIds ?? const [],
+          guestIds: latest.guestIds ?? const [],
+          publishingIds: _publishingUserIds,
+          battleEnabled: (setting?.liveBattle ?? 1) == 1,
+        );
+        final validationError = hostId == null
+            ? 'missing_host'
+            : validatePkTeams(
+                eligibility: eligibility,
+                hostId: hostId,
+                teamA: teamA,
+                teamB: teamB,
+              );
+        if (validationError != null) {
+          failureReason = validationError;
+          transaction.update(liveStreamDocRef, _clearPkInviteFields());
+          return;
+        }
+        final now = DateTime.now().millisecondsSinceEpoch;
+        transaction.update(liveStreamDocRef, {
+          FirebaseConst.type: LivestreamType.battle.value,
+          FirebaseConst.battleType: BattleType.waiting.value,
+          FirebaseConst.battleDuration:
+              latest.pkInviteDurationMin ?? pkMatchDurationMinutes,
+          FirebaseConst.battleCreatedAt: now,
+          FirebaseConst.battleRoundWinsHost: 0,
+          FirebaseConst.battleRoundWinsCoHost: 0,
+          FirebaseConst.battleTotalRounds: pkMatchTotalRounds,
+          FirebaseConst.battleCurrentRound: 1,
+          FirebaseConst.firstGiftBonusClaimed: false,
+          FirebaseConst.pkTeamAIds: teamA,
+          FirebaseConst.pkTeamBIds: teamB,
+          FirebaseConst.pkEligibleGiftIds: latest.pkInviteEligibleGiftIds,
+          ..._clearPkInviteFields(),
+        });
+      });
+      if (failureReason != null) {
+        Loggers.error('PK match could not start: $failureReason');
+        showSnackBar(LKey.pkMatchStartFailed.tr);
+      } else {
+        roundBaselineRed.value = 0;
+        roundBaselineBlue.value = 0;
+      }
+    } catch (e) {
+      Loggers.error('Failed to start PK match: $e');
+      showSnackBar(LKey.pkMatchStartFailed.tr);
+    } finally {
+      _pkMatchStartInFlight = false;
     }
   }
 

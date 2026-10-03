@@ -83,4 +83,20 @@ class FirebaseConst {
   // existing listenLiveStreamData snapshot listener (already running) picks
   // it up the same way an initial battle invite is picked up.
   static const String pendingRematchFromId = 'pending_rematch_from_id';
+
+  // Same-room co-host PK Match invitation — negotiated on this one room doc
+  // (unlike the cross-room invite above, which spans two docs).
+  static const String pkInviteFromId = 'pk_invite_from_id';
+  static const String pkInviteTeamAIds = 'pk_invite_team_a_ids';
+  static const String pkInviteTeamBIds = 'pk_invite_team_b_ids';
+  static const String pkInviteEligibleGiftIds = 'pk_invite_eligible_gift_ids';
+  static const String pkInviteDurationMin = 'pk_invite_duration_min';
+  static const String pkInviteSentAt = 'pk_invite_sent_at';
+  static const String pkInviteAcceptedIds = 'pk_invite_accepted_ids';
+
+  // The negotiated teams for the PK Match in progress, promoted from the
+  // pk_invite_* fields once every required player accepts.
+  static const String pkTeamAIds = 'pk_team_a_ids';
+  static const String pkTeamBIds = 'pk_team_b_ids';
+  static const String pkEligibleGiftIds = 'pk_eligible_gift_ids';
 }

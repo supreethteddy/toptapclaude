@@ -16,6 +16,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_p
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/live_stream/manage_moderators_screen/manage_moderators_screen.dart';
+import 'package:shortzz/model/livestream/pk_eligibility.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -297,6 +298,9 @@ class LiveStreamBottomView extends StatelessWidget {
               ),
               onPressed: () => controller.toggleVideo(isVideoOn),
             ),
+            if (state?.type == LivestreamUserType.host &&
+                stream.type != LivestreamType.battle)
+              _PkMatchButton(controller: controller),
             if (state?.type == LivestreamUserType.host)
               _GuestsButton(controller: controller),
             if (state?.type == LivestreamUserType.host)
@@ -596,6 +600,79 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// PK Match entry point: visible only for the host and only while a 1v1 or
+/// 2v2 match is actually possible (see PkEligibility). A 2v2 match is
+/// recognised but not launchable yet — the setup sheet/arena for it ship in
+/// a later update, so tapping it says so rather than opening anything.
+class _PkMatchButton extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const _PkMatchButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final stream = controller.liveData.value;
+      final eligibility = controller.pkMatchEligibility;
+      // Nobody to challenge at all - don't clutter the controls with a
+      // button that can only ever explain why it's disabled.
+      if (eligibility.reason == PkIneligibleReason.hostAlone) {
+        return const SizedBox();
+      }
+      final isPending = stream.pkInviteFromId == controller.myUserId;
+      final isReady = eligibility.isAvailable && !isPending;
+      final label = eligibility.mode == PkMode.twoVsTwo
+          ? LKey.twoVsTwoMatch.tr
+          : LKey.oneVsOneMatch.tr;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: GestureDetector(
+          onTap: isPending ? null : () => _onTap(eligibility),
+          child: Container(
+            height: 30,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              gradient: isReady
+                  ? const LinearGradient(
+                      colors: [Color(0xFFFF3D6E), Color(0xFF7C4DFF)])
+                  : null,
+              color: isReady ? null : Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.white.withOpacity(0.35)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(AssetRes.icBattleVs,
+                    height: 14, width: 14, color: Colors.white),
+                const SizedBox(width: 4),
+                Text(label,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5)),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  void _onTap(PkEligibility eligibility) {
+    if (!eligibility.isAvailable) {
+      controller.showSnackBar(controller.pkIneligibleMessage(eligibility.reason));
+      return;
+    }
+    if (eligibility.mode == PkMode.twoVsTwo) {
+      controller.showSnackBar(LKey.twoVsTwoMatchComingSoon.tr);
+      return;
+    }
+    controller.openPkMatchSetupSheet();
   }
 }
 

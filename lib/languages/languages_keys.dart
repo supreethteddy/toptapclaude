@@ -364,6 +364,37 @@ class LKey {
   static const String battleInviteTitle = "Incoming PK Battle";
   static const String battleInviteDescription =
       "@name wants to battle you. Accept?";
+
+  // Same-room co-host PK Match (1v1 for now — 2v2 setup/arena ships later).
+  static const String oneVsOneMatch = "1v1 Match";
+  static const String twoVsTwoMatch = "2v2 Match";
+  static const String twoVsTwoMatchComingSoon =
+      "2v2 matches are coming in a future update.";
+  static const String pkMatchHostAlone =
+      "Add a co-host first to start a PK Match.";
+  static const String pkMatchNeedEvenTeams =
+      "Add one more co-host for an even match.";
+  static const String pkMatchTooManyCoHosts =
+      "Too many co-hosts on screen for a PK match.";
+  static const String pkMatchBattleDisabled =
+      "PK matches are turned off for this LIVE.";
+  static const String pkMatchSetupTitle = "Set Up PK Match";
+  static const String pkMatchDuration = "Duration";
+  static const String pkMatchEligibleGifts = "Eligible Gifts";
+  static const String pkMatchAllGiftsCount = "All gifts count";
+  static const String sendMatchInvitation = "Send Match Invitation";
+  static const String pkMatchInviteSent = "Match invitation sent!";
+  static const String pkMatchInviteFailed =
+      "Couldn't send the match invitation. Try again.";
+  static const String pkMatchInviteTitle = "PK Match Invitation";
+  static const String pkMatchInviteDescription =
+      "@name challenged you to a 1v1 PK Match (@duration min). Accept?";
+  static const String pkMatchDeclined =
+      "Your PK match invitation was declined.";
+  static const String pkMatchInviteExpired =
+      "That match invitation has expired.";
+  static const String pkMatchStartFailed =
+      "Couldn't start the PK match. Try again.";
   static const String rematchRequestSent = "Rematch request sent!";
   static const String rematchRequestTitle = "Rematch?";
   static const String rematchRequestDescription =
