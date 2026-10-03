@@ -13,7 +13,6 @@ import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/utilities/app_res.dart';
@@ -82,28 +81,21 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
   Widget build(BuildContext context) {
     return Obx(() {
       Livestream stream = widget.controller.liveData.value;
-      List<LivestreamUserState> userStates = widget.controller.liveUsersStates;
       List<AppUser> liveUsers = widget.controller.firestoreController.users;
 
-      // Host
-      LivestreamUserState? hostState;
-      AppUser? hostUser;
-      if (streamViews.isNotEmpty) {
-        hostState = userStates.firstWhereOrNull(
-          (e) => '${e.userId}' == streamViews[0].streamId,
-        );
-        hostUser = hostState?.getUser(liveUsers);
-      }
-
-      // Co-host
-      LivestreamUserState? coHostState;
-      AppUser? coHostUser;
-      if (streamViews.length > 1) {
-        coHostState = userStates.firstWhereOrNull(
-          (e) => '${e.userId}' == streamViews[1].streamId,
-        );
-        coHostUser = coHostState?.getUser(liveUsers);
-      }
+      // Team membership (pkTeamAIds/pkTeamBIds, falling back to host/first-
+      // co-host for any battle predating them) rather than screen position —
+      // a guest tile or future 2v2 co-host sitting at streamViews[1] used to
+      // silently become "the opponent" here. 1v1 only for now, so each team
+      // is exactly one user.
+      final teamAIds = widget.controller.pkTeamAUserIds;
+      final teamBIds = widget.controller.pkTeamBUserIds;
+      final teamAId = teamAIds.isEmpty ? null : teamAIds.first;
+      final teamBId = teamBIds.isEmpty ? null : teamBIds.first;
+      AppUser? hostUser =
+          teamAId == null ? null : liveUsers.firstWhereOrNull((u) => u.userId == teamAId);
+      AppUser? coHostUser =
+          teamBId == null ? null : liveUsers.firstWhereOrNull((u) => u.userId == teamBId);
 
       // User list
       List<AppUser> users = [
@@ -111,14 +103,13 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
         if (coHostUser != null) coHostUser,
       ];
 
-      // Battle coins, relative to this round's baseline (see
-      // LivestreamScreenController.roundBaselineRed/Blue) so the score
-      // resets to 0 for a fresh round without needing a Firestore reset of
-      // currentBattleCoin.
-      int red = (hostState?.currentBattleCoin ?? 0) -
-          widget.controller.roundBaselineRed.value;
-      int blue = (coHostState?.currentBattleCoin ?? 0) -
-          widget.controller.roundBaselineBlue.value;
+      // Team scores (gift coins since this round's baseline, respecting any
+      // eligible-gift restriction the match was set up with, plus likes
+      // tapped on that side) via the same pkTeamScore the match's saved
+      // history uses, instead of reading one side's currentBattleCoin by
+      // screen position.
+      int red = widget.controller.pkTeamAScore().total;
+      int blue = widget.controller.pkTeamBScore().total;
 
       return SafeArea(
         bottom: false,

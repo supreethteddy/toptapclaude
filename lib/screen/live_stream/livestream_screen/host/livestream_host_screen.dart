@@ -74,8 +74,11 @@ class LivestreamHostScreen extends StatelessWidget {
             // pick of any tap that lands on them.
             GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTapUp: (details) =>
-                  controller.onLikeButtonTap(details.localPosition),
+              onTapUp: (details) => controller.onLikeButtonTap(
+                details.localPosition,
+                details.localPosition.dx <
+                    MediaQuery.sizeOf(context).width / 2,
+              ),
               child: const SizedBox.expand(),
             ),
 

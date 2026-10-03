@@ -28,6 +28,7 @@ import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/live_invite.dart';
 import 'package:shortzz/model/livestream/pk_eligibility.dart';
 import 'package:shortzz/model/livestream/pk_invite.dart';
+import 'package:shortzz/model/livestream/pk_scores.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_comment.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
@@ -292,6 +293,59 @@ class LivestreamScreenController extends BaseController
   int get pkMatchDurationMinutes => setting?.pkBattleDurationMinutes ?? 5;
   int get pkMatchTotalRounds => setting?.pkBattleRounds ?? 1;
   int get pkMatchInviteExpirySeconds => setting?.pkInviteExpirySeconds ?? 60;
+
+  // ── Same-room PK Match scoring ──────────────────────────────────────────
+  // Team membership for the battle currently in progress (or just ended):
+  // the real pk_team_*_ids recorded by _startPkMatch, or — for any
+  // same-room battle data that predates this feature — the host/first-co-
+  // host pair the arena always used before team arrays existed. 1v1 only
+  // for now, so each list always has at most one member; a 2v2 arena will
+  // need the per-member baseline/raw-sum helpers below reworked, since they
+  // currently treat "the team's one member" and "the team" as equivalent.
+  List<int> get pkTeamAUserIds {
+    final real = liveData.value.pkTeamAIds;
+    if (real != null) return real;
+    final hostId = liveData.value.hostId;
+    return hostId == null ? const <int>[] : [hostId];
+  }
+
+  List<int> get pkTeamBUserIds {
+    final real = liveData.value.pkTeamBIds;
+    if (real != null) return real;
+    final coHostIds = liveData.value.coHostIds ?? const <int>[];
+    return coHostIds.isEmpty ? const <int>[] : [coHostIds.first];
+  }
+
+  Map<int, int> get _currentBattleCoinByUser => {
+        for (final state in liveUsersStates) state.userId: state.currentBattleCoin,
+      };
+
+  int _teamRawBattleCoins(List<int> memberIds) {
+    final coinByUser = _currentBattleCoinByUser;
+    return memberIds.fold(0, (total, id) => total + (coinByUser[id] ?? 0));
+  }
+
+  PkTeamScore pkTeamAScore() {
+    final members = pkTeamAUserIds;
+    return pkTeamScore(
+      memberIds: members,
+      battleCoinByUser: _currentBattleCoinByUser,
+      baselineByUser: {for (final id in members) id: roundBaselineRed.value},
+      likeEvents: liveData.value.pkLikePointsA ?? 0,
+      pointsPerLike: setting?.pkLikePoints ?? 1,
+    );
+  }
+
+  PkTeamScore pkTeamBScore() {
+    final members = pkTeamBUserIds;
+    return pkTeamScore(
+      memberIds: members,
+      battleCoinByUser: _currentBattleCoinByUser,
+      baselineByUser: {for (final id in members) id: roundBaselineBlue.value},
+      likeEvents: liveData.value.pkLikePointsB ?? 0,
+      pointsPerLike: setting?.pkLikePoints ?? 1,
+    );
+  }
 
   /// Seats still open for a given stage role, counting reservations held by
   /// invitees who accepted but haven't published yet (see pendingSeatIds).
@@ -1616,7 +1670,11 @@ class LivestreamScreenController extends BaseController
     streamViews.refresh();
   }
 
-  void onLikeButtonTap([Offset? tapPosition]) async {
+  /// [isLeftHalf] is which half of the screen was tapped, in screen-width
+  /// terms — only meaningful for (and only passed during) a same-room PK
+  /// Match, where the client's confirmed decision is that likes score to
+  /// whichever side you tap (left = team A/host, right = team B).
+  void onLikeButtonTap([Offset? tapPosition, bool? isLeftHalf]) async {
     HapticManager.shared.light();
     // Optimistic local heart burst — don't make the tapper wait for the
     // Firestore round-trip. _lastAnimatedLikeCount is bumped in lockstep so
@@ -1627,9 +1685,18 @@ class LivestreamScreenController extends BaseController
     _lastAnimatedLikeCount++;
     bool isExist = (await liveStreamDocRef.get()).exists;
     if (isExist) {
-      liveStreamDocRef.update({
+      final stream = liveData.value;
+      final updates = <String, dynamic>{
         FirebaseConst.likeCount: FieldValue.increment(1),
-      });
+      };
+      if (isLeftHalf != null &&
+          stream.battleType == BattleType.waiting &&
+          stream.pkTeamAIds != null) {
+        updates[isLeftHalf
+            ? FirebaseConst.pkLikePointsA
+            : FirebaseConst.pkLikePointsB] = FieldValue.increment(1);
+      }
+      liveStreamDocRef.update(updates);
 
       // Like goals read directly from the atomically incremented like count.
     }
@@ -1678,6 +1745,13 @@ class LivestreamScreenController extends BaseController
         // 1:1, so this is a no-op for every gift not explicitly configured.
         final battlePoints =
             battlePointsForGift(gift.id, fallbackCoins: coinPrice);
+        // A PK Match can restrict scoring to specific gifts
+        // (pkEligibleGiftIds, set from the match setup sheet); null/empty
+        // means every gift counts, same as every battle before this
+        // existed. The gift itself still sends and the coin value above
+        // still transfers either way — only the battle score is skipped.
+        final countsForPk =
+            giftCountsForPk(gift.id, liveData.value.pkEligibleGiftIds);
 
         _sendCommentToFirestore(
           type: LivestreamCommentType.gift,
@@ -1686,8 +1760,10 @@ class LivestreamScreenController extends BaseController
         );
         updateUserStateToFirestore(
           user?.userId,
-          battleCoin: type == GiftType.battle ? battlePoints : null,
-          currentBattleCoin: type == GiftType.battle ? battlePoints : null,
+          battleCoin:
+              type == GiftType.battle && countsForPk ? battlePoints : null,
+          currentBattleCoin:
+              type == GiftType.battle && countsForPk ? battlePoints : null,
           liveCoin: type == GiftType.livestream ? coinPrice : null,
         );
         // Daily + hourly ranking: every coin received in a LIVE counts for
@@ -2574,27 +2650,34 @@ class LivestreamScreenController extends BaseController
         Loggers.error('Failed to start next cross-room round: $e');
       }
     } else {
-      final hostState = liveUsersStates
-          .firstWhereOrNull((state) => state.userId == liveData.value.hostId);
-      final coHostIds = liveData.value.coHostIds ?? const <int>[];
-      final coHostId = coHostIds.isEmpty ? null : coHostIds.first;
-      final coHostState = liveUsersStates
-          .firstWhereOrNull((state) => state.userId == coHostId);
-      final hostCoins = hostState?.currentBattleCoin ?? 0;
-      final coHostCoins = coHostState?.currentBattleCoin ?? 0;
-      final isRoundDraw = hostCoins == coHostCoins;
-      final hostWon = !isRoundDraw && hostCoins > coHostCoins;
-      roundBaselineRed.value = hostCoins;
-      roundBaselineBlue.value = coHostCoins;
-      await updateLiveStreamData(
-        battleType: BattleType.waiting,
-        battleCreatedAt: now,
-        battleRoundWinsHost: hostWon ? FieldValue.increment(1) : null,
-        battleRoundWinsCoHost:
-            (!isRoundDraw && !hostWon) ? FieldValue.increment(1) : null,
-        battleCurrentRound: nextRound,
-        firstGiftBonusClaimed: false,
-      );
+      // Team-based (pkTeamAIds/pkTeamBIds, falling back to host/first-co-host
+      // for any battle predating them) rather than the host-vs-first-co-host
+      // math this used to inline — same source pkTeamAScore/pkTeamBScore use
+      // for the live arena display, so a round's win/loss always matches
+      // what the scoreboard showed for it.
+      final teamAScore = pkTeamAScore();
+      final teamBScore = pkTeamBScore();
+      final outcome = pkOutcome(teamAScore, teamBScore);
+      final isRoundDraw = outcome == BattleOutcome.draw;
+      final teamAWon = outcome == BattleOutcome.sideAWins;
+      roundBaselineRed.value = _teamRawBattleCoins(pkTeamAUserIds);
+      roundBaselineBlue.value = _teamRawBattleCoins(pkTeamBUserIds);
+      try {
+        await liveStreamDocRef.update({
+          FirebaseConst.battleType: BattleType.waiting.value,
+          FirebaseConst.battleCreatedAt: now,
+          if (teamAWon)
+            FirebaseConst.battleRoundWinsHost: FieldValue.increment(1),
+          if (!isRoundDraw && !teamAWon)
+            FirebaseConst.battleRoundWinsCoHost: FieldValue.increment(1),
+          FirebaseConst.battleCurrentRound: nextRound,
+          FirebaseConst.firstGiftBonusClaimed: false,
+          FirebaseConst.pkLikePointsA: 0,
+          FirebaseConst.pkLikePointsB: 0,
+        });
+      } catch (e) {
+        Loggers.error('Failed to start next same-room round: $e');
+      }
     }
   }
 
@@ -3045,6 +3128,8 @@ class LivestreamScreenController extends BaseController
           FirebaseConst.pkTeamAIds: teamA,
           FirebaseConst.pkTeamBIds: teamB,
           FirebaseConst.pkEligibleGiftIds: latest.pkInviteEligibleGiftIds,
+          FirebaseConst.pkLikePointsA: 0,
+          FirebaseConst.pkLikePointsB: 0,
           ..._clearPkInviteFields(),
         });
       });
@@ -3199,17 +3284,18 @@ class LivestreamScreenController extends BaseController
           '$opponentHostId': opponentLiveData.value?.battleRoundWins ?? 0,
         };
       } else {
-        final coHostIds = stream.coHostIds ?? const <int>[];
-        if (coHostIds.isEmpty) return;
-        opponentHostId = coHostIds.first;
+        // Team-based (pkTeamAIds/pkTeamBIds, with the usual host/first-co-
+        // host fallback) rather than a raw currentBattleCoin lookup, so a
+        // history entry's final score always matches what the live arena
+        // showed for it — including like points and any gift-eligibility
+        // restriction the match was set up with.
+        final teamB = pkTeamBUserIds;
+        if (teamB.isEmpty) return;
+        opponentHostId = teamB.first;
         roomIds = [myRoomId];
-        final hostState = liveUsersStates
-            .firstWhereOrNull((state) => state.userId == myHostId);
-        final coHostState = liveUsersStates
-            .firstWhereOrNull((state) => state.userId == opponentHostId);
         finalScores = {
-          '$myHostId': hostState?.currentBattleCoin ?? 0,
-          '$opponentHostId': coHostState?.currentBattleCoin ?? 0,
+          '$myHostId': pkTeamAScore().total,
+          '$opponentHostId': pkTeamBScore().total,
         };
         roundsWon = {
           '$myHostId': stream.battleRoundWinsHost ?? 0,

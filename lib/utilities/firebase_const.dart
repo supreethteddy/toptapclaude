@@ -99,4 +99,9 @@ class FirebaseConst {
   static const String pkTeamAIds = 'pk_team_a_ids';
   static const String pkTeamBIds = 'pk_team_b_ids';
   static const String pkEligibleGiftIds = 'pk_eligible_gift_ids';
+
+  // Likes tapped on each half of the screen during an active PK Match,
+  // reset to 0 at the start of every match/round.
+  static const String pkLikePointsA = 'pk_like_points_a';
+  static const String pkLikePointsB = 'pk_like_points_b';
 }

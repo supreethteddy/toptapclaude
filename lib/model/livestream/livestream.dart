@@ -121,6 +121,11 @@ class Livestream {
   List<int>? pkTeamBIds;
   List<int>? pkEligibleGiftIds;
 
+  // Likes tapped on each half of the screen during the match above, reset
+  // to 0 at the start of every match/round (see onLikeButtonTap).
+  int? pkLikePointsA;
+  int? pkLikePointsB;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -171,6 +176,8 @@ class Livestream {
     this.pkTeamAIds,
     this.pkTeamBIds,
     this.pkEligibleGiftIds,
+    this.pkLikePointsA,
+    this.pkLikePointsB,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -245,6 +252,8 @@ class Livestream {
     pkEligibleGiftIds = (json['pk_eligible_gift_ids'] as List<dynamic>?)
         ?.map((e) => (e as num).toInt())
         .toList();
+    pkLikePointsA = json['pk_like_points_a'];
+    pkLikePointsB = json['pk_like_points_b'];
   }
 
   Map<String, dynamic> toJson() {
@@ -298,6 +307,8 @@ class Livestream {
     data['pk_team_a_ids'] = pkTeamAIds;
     data['pk_team_b_ids'] = pkTeamBIds;
     data['pk_eligible_gift_ids'] = pkEligibleGiftIds;
+    data['pk_like_points_a'] = pkLikePointsA;
+    data['pk_like_points_b'] = pkLikePointsB;
     return data;
   }
 
