@@ -11,6 +11,7 @@ import 'package:shortzz/common/widget/text_button_custom.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -48,13 +49,35 @@ class _PkMatchSetupSheetState extends State<PkMatchSetupSheet> {
         .firstWhereOrNull((user) => user.userId == opponentId);
   }
 
+  // Closes itself the moment the invite this sheet sent actually turns into
+  // a running match — there is nothing left for the sheet to do once
+  // BattleView takes over the screen.
+  late final Worker _matchStartedWorker;
+
+  @override
+  void initState() {
+    super.initState();
+    _matchStartedWorker = ever<Livestream>(controller.liveData, (stream) {
+      if (stream.type == LivestreamType.battle &&
+          stream.battleType == BattleType.waiting &&
+          mounted) {
+        Get.back();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _matchStartedWorker.dispose();
+    super.dispose();
+  }
+
   Future<void> _send() async {
     if (isSending.value) return;
     isSending.value = true;
     final giftIds = allGiftsCount.value ? null : selectedGiftIds.toList();
     await controller.sendPkMatchInvite(eligibleGiftIds: giftIds);
     isSending.value = false;
-    if (mounted) Get.back();
   }
 
   @override
@@ -69,32 +92,74 @@ class _PkMatchSetupSheetState extends State<PkMatchSetupSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BottomSheetTopView(
-                title: LKey.pkMatchSetupTitle.tr, sideBtnVisibility: false),
-            _buildMatchup(context),
-            const SizedBox(height: 10),
-            _buildDurationRow(context),
-            const CustomDivider(),
-            Flexible(child: _buildGiftsSection(context)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(15, 10, 15, 10),
-              child: Obx(
-                () => Opacity(
-                  opacity: isSending.value ? 0.6 : 1,
-                  child: TextButtonCustom(
-                    onTap: _send,
-                    title: LKey.sendMatchInvitation.tr,
-                    horizontalMargin: 0,
-                  ),
-                ),
+        child: Obx(() {
+          final isPending =
+              controller.liveData.value.pkInviteFromId == controller.myUserId;
+          return isPending ? _buildPendingView(context) : _buildConfigureView(context);
+        }),
+      ),
+    );
+  }
+
+  Widget _buildConfigureView(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        BottomSheetTopView(
+            title: LKey.pkMatchSetupTitle.tr, sideBtnVisibility: false),
+        _buildMatchup(context),
+        const SizedBox(height: 10),
+        _buildDurationRow(context),
+        const CustomDivider(),
+        Flexible(child: _buildGiftsSection(context)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(15, 10, 15, 10),
+          child: Obx(
+            () => Opacity(
+              opacity: isSending.value ? 0.6 : 1,
+              child: TextButtonCustom(
+                onTap: _send,
+                title: LKey.sendMatchInvitation.tr,
+                horizontalMargin: 0,
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  /// Shown in place of the configure form once the invite is out — the host
+  /// just watches the same VS card and can pull it back with Withdraw;
+  /// declining/expiring on the other end flips this back to the configure
+  /// view on its own (pkInviteFromId clears), ready to send again.
+  Widget _buildPendingView(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        BottomSheetTopView(
+            title: LKey.pkMatchInviteTitle.tr, sideBtnVisibility: false),
+        _buildMatchup(context),
+        const SizedBox(height: 16),
+        Text(
+          LKey.pkMatchWaitingForResponse
+              .trParams({'name': _opponent?.username ?? ''}),
+          style: TextStyleCustom.outFitRegular400(
+              color: textLightGrey(context), fontSize: 14),
+        ),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          child: TextButtonCustom(
+            onTap: () => controller.declinePkMatchInvite(),
+            title: LKey.withdraw.tr,
+            horizontalMargin: 0,
+            backgroundColor: bgMediumGrey(context),
+            titleColor: textDarkGrey(context),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 

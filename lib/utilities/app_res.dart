@@ -60,6 +60,11 @@ class AppRes {
   static const int firstGiftBonusWindowInSecond = 30;
   static const int firstGiftBonusMultiplier = 3;
 
+  /// Same-room PK Match: how long the winning side's "Victory lap" countdown
+  /// runs for after the match ends — purely a local, cosmetic timer, not
+  /// synced through Firestore.
+  static const int pkVictoryLapDurationInSecond = 180;
+
   /// How long a PK Battle invite stays valid before the inviter's own side
   /// auto-clears it and a late accept is rejected. Previously unenforced —
   /// the invite dialog had no expiry at all.

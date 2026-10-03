@@ -399,6 +399,15 @@ class LKey {
   static const String rematchRequestTitle = "Rematch?";
   static const String rematchRequestDescription =
       "@name wants a rematch. Accept?";
+  static const String pkMatchWaitingForResponse =
+      "Waiting for @name to respond…";
+  static const String withdraw = "Withdraw";
+  static const String lose = "LOSE";
+  static const String victoryLap = "Victory lap";
+  static const String reconnectingCreator = "Reconnecting…";
+  static const String creatorWillBeBackSoon = "They'll be back soon.";
+  static const String pt = "pt";
+  static const String pts = "pts";
   static const String inviteViewers = "Viewers you can invite";
   static const String noViewersToInvite = "No viewers to invite yet";
   static const String dailyRanking = "Daily Ranking";

@@ -50,6 +50,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/widget/hourly_ranki
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/league_standings_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/pk_match_invite_dialog.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/pk_match_setup_sheet.dart';
 import 'package:shortzz/screen/report_sheet/report_sheet.dart';
 import 'package:shortzz/utilities/app_res.dart';
@@ -206,6 +207,11 @@ class LivestreamScreenController extends BaseController
   /// subcollection in the cross-room case.
   RxInt roundBaselineRed = 0.obs;
   RxInt roundBaselineBlue = 0.obs;
+
+  /// Same-room PK Match "Victory lap" countdown — see where it's started in
+  /// listenLiveStreamData.
+  RxInt victoryLapSecondsRemaining = 0.obs;
+  Timer? _victoryLapTimer;
 
   /// Live gift-combo streak: how many times in a row the most recent gift
   /// comment repeats the same sender+gift+receiver, each arriving within
@@ -474,6 +480,7 @@ class LivestreamScreenController extends BaseController
     _giftComboTimer?.cancel();
     _battleInviteExpiryTimer?.cancel();
     _pkInviteExpiryTimer?.cancel();
+    _victoryLapTimer?.cancel();
     videoPlayerController.value?.dispose();
     liveStreamUserStatesListener?.cancel();
     liveStreamCommentsListener?.cancel();
@@ -1360,6 +1367,31 @@ class LivestreamScreenController extends BaseController
           totalBattleSecond = Duration(
             minutes: stream.battleDuration,
           ).inSeconds;
+        }
+
+        // Same-room PK Match "Victory lap": a purely cosmetic, local
+        // countdown that starts the moment the match freezes on its result
+        // screen, replacing the plain timer display on every device
+        // watching (see PkVictoryLapTimer in battle_view.dart). Cross-room
+        // battles don't get one — out of scope, and this never collides
+        // with mySideBattleCoins/opponentSideBattleCoins' own cross-room
+        // end-of-match handling.
+        if (stream.battleType == BattleType.end &&
+            stream.opponentRoomId == null &&
+            _victoryLapTimer == null) {
+          victoryLapSecondsRemaining.value = AppRes.pkVictoryLapDurationInSecond;
+          _victoryLapTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+            if (victoryLapSecondsRemaining.value <= 0) {
+              _victoryLapTimer?.cancel();
+              _victoryLapTimer = null;
+              return;
+            }
+            victoryLapSecondsRemaining.value--;
+          });
+        }
+        if (stream.battleType != BattleType.end) {
+          _victoryLapTimer?.cancel();
+          _victoryLapTimer = null;
         }
 
         // Update LiveData
@@ -2894,6 +2926,14 @@ class LivestreamScreenController extends BaseController
     }
   }
 
+  /// A battle frozen on its end/"Victory lap" screen does NOT count as
+  /// active — that state is exactly when a rematch invite should be
+  /// allowed to replace it. Only an actively running round blocks a new
+  /// same-room PK Match invite.
+  static bool _isPkMatchActive(Livestream stream) =>
+      stream.type == LivestreamType.battle &&
+      stream.battleType == BattleType.waiting;
+
   bool _isOnPkInviteTeam(Livestream stream, int userId) =>
       (stream.pkInviteTeamAIds?.contains(userId) ?? false) ||
       (stream.pkInviteTeamBIds?.contains(userId) ?? false);
@@ -2956,7 +2996,11 @@ class LivestreamScreenController extends BaseController
         final data = snap.data() as Map<String, dynamic>?;
         if (data == null) throw Exception('Room no longer exists');
         final latest = Livestream.fromJson(data);
-        if (latest.type == LivestreamType.battle) {
+        // A match frozen on its end/"Victory lap" screen (battleType.end) is
+        // fair game for a rematch invite — only an actively running one
+        // blocks sending a new invite.
+        final matchActive = _isPkMatchActive(latest);
+        if (matchActive) {
           throw Exception('Already in a battle');
         }
         if (latest.pkInviteFromId != null && !_isPkInviteExpired(latest)) {
@@ -3007,30 +3051,20 @@ class LivestreamScreenController extends BaseController
       },
     );
     Get.dialog(
-      AlertDialog(
-        title: Text(LKey.pkMatchInviteTitle.tr),
-        content: Text(LKey.pkMatchInviteDescription.trParams({
-          'name': inviter?.username ?? 'The host',
-          'duration': '$durationMin',
-        })),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _pkInviteExpiryTimer?.cancel();
-              Get.back();
-              unawaited(declinePkMatchInvite());
-            },
-            child: Text(LKey.refuse.tr),
-          ),
-          TextButton(
-            onPressed: () {
-              _pkInviteExpiryTimer?.cancel();
-              Get.back();
-              unawaited(acceptPkMatchInvite());
-            },
-            child: Text(LKey.accept.tr),
-          ),
-        ],
+      PkMatchInviteDialog(
+        host: inviter,
+        me: myUser.value?.appUser,
+        durationMinutes: durationMin,
+        onDecline: () {
+          _pkInviteExpiryTimer?.cancel();
+          Get.back();
+          unawaited(declinePkMatchInvite());
+        },
+        onAccept: () {
+          _pkInviteExpiryTimer?.cancel();
+          Get.back();
+          unawaited(acceptPkMatchInvite());
+        },
       ),
       barrierDismissible: false,
     );
@@ -3084,10 +3118,11 @@ class LivestreamScreenController extends BaseController
         final data = snap.data() as Map<String, dynamic>?;
         if (data == null) return;
         final latest = Livestream.fromJson(data);
-        // Already cleared or already started by another trigger - nothing
-        // left for this one to do.
-        if (latest.pkInviteFromId != myUserId ||
-            latest.type == LivestreamType.battle) {
+        // Already cleared, or already started/still running from another
+        // trigger - nothing left for this one to do. A frozen end/"Victory
+        // lap" screen from the PREVIOUS match doesn't count as "running" —
+        // this invite is a rematch and is exactly what should replace it.
+        if (latest.pkInviteFromId != myUserId || _isPkMatchActive(latest)) {
           return;
         }
         final teamA = latest.pkInviteTeamAIds ?? const <int>[];

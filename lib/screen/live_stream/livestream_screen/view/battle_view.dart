@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/common_extension.dart';
@@ -39,18 +38,13 @@ class BattleView extends StatefulWidget {
 class _BattleViewState extends State<BattleView> {
   @override
   Widget build(BuildContext context) {
+    // The match timer / Victory lap countdown now overlay the video itself
+    // (see LiveBattleOverlayWidget) instead of sitting in a row below it.
     return SizedBox(
       width: double.infinity,
       child: SingleChildScrollView(
-        child: Column(
-          children: [
-            LiveBattleOverlayWidget(
-                controller: widget.controller, margin: widget.margin),
-            Obx(() => BattleTimer(
-                controller: widget.controller,
-                livestream: widget.controller.liveData.value)),
-          ],
-        ),
+        child: LiveBattleOverlayWidget(
+            controller: widget.controller, margin: widget.margin),
       ),
     );
   }
@@ -69,19 +63,12 @@ class LiveBattleOverlayWidget extends StatefulWidget {
 }
 
 class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
-  List<StreamView> streamViews = [];
-
-  @override
-  void initState() {
-    super.initState();
-    streamViews = widget.controller.streamViews;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       Livestream stream = widget.controller.liveData.value;
       List<AppUser> liveUsers = widget.controller.firestoreController.users;
+      List<StreamView> streamViews = widget.controller.streamViews;
 
       // Team membership (pkTeamAIds/pkTeamBIds, falling back to host/first-
       // co-host for any battle predating them) rather than screen position —
@@ -92,10 +79,22 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
       final teamBIds = widget.controller.pkTeamBUserIds;
       final teamAId = teamAIds.isEmpty ? null : teamAIds.first;
       final teamBId = teamBIds.isEmpty ? null : teamBIds.first;
-      AppUser? hostUser =
-          teamAId == null ? null : liveUsers.firstWhereOrNull((u) => u.userId == teamAId);
-      AppUser? coHostUser =
-          teamBId == null ? null : liveUsers.firstWhereOrNull((u) => u.userId == teamBId);
+      AppUser? hostUser = teamAId == null
+          ? null
+          : liveUsers.firstWhereOrNull((u) => u.userId == teamAId);
+      AppUser? coHostUser = teamBId == null
+          ? null
+          : liveUsers.firstWhereOrNull((u) => u.userId == teamBId);
+      // Each team's own tile, kept in its own fixed slot even when their
+      // stream has dropped — collapsing the Row to one tile when a co-host
+      // disconnects used to silently relabel the remaining tile as "both
+      // sides"; now that slot shows a reconnecting placeholder instead.
+      StreamView? teamAView = teamAId == null
+          ? null
+          : streamViews.firstWhereOrNull((v) => v.streamId == '$teamAId');
+      StreamView? teamBView = teamBId == null
+          ? null
+          : streamViews.firstWhereOrNull((v) => v.streamId == '$teamBId');
 
       // User list
       List<AppUser> users = [
@@ -111,6 +110,11 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
       int red = widget.controller.pkTeamAScore().total;
       int blue = widget.controller.pkTeamBScore().total;
 
+      final isEnded = stream.battleType == BattleType.end;
+      final outcome = determineBattleOutcome(red, blue);
+      final isDraw = outcome == BattleOutcome.draw;
+      final isRedWin = outcome == BattleOutcome.sideAWins;
+
       return SafeArea(
         bottom: false,
         child: Container(
@@ -123,29 +127,165 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
               Container(
                 padding: const EdgeInsets.only(top: 15.0, bottom: 30),
                 child: Row(
-                  children: List.generate(
-                    streamViews.length,
-                    (index) {
-                      return Expanded(
-                        child: LiveStreamUserView(
-                          isNameAndSpeakerVisible: false,
-                          controller: widget.controller,
-                          streamingView: streamViews[index],
-                        ),
-                      );
-                    },
-                  ),
+                  children: [
+                    Expanded(
+                        child: _buildSlot(teamAView, hostUser)),
+                    Expanded(
+                        child: _buildSlot(teamBView, coHostUser)),
+                  ],
                 ),
               ),
-              BuildProgressBar(red: red, blue: blue),
-              BuildStates(
-                  red: red,
-                  blue: blue,
-                  users: users,
-                  stream: stream,
-                  controller: widget.controller),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: BuildProgressBar(
+                    red: red, blue: blue, showScoreLabels: true),
+              ),
+              Positioned(
+                top: 46,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: isEnded
+                      ? VictoryLapTimer(controller: widget.controller)
+                      : BattleTimer(
+                          controller: widget.controller, livestream: stream),
+                ),
+              ),
+              if (isEnded) ...[
+                Positioned(
+                  top: 46,
+                  left: 10,
+                  child: ResultPill(
+                      isWin: !isDraw && isRedWin, isDraw: isDraw),
+                ),
+                Positioned(
+                  top: 46,
+                  right: 10,
+                  child: ResultPill(
+                      isWin: !isDraw && !isRedWin, isDraw: isDraw),
+                ),
+              ],
+              BuildBottomInfo(
+                  stream: stream, controller: widget.controller, users: users),
               BuildLastTenSecondView(controller: widget.controller),
               GiftComboBadge(controller: widget.controller),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildSlot(StreamView? view, AppUser? user) {
+    if (view != null) {
+      return LiveStreamUserView(
+        isNameAndSpeakerVisible: false,
+        controller: widget.controller,
+        streamingView: view,
+      );
+    }
+    if (user == null) return const SizedBox();
+    return ReconnectingPlaceholder(user: user);
+  }
+}
+
+/// A PK team member whose stream has dropped — same slot, same side, not
+/// collapsed out of the layout, so the other tile never silently becomes
+/// "the whole screen".
+class ReconnectingPlaceholder extends StatelessWidget {
+  final AppUser user;
+
+  const ReconnectingPlaceholder({super.key, required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black87,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            height: 26,
+            width: 26,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white70),
+          ),
+          const SizedBox(height: 10),
+          Text(LKey.reconnectingCreator.tr,
+              style: TextStyleCustom.outFitSemiBold600(
+                  color: Colors.white, fontSize: 13)),
+          const SizedBox(height: 2),
+          Text(LKey.creatorWillBeBackSoon.tr,
+              style: TextStyleCustom.outFitRegular400(
+                  color: Colors.white70, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Per-tile "WIN" / "LOSE" badge shown once the match ends — replaces the
+/// shared gradient VICTORY/DEFEAT tags that used to sit below the video for
+/// both sides at once with the same top-corner placement the reference
+/// client's PK arena uses.
+class ResultPill extends StatelessWidget {
+  final bool isWin;
+  final bool isDraw;
+
+  const ResultPill({super.key, required this.isWin, required this.isDraw});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = isDraw
+        ? LKey.battleDraw.tr.toUpperCase()
+        : (isWin ? '${LKey.win.tr} x1' : LKey.lose.tr);
+    final bgColor = isDraw
+        ? Colors.grey.withValues(alpha: .85)
+        : (isWin
+            ? ColorRes.likeRed.withValues(alpha: .9)
+            : Colors.black.withValues(alpha: .6));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration:
+          BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
+      child: Text(label,
+          style: TextStyleCustom.outFitSemiBold600(
+              color: Colors.white, fontSize: 12)),
+    );
+  }
+}
+
+/// Replaces the plain post-match timer with a "🎉 Victory lap mm:ss"
+/// countdown once the match ends — the same centered slot the running
+/// match's BattleTimer occupies, just relabelled.
+class VictoryLapTimer extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const VictoryLapTimer({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final duration =
+          Duration(seconds: controller.victoryLapSecondsRemaining.value);
+      return FittedBox(
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: whitePure(context),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🎉', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              Text('${LKey.victoryLap.tr} ${duration.printDuration}',
+                  style: TextStyleCustom.unboundedMedium500(
+                      color: ColorRes.green, fontSize: 14)),
             ],
           ),
         ),
@@ -204,8 +344,17 @@ class GiftComboBadge extends StatelessWidget {
 class BuildProgressBar extends StatelessWidget {
   final int red;
   final int blue;
+  // Same-room PK Match only (see LiveBattleOverlayWidget) — the raw score
+  // numbers at each end of the bar. Defaults off so the cross-room view
+  // (PartyBattleView, which reuses this same widget) is unaffected.
+  final bool showScoreLabels;
 
-  const BuildProgressBar({super.key, required this.red, required this.blue});
+  const BuildProgressBar({
+    super.key,
+    required this.red,
+    required this.blue,
+    this.showScoreLabels = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -238,6 +387,16 @@ class BuildProgressBar extends StatelessWidget {
                 ),
               ],
             ),
+            if (showScoreLabels) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _ScoreLabel(score: red, color: ColorRes.likeRed),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _ScoreLabel(score: blue, color: ColorRes.battleProgressColor),
+              ),
+            ],
             AnimatedAlign(
               alignment: Alignment(alignmentX, 0),
               duration: const Duration(milliseconds: 200),
@@ -260,10 +419,30 @@ class BuildProgressBar extends StatelessWidget {
   }
 }
 
+class _ScoreLabel extends StatelessWidget {
+  final int score;
+  final Color color;
+
+  const _ScoreLabel({required this.score, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(color: color, shape: BoxShape.rectangle),
+      child: Text(
+        score.numberFormat,
+        style: TextStyleCustom.outFitSemiBold600(
+            color: Colors.white, fontSize: 12),
+      ),
+    );
+  }
+}
+
 /// "WIN xN" pill for one side's round-win tally across the current
 /// multi-round match, shown above the score bar throughout the battle.
-/// Shared by both [BuildStates] (same-room) and PartyBattleView
-/// (cross-room).
+/// Cross-room only now (PartyBattleView) — the same-room PK Match arena
+/// shows a result-only ResultPill once a (single-round) match ends instead.
 class WinPill extends StatelessWidget {
   final int count;
   final Color color;
@@ -289,8 +468,7 @@ class WinPill extends StatelessWidget {
 }
 
 /// "Round {current}/{total}" label for the fixed round count per match.
-/// Shared by both [BuildStates] (same-room) and PartyBattleView
-/// (cross-room).
+/// Cross-room only now (PartyBattleView) — see [WinPill].
 class RoundLabel extends StatelessWidget {
   final int current;
   final int total;
@@ -371,197 +549,71 @@ class _FirstGiftBonusBannerState extends State<FirstGiftBonusBanner> {
   }
 }
 
-class BuildStates extends StatelessWidget {
-  final int red;
-  final int blue;
-  final List<AppUser> users;
+/// Bottom-of-arena content: the first-gift-bonus banner, each player's name
+/// strip, and — once the match ends — a single host-only action button
+/// (Next Round for a multi-round match, otherwise Rematch). The shared
+/// VICTORY/DEFEAT tags and the floating VS logo this used to render here are
+/// gone: the result is now the per-tile ResultPill at the top of the arena,
+/// and no VS logo is shown once a match is actually under way (the client's
+/// reference only shows that in the pre-match setup/invite cards).
+class BuildBottomInfo extends StatelessWidget {
   final Livestream stream;
   final LivestreamScreenController controller;
+  final List<AppUser> users;
 
-  const BuildStates(
+  const BuildBottomInfo(
       {super.key,
-      required this.red,
-      required this.blue,
-      required this.users,
       required this.stream,
-      required this.controller});
+      required this.controller,
+      required this.users});
 
   @override
   Widget build(BuildContext context) {
-    // Was `red >= blue`, which silently counted a tie as a red win — fixed
-    // using the same shared, unit-tested outcome function as the cross-room
-    // view (party_battle_view.dart) and `_recordBattleHistory`.
-    final outcome = determineBattleOutcome(red, blue);
-    bool isDraw = outcome == BattleOutcome.draw;
-    bool isRedWin = outcome == BattleOutcome.sideAWins;
-
+    final isEnded = stream.battleType == BattleType.end;
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Stack(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              // round-win tally
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    WinPill(
-                        count: stream.battleRoundWinsHost ?? 0,
-                        color: ColorRes.likeRed),
-                    RoundLabel(
-                        current: stream.battleCurrentRound ?? 1,
-                        total: stream.battleTotalRounds ??
-                            AppRes.battleTotalRounds),
-                    WinPill(
-                        count: stream.battleRoundWinsCoHost ?? 0,
-                        color: ColorRes.battleProgressColor),
-                  ],
+          FirstGiftBonusBanner(controller: controller),
+          if (isEnded && controller.isHost)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: InkWell(
+                onTap: controller.canStartNextRound
+                    ? controller.startNextRound
+                    : controller.openPkMatchSetupSheet,
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    gradient: const LinearGradient(
+                        colors: [Color(0xFFFF3D6E), Color(0xFF7C4DFF)]),
+                  ),
+                  child: Text(
+                    controller.canStartNextRound
+                        ? LKey.nextRound.tr
+                        : LKey.rematch.tr,
+                    style: TextStyleCustom.outFitSemiBold600(
+                        color: Colors.white, fontSize: 14),
+                  ),
                 ),
               ),
-              FirstGiftBonusBanner(controller: controller),
-              // coin view
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+          if (users.length == 2)
+            Container(
+              height: 60,
+              alignment: Alignment.topCenter,
+              child: Row(
                 children: [
-                  _buildCoinStats(context, topRight: true, coin: red),
-                  _buildCoinStats(context, topRight: false, coin: blue),
+                  _buildStreamerInfo(context, isLeft: true, user: users[0]),
+                  _buildStreamerInfo(context, isLeft: false, user: users[1])
                 ],
               ),
-              // winner tag
-              if (stream.battleType == BattleType.end) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildWinnerTag(context,
-                        rightSide: false, winnerTag: isRedWin, isDraw: isDraw),
-                    _buildWinnerTag(context,
-                        rightSide: true, winnerTag: !isRedWin, isDraw: isDraw),
-                  ],
-                ),
-                if (controller.isHost && controller.canStartNextRound)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: InkWell(
-                      onTap: controller.startNextRound,
-                      child: Container(
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30),
-                            color: whitePure(context).withValues(alpha: .15),
-                            border: Border.all(
-                                color:
-                                    whitePure(context).withValues(alpha: .3))),
-                        child: Text(
-                          LKey.nextRound.tr,
-                          style: TextStyleCustom.outFitSemiBold600(
-                              color: whitePure(context), fontSize: 14),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-              // profile name both user
-              if (users.length == 2)
-                Container(
-                  height: 60,
-                  alignment: Alignment.topCenter,
-                  child: Row(
-                    children: [
-                      _buildStreamerInfo(context, isLeft: true, user: users[0]),
-                      _buildStreamerInfo(context, isLeft: false, user: users[1])
-                    ],
-                  ),
-                )
-            ],
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Image.asset(AssetRes.icBattleVs, height: 80, width: 80),
-          ),
+            )
         ],
-      ),
-    );
-  }
-
-  Widget _buildCoinStats(BuildContext context,
-      {required bool topRight, required int coin}) {
-    return Container(
-      height: 26,
-      constraints: const BoxConstraints(minWidth: 90, maxWidth: 150),
-      decoration: ShapeDecoration(
-        color: whitePure(context),
-        shape: SmoothRectangleBorder(
-          borderRadius: topRight
-              ? const SmoothBorderRadius.only(
-                  topRight: SmoothRadius(cornerRadius: 40, cornerSmoothing: 0))
-              : const SmoothBorderRadius.only(
-                  topLeft: SmoothRadius(cornerRadius: 40, cornerSmoothing: 0)),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Row(
-        textDirection: TextDirection.ltr,
-        mainAxisSize: MainAxisSize.min,
-        spacing: 5,
-        mainAxisAlignment:
-            topRight ? MainAxisAlignment.start : MainAxisAlignment.end,
-        children: [
-          if (topRight) Image.asset(AssetRes.icCoin, height: 18, width: 18),
-          Text(
-            coin.numberFormat,
-            style: TextStyleCustom.outFitMedium500(
-              fontSize: 13,
-              color: textDarkGrey(context),
-            ),
-          ),
-          if (!topRight) Image.asset(AssetRes.icCoin, height: 18, width: 18),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWinnerTag(BuildContext context,
-      {required bool rightSide,
-      required bool winnerTag,
-      bool isDraw = false}) {
-    final tagColor = isDraw
-        ? Colors.grey
-        : (winnerTag ? ColorRes.green : ColorRes.likeRed);
-    return Expanded(
-      child: Container(
-        height: 31,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        alignment: rightSide
-            ? AlignmentDirectional.centerEnd
-            : AlignmentDirectional.centerStart,
-        decoration: BoxDecoration(
-            gradient: LinearGradient(
-                colors: [
-              tagColor,
-              Colors.transparent,
-            ],
-                begin: !rightSide
-                    ? AlignmentDirectional.centerEnd
-                    : AlignmentDirectional.centerStart,
-                end: !rightSide
-                    ? AlignmentDirectional.centerStart
-                    : AlignmentDirectional.centerEnd)),
-        child: Text(
-          (isDraw
-                  ? LKey.battleDraw.tr
-                  : (winnerTag ? LKey.victory.tr : LKey.defeat.tr))
-              .toUpperCase(),
-          style: TextStyleCustom.unboundedBlack900(
-              color: isDraw
-                  ? Colors.grey
-                  : (winnerTag ? ColorRes.green1 : ColorRes.likeRed),
-              fontSize: 17),
-        ),
       ),
     );
   }
