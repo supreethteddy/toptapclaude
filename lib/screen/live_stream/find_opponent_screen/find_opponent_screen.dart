@@ -90,7 +90,7 @@ class _OpponentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppUser? host = stream.getHostUser(controller.firestoreController.users);
-    int headcount = 1 + (stream.coHostIds?.length ?? 0);
+    int headcount = stream.stageIds.length;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/list_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
+import 'package:shortzz/common/extensions/user_extension.dart';
 import 'package:shortzz/common/widget/bottom_sheet_top_view.dart';
 import 'package:shortzz/common/widget/custom_divider.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
@@ -12,8 +13,11 @@ import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
 import 'package:shortzz/common/widget/no_data_widget.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:shortzz/model/livestream/live_invite.dart';
 import 'package:shortzz/model/livestream/livestream_comment.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
+import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/invite_candidates_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
@@ -32,6 +36,7 @@ class MembersSheet extends StatefulWidget {
   static const int tabRequests = 0;
   static const int tabInvited = 1;
   static const int tabCoHosts = 2;
+  static const int tabGuests = 3;
 
   const MembersSheet(
       {super.key,
@@ -51,9 +56,41 @@ class _MembersSheetState extends State<MembersSheet> {
   late final RxInt selectedTab = widget.initialTab.obs;
   final RxString query = ''.obs;
 
+  // Invited page's own secondary switcher: who is in the room already vs.
+  // who can be reached out-of-room (Friends / Recommended).
+  static const int _subTabInRoom = 0;
+  final RxInt invitedSubTab = _subTabInRoom.obs;
+  late final PageController invitedSubPageController = PageController();
+  late final InviteCandidatesController inviteCandidates;
+  late final String _inviteCandidatesTag =
+      'invite_candidates_${widget.roomID}';
+
+  @override
+  void initState() {
+    super.initState();
+    inviteCandidates = Get.put(
+      InviteCandidatesController(),
+      tag: _inviteCandidatesTag,
+    );
+  }
+
+  @override
+  void dispose() {
+    pageController.dispose();
+    invitedSubPageController.dispose();
+    Get.delete<InviteCandidatesController>(tag: _inviteCandidatesTag);
+    super.dispose();
+  }
+
   void onSelectedTab(int index) {
     selectedTab.value = index;
     pageController.animateToPage(index,
+        duration: const Duration(milliseconds: 250), curve: Curves.linear);
+  }
+
+  void onSelectedInvitedSubTab(int index) {
+    invitedSubTab.value = index;
+    invitedSubPageController.animateToPage(index,
         duration: const Duration(milliseconds: 250), curve: Curves.linear);
   }
 
@@ -112,6 +149,7 @@ class _MembersSheetState extends State<MembersSheet> {
                         : LKey.requests.tr,
                     LKey.invited.tr,
                     LKey.coHosts.tr,
+                    LKey.guests.tr,
                   ],
                   onTap: onSelectedTab,
                   selectedIndex: selectedTab,
@@ -121,11 +159,14 @@ class _MembersSheetState extends State<MembersSheet> {
                 );
               }),
             Obx(
-              () => selectedTab.value == MembersSheet.tabCoHosts
+              () => selectedTab.value >= MembersSheet.tabCoHosts
                   ? const SizedBox()
                   : CustomSearchTextField(
                       backgroundColor: bgLightGrey(context),
-                      onChanged: (value) => query.value = value,
+                      onChanged: (value) {
+                        query.value = value;
+                        inviteCandidates.onSearchChanged(value);
+                      },
                     ),
             ),
             Expanded(
@@ -165,6 +206,7 @@ class _MembersSheetState extends State<MembersSheet> {
         _buildRequestsPage(),
         _buildInvitedPage(),
         _buildCoHostsPage(),
+        _buildGuestsPage(),
       ],
     );
   }
@@ -192,9 +234,45 @@ class _MembersSheetState extends State<MembersSheet> {
     });
   }
 
+  /// In room / Friends / Recommended: the in-room list reaches viewers
+  /// already watching, the other two reach people who are not in the room at
+  /// all (out-of-room `LiveInvite` + FCM nudge, see
+  /// LivestreamScreenController.inviteOutOfRoom).
+  Widget _buildInvitedPage() {
+    return Column(
+      children: [
+        CustomTabSwitcher(
+          items: [LKey.inRoom.tr, LKey.friends.tr, LKey.recommended.tr],
+          onTap: onSelectedInvitedSubTab,
+          selectedIndex: invitedSubTab,
+          margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+          backgroundColor: bgLightGrey(context),
+          selectedFontColor: themeAccentSolid(context),
+        ),
+        Expanded(
+          child: PageView(
+            controller: invitedSubPageController,
+            onPageChanged: (value) => invitedSubTab.value = value,
+            children: [
+              _buildInRoomInviteList(),
+              _buildCandidatesList(
+                isFriends: true,
+                loading: inviteCandidates.isLoadingFriends,
+              ),
+              _buildCandidatesList(
+                isFriends: false,
+                loading: inviteCandidates.isLoadingRecommended,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Invited viewers on top, then every other viewer with an Invite button so
   /// the host can collect guests from this one place.
-  Widget _buildInvitedPage() {
+  Widget _buildInRoomInviteList() {
     return Obx(() {
       final invited = _filter(controller.invitedList);
       final invitable = _filter(controller.audienceList);
@@ -238,6 +316,98 @@ class _MembersSheetState extends State<MembersSheet> {
     });
   }
 
+  /// Shared by the Friends and Recommended pages — only the source list and
+  /// loading flag differ.
+  Widget _buildCandidatesList({required bool isFriends, required RxBool loading}) {
+    return Obx(() {
+      final items = isFriends
+          ? inviteCandidates.friendsVisible
+          : inviteCandidates.recommendedVisible;
+      final isBusy = loading.value ||
+          (!isFriends && inviteCandidates.isSearching.value);
+      if (items.isEmpty) {
+        return NoDataView(
+          showShow: !isBusy,
+          title: LKey.noInviteCandidatesTitle.tr,
+          description: LKey.noInviteCandidates.tr,
+          child: const SizedBox(),
+        );
+      }
+      return ListView.builder(
+        padding: EdgeInsets.zero,
+        itemCount: items.length,
+        itemBuilder: (context, index) => _buildCandidateRow(items[index]),
+      );
+    });
+  }
+
+  Widget _buildCandidateRow(User user) {
+    return Obx(() {
+      // Touch liveData/outgoingInvites so this rebuilds as seats/status change.
+      controller.liveData.value;
+      final invite =
+          user.id == null ? null : controller.outgoingInviteFor(user.id!);
+      return MemberProfileCard(
+        user: user.appUser,
+        widget: _buildCandidateAction(user, invite),
+      );
+    });
+  }
+
+  Widget _buildCandidateAction(User user, LiveInvite? invite) {
+    if (invite != null) {
+      switch (invite.status) {
+        case LiveInviteStatus.pending:
+          return TextBorderButton(
+            text: LKey.invitedEllipsis.tr,
+            onTap: () => controller.cancelOutOfRoomInvite(invite),
+          );
+        case LiveInviteStatus.accepted:
+          return TextBorderButton(text: LKey.inRoom.tr, textOpacity: .5);
+        case LiveInviteStatus.declined:
+          return TextBorderButton(
+            text: LKey.declinedTapToReinvite.tr,
+            onTap: () => controller.inviteOutOfRoom(user, invite.role),
+          );
+        case LiveInviteStatus.expired:
+        case LiveInviteStatus.cancelled:
+        case LiveInviteStatus.seatsFull:
+          break; // Treat as a clean slate: fall through to fresh invite buttons.
+      }
+    }
+    final coHostSeat = controller.hasSeatFor(LivestreamUserType.coHost);
+    final guestSeat = controller.hasSeatFor(LivestreamUserType.guest);
+    if (!coHostSeat && !guestSeat) {
+      return TextBorderButton(text: LKey.seatsFullShort.tr, textOpacity: .4);
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Opacity(
+          opacity: coHostSeat ? 1 : .4,
+          child: TextBorderButton(
+            text: LKey.coHosts.tr,
+            onTap: coHostSeat
+                ? () => controller.inviteOutOfRoom(
+                    user, LivestreamUserType.coHost)
+                : null,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Opacity(
+          opacity: guestSeat ? 1 : .4,
+          child: TextBorderButton(
+            text: LKey.guest.tr,
+            onTap: guestSeat
+                ? () =>
+                    controller.inviteOutOfRoom(user, LivestreamUserType.guest)
+                : null,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCoHostsPage() {
     return Obx(() {
       final items = controller.coHostList;
@@ -261,6 +431,64 @@ class _MembersSheetState extends State<MembersSheet> {
     });
   }
 
+  Widget _buildGuestsPage() {
+    return Obx(() {
+      final items = controller.guestList;
+      return NoDataView(
+        showShow: items.isEmpty,
+        title: LKey.guestListEmptyTitle.tr,
+        description: LKey.guestListEmptyDescription.tr,
+        child: ListView.builder(
+          padding: EdgeInsets.zero,
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final state = items[index];
+            final user = _userOf(state);
+            return MemberProfileCard(
+              user: user,
+              widget: _buildActionWidget(state, user),
+            );
+          },
+        ),
+      );
+    });
+  }
+
+  /// Two invite buttons because the two roles are different seats with
+  /// different caps: Co-host Mode (PK-eligible, 4 in frame) vs Guest Call.
+  /// A button is disabled - not hidden - when that role's seats are full so
+  /// the host can see why.
+  Widget _buildInviteButtons(AppUser? user) {
+    return Obx(() {
+      // Touch liveData so this rebuilds as seats are taken/freed.
+      controller.liveData.value;
+      final coHostSeat = controller.hasSeatFor(LivestreamUserType.coHost);
+      final guestSeat = controller.hasSeatFor(LivestreamUserType.guest);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Opacity(
+            opacity: coHostSeat ? 1 : .4,
+            child: TextBorderButton(
+              text: LKey.coHosts.tr,
+              onTap: () => controller.onInvite(user,
+                  isInvited: false, role: LivestreamUserType.coHost),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Opacity(
+            opacity: guestSeat ? 1 : .4,
+            child: TextBorderButton(
+              text: LKey.guest.tr,
+              onTap: () => controller.onInvite(user,
+                  isInvited: false, role: LivestreamUserType.guest),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
   Widget _buildActionWidget(LivestreamUserState state, AppUser? user) {
     if (!widget.isHost) return const SizedBox();
     switch (state.type) {
@@ -278,10 +506,7 @@ class _MembersSheetState extends State<MembersSheet> {
           ],
         );
       case LivestreamUserType.audience:
-        return TextBorderButton(
-          text: LKey.invite.tr,
-          onTap: () => controller.onInvite(user, isInvited: false),
-        );
+        return _buildInviteButtons(user);
       case LivestreamUserType.invited:
         return TextBorderButton(
           text: LKey.cancel.tr,
@@ -299,6 +524,32 @@ class _MembersSheetState extends State<MembersSheet> {
               state.isMuted ? AssetRes.icMicOff : AssetRes.icMicrophone,
               textLightGrey(context),
               () => controller.coHostAudioToggle(state),
+            ),
+            _buildActionBtn(AssetRes.icDelete1, ColorRes.likeRed,
+                () => controller.coHostDelete(state)),
+          ],
+        );
+      case LivestreamUserType.guest:
+        // Same moderation as a co-host, plus an explicit "promote" so a
+        // guest can only ever become PK-eligible by a deliberate host action.
+        return Row(
+          children: [
+            _buildActionBtn(
+              state.isVideoOn ? AssetRes.icVideoCamera : AssetRes.icVideoOff,
+              textLightGrey(context),
+              () => controller.coHostVideoToggle(state),
+            ),
+            _buildActionBtn(
+              state.isMuted ? AssetRes.icMicOff : AssetRes.icMicrophone,
+              textLightGrey(context),
+              () => controller.coHostAudioToggle(state),
+            ),
+            IconButton(
+              tooltip: LKey.promoteToCoHost.tr,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              icon: Icon(Icons.upgrade, color: themeAccentSolid(context)),
+              onPressed: () => controller.promoteGuestToCoHost(state),
             ),
             _buildActionBtn(AssetRes.icDelete1, ColorRes.likeRed,
                 () => controller.coHostDelete(state)),

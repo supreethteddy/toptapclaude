@@ -7,6 +7,7 @@ import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/text_button_custom.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -17,12 +18,18 @@ class LiveStreamJoinSheet extends StatelessWidget {
   final VoidCallback? onJoined;
   final VoidCallback? onCancel;
 
+  /// Which stage role the host invited you into — changes the copy so the
+  /// invitee knows whether they're joining Co-host Mode (PK-eligible, 4 in
+  /// frame) or a Guest Call seat.
+  final LivestreamUserType role;
+
   const LiveStreamJoinSheet(
       {super.key,
       this.hostUser,
       this.myUser,
       this.onJoined,
-      this.onCancel});
+      this.onCancel,
+      this.role = LivestreamUserType.guest});
 
   @override
   Widget build(BuildContext context) {
@@ -105,8 +112,9 @@ class LiveStreamJoinSheet extends StatelessWidget {
                               fontSize: 16),
                       children: [
                         TextSpan(
-                            text:
-                                ' ${LKey.wantsYouToBeEtc.tr}',
+                            text: role == LivestreamUserType.coHost
+                                ? ' ${LKey.invitedYouAsCoHost.tr}'
+                                : ' ${LKey.invitedYouAsGuest.tr}',
                             style: TextStyleCustom
                                 .outFitRegular400(
                                     color: textLightGrey(
@@ -125,7 +133,7 @@ class LiveStreamJoinSheet extends StatelessWidget {
                           Get.back();
                           onCancel?.call();
                         },
-                        title: LKey.cancel.tr,
+                        title: LKey.decline.tr,
                         titleColor: textLightGrey(context),
                         backgroundColor:
                             bgMediumGrey(context),
@@ -142,7 +150,7 @@ class LiveStreamJoinSheet extends StatelessWidget {
                           Get.back();
                           onJoined?.call();
                         },
-                        title: LKey.join.tr,
+                        title: LKey.acceptInvitation.tr,
                         titleColor: whitePure(context),
                         backgroundColor:
                             blueFollow(context),

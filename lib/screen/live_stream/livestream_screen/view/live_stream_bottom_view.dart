@@ -192,8 +192,13 @@ class LiveStreamBottomView extends StatelessWidget {
   /// a co-host.
   Widget _buildGuestRequestButton(BuildContext context, Livestream stream) {
     final isBattleOn = stream.type == LivestreamType.battle;
-    final isCoHost = (stream.coHostIds ?? []).contains(controller.myUserId);
-    if (isBattleOn || stream.isRestrictToJoin != 0 || isCoHost) {
+    // Already on stage (co-host or guest), battle running, host restricted
+    // joining, or the admin switched guest requests off — no request pill.
+    final isOnStage = stream.isOnStage(controller.myUserId);
+    if (isBattleOn ||
+        stream.isRestrictToJoin != 0 ||
+        isOnStage ||
+        !controller.guestRequestsEnabled) {
       return const SizedBox.shrink();
     }
     final myState = controller.liveUsersStates
@@ -246,8 +251,11 @@ class LiveStreamBottomView extends StatelessWidget {
       LivestreamUserState? state = controller.liveUsersStates.firstWhereOrNull(
         (element) => element.userId == userId,
       );
+      // Guests get the same camera/mic/leave controls as co-hosts — the
+      // role only matters for PK eligibility, not for running your own feed.
       final isHostOrCoHost = state?.type == LivestreamUserType.host ||
-          state?.type == LivestreamUserType.coHost;
+          state?.type == LivestreamUserType.coHost ||
+          state?.type == LivestreamUserType.guest;
       bool isMute = state?.isMuted ?? false;
       bool isVideoOn = state?.isVideoOn ?? false;
       Livestream stream = controller.liveData.value;
@@ -258,7 +266,8 @@ class LiveStreamBottomView extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (LivestreamUserType.coHost == state?.type &&
+            if ((LivestreamUserType.coHost == state?.type ||
+                    LivestreamUserType.guest == state?.type) &&
                 stream.type == LivestreamType.livestream)
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.red),

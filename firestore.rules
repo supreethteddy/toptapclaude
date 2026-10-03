@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// DRAFT — do not paste this into the console as-is. There is no Firebase
+// CLI / service account on this machine, so nothing here is ever deployed
+// from the repo automatically; a human applies whatever is actually correct
+// by hand in Firebase console > Firestore Database > Rules.
+//
+// Known gap found while drafting this: every Firestore document in this app
+// (users/{id}, livestreams/{id}, live_invites/{id}, ...) is keyed by the
+// app's own numeric MySQL user id (see e.g. SessionManager.getUserID(),
+// `liveStreamUserStatesRef.doc(myUserId.toString())`), but sign-in goes
+// through FirebaseAuth email/Google/Apple (auth_screen_controller.dart),
+// which gives `request.auth.uid` a Firebase-assigned id with no recorded
+// link to that numeric id anywhere in Firestore (no `firebase_uid` field on
+// the user doc, no custom claim). A rule like
+// `request.auth.uid == resource.data.host_id.toString()` would therefore
+// reject every request, not just unauthorized ones — so it is NOT safe to
+// enable for `live_invites` (or anything else keyed the same way) until one
+// of these exists:
+//   (a) the Laravel backend mints a Firebase custom token with
+//       `uid: <numeric user id>` (Admin SDK `createCustomToken`) and the app
+//       signs into Firestore with that, alongside/instead of the
+//       email/OAuth FirebaseAuth session it uses today, or
+//   (b) each `users/{id}` doc stores the viewer's `firebase_uid`, and rules
+//       look it up with `get()` to compare against `request.auth.uid`.
+// Either is real backend + app work, not something a rules file alone can
+// paper over — flagging it rather than shipping a rule that silently locks
+// everyone out, or a rule that only checks `request.auth != null` and
+// therefore isn't actually scoped to the host/invitee as the spec asked.
+//
+// Until (a) or (b) lands, `live_invites` gets the same trust level every
+// other collection already has in this project (no rules file has ever been
+// checked in here, so the console is presumably in fully-open "test mode" —
+// confirm in the console before relying on that). The catch-all below keeps
+// that unchanged so this file cannot be applied by accident and break a
+// feature nobody has reviewed yet.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

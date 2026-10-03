@@ -116,8 +116,7 @@ class _BuildTopView extends StatelessWidget {
         Obx(() {
           Livestream stream = controller.liveData.value;
           bool isBattleRunning = stream.battleType != BattleType.initiate;
-          bool isAudience =
-              stream.coHostIds?.contains(controller.myUserId) == false;
+          bool isAudience = !stream.isOnStage(controller.myUserId);
 
           if (isBattleRunning && !isAudience) return const SizedBox();
           return InkWell(
@@ -254,9 +253,7 @@ class _BuildCenterView extends StatelessWidget {
           Obx(() {
             Livestream liveData = controller.liveData.value;
             bool isBattleOn = liveData.type == LivestreamType.battle;
-            bool isCoHost = (stream.coHostIds ?? []).contains(
-              controller.myUserId,
-            );
+            bool isCoHost = stream.isOnStage(controller.myUserId);
             int count = liveData.watchingCount ?? 0;
             int watchingCount = count >= 0 ? count : 0;
             return Row(
@@ -287,7 +284,10 @@ class _BuildCenterView extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (!isBattleOn && liveData.isRestrictToJoin == 0 && !isCoHost)
+                if (!isBattleOn &&
+                    liveData.isRestrictToJoin == 0 &&
+                    !isCoHost &&
+                    controller.guestRequestsEnabled)
                   LiveStreamCircleBorderButton(
                     image: AssetRes.icVideoRequest,
                     margin: EdgeInsets.zero,

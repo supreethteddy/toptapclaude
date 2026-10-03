@@ -12,6 +12,7 @@ import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
 import 'package:shortzz/common/extensions/user_extension.dart';
 import 'package:shortzz/common/manager/firebase_notification_manager.dart';
 import 'package:shortzz/common/manager/haptic_manager.dart';
+import 'package:shortzz/common/manager/live_invite_watcher.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/utilities/beautify_controls_mixin.dart';
 import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
@@ -19,10 +20,12 @@ import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/notification_service.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
+import 'package:shortzz/common/service/live_invite_service.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:shortzz/model/livestream/live_invite.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_comment.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
@@ -63,6 +66,12 @@ class LivestreamScreenController extends BaseController
   Timer? timer;
   Timer? minViewerTimeoutTimer;
   Timer? presenceTimer;
+  StreamSubscription<List<LiveInvite>>? _outgoingInvitesSub;
+
+  /// Every out-of-room invite this host has sent for this room, any status —
+  /// drives the Friends/Recommended row button states (Invite / Invited… /
+  /// Declined / Seats full). Host-only; empty for everyone else.
+  RxList<LiveInvite> outgoingInvites = <LiveInvite>[].obs;
   // Offset is where the burst should originate (the actual tap point); null
   // means "no specific tap to anchor to" (a like echoed in from Firestore).
   void Function(Offset?)? onLikeTap;
@@ -234,10 +243,42 @@ class LivestreamScreenController extends BaseController
   List<LivestreamUserState> memberList = <LivestreamUserState>[];
 
   List<Gift> get gifts => setting?.gifts ?? [];
+
+  // Seat caps come from the admin panel (Phase 0 settings); the literals are
+  // only the fallback for a backend that predates those columns and match
+  // the client's spec (Co-host Mode = 4 in frame incl. host; 9 guests).
+  int get maxCoHosts => setting?.maxLiveCohosts ?? 3;
+  int get maxGuests => setting?.maxLiveGuests ?? 9;
+  bool get guestRequestsEnabled =>
+      (setting?.liveGuestRequestsEnabled ?? 1) == 1;
+
+  /// Seats still open for a given stage role, counting reservations held by
+  /// invitees who accepted but haven't published yet (see pendingSeatIds).
+  int seatsLeftFor(LivestreamUserType role) {
+    final stream = liveData.value;
+    final reserved = (stream.pendingSeatIds ?? const []).length;
+    switch (role) {
+      case LivestreamUserType.coHost:
+        return maxCoHosts - (stream.coHostIds ?? const []).length - reserved;
+      case LivestreamUserType.guest:
+        return maxGuests - (stream.guestIds ?? const []).length - reserved;
+      default:
+        return 0;
+    }
+  }
+
+  bool hasSeatFor(LivestreamUserType role) => seatsLeftFor(role) > 0;
+
+  String seatsFullMessageFor(LivestreamUserType role) =>
+      role == LivestreamUserType.coHost
+          ? LKey.coHostSeatsFull.tr
+          : LKey.guestSeatsFull.tr;
+
   RxList<LivestreamUserState> requestList = <LivestreamUserState>[].obs;
   RxList<LivestreamUserState> audienceList = <LivestreamUserState>[].obs;
   RxList<LivestreamUserState> invitedList = <LivestreamUserState>[].obs;
   RxList<LivestreamUserState> coHostList = <LivestreamUserState>[].obs;
+  RxList<LivestreamUserState> guestList = <LivestreamUserState>[].obs;
   RxList<LivestreamUserState> audienceMemberList = <LivestreamUserState>[].obs;
   RxList<StreamView> streamViews = <StreamView>[].obs;
   RxList<LivestreamComment> comments = <LivestreamComment>[].obs;
@@ -257,6 +298,18 @@ class LivestreamScreenController extends BaseController
   void onInit() {
     super.onInit();
     activeRoomIds.add(liveData.value.roomID ?? '');
+    // Tell LiveInviteWatcher this room already has its screen open, so an
+    // out-of-room invite for it is handled by the in-room INVITED path
+    // instead of double-prompting with a second sheet.
+    LiveInviteWatcher.activeRoomIds.add(liveData.value.roomID ?? '');
+    if (isHost) {
+      _outgoingInvitesSub = LiveInviteService.instance
+          .watchOutgoing(myUserId, liveData.value.roomID ?? '')
+          .listen(
+            (invites) => outgoingInvites.value = invites,
+            onError: (Object e) => Loggers.error('watchOutgoing failed: $e'),
+          );
+    }
     if (liveData.value.isDummyLive == 1) {
       initVideoPlayer();
     } else {
@@ -317,6 +370,8 @@ class LivestreamScreenController extends BaseController
   @override
   void onClose() {
     activeRoomIds.remove(liveData.value.roomID ?? '');
+    LiveInviteWatcher.activeRoomIds.remove(liveData.value.roomID ?? '');
+    _outgoingInvitesSub?.cancel();
     WakelockPlus.disable();
     timer?.cancel();
     minViewerTimeoutTimer?.cancel();
@@ -598,6 +653,31 @@ class LivestreamScreenController extends BaseController
 
       await _joinAudience();
       _startPresenceMaintenance();
+
+      // Arriving here via an accepted out-of-room invite (Friends /
+      // Recommended tab): land in INVITED so the existing
+      // updateStateAction -> _showJoinStreamSheet -> publishCoHostStream
+      // path takes over, exactly like the in-room invite path. Re-check the
+      // current state first so a room-state change that raced ahead of us
+      // (already promoted, or re-invited to a different room) is not
+      // clobbered.
+      final pendingInvite =
+          LiveInviteService.instance.takeAcceptedFor(roomID);
+      if (pendingInvite != null) {
+        final latestState =
+            (await stateRef.get()).data() as Map<String, dynamic>?;
+        final currentType = LivestreamUserType.fromStringOrNull(
+          latestState?[FirebaseConst.type],
+        );
+        if (currentType == null || currentType == LivestreamUserType.audience) {
+          await updateUserStateToFirestore(
+            myUserId,
+            type: LivestreamUserType.invited,
+            invitedRole: pendingInvite.role,
+          );
+        }
+      }
+
       return result;
     } catch (e) {
       Loggers.error('Error in loginRoom: $e');
@@ -787,6 +867,8 @@ class LivestreamScreenController extends BaseController
     int? battleCreatedAt,
     int? battleDuration,
     FieldValue? coHostId,
+    FieldValue? guestId,
+    FieldValue? pendingSeatId,
     dynamic battleRoundWins,
     dynamic battleRoundWinsHost,
     dynamic battleRoundWinsCoHost,
@@ -807,6 +889,8 @@ class LivestreamScreenController extends BaseController
         FirebaseConst.battleCreatedAt: battleCreatedAt,
       if (battleDuration != null) FirebaseConst.battleDuration: battleDuration,
       if (coHostId != null) FirebaseConst.coHostIds: coHostId,
+      if (guestId != null) FirebaseConst.guestIds: guestId,
+      if (pendingSeatId != null) FirebaseConst.pendingSeatIds: pendingSeatId,
       if (battleRoundWins != null)
         FirebaseConst.battleRoundWins: battleRoundWins,
       if (battleRoundWinsHost != null)
@@ -893,6 +977,8 @@ class LivestreamScreenController extends BaseController
     }
     await updateLiveStreamData(
       coHostId: FieldValue.arrayRemove([myUserId]),
+      guestId: FieldValue.arrayRemove([myUserId]),
+      pendingSeatId: FieldValue.arrayRemove([myUserId]),
     );
   }
 
@@ -954,6 +1040,10 @@ class LivestreamScreenController extends BaseController
       if (data[FirebaseConst.countedAsViewer] != true) continue;
       final userId = (data['user_id'] as num?)?.toInt();
       if (userId == liveData.value.hostId) continue;
+      // Co-hosts and guests are publishing participants, not viewers: a
+      // backgrounded one must not be silently dropped from the count.
+      final type = LivestreamUserType.fromString(data[FirebaseConst.type] ?? '');
+      if (type.isOnStage) continue;
       final lastSeen = (data[FirebaseConst.lastSeenAt] as num?)?.toInt();
       if (lastSeen != null && now - lastSeen > 45000)
         staleRefs.add(doc.reference);
@@ -1031,6 +1121,12 @@ class LivestreamScreenController extends BaseController
   }) async {
     if (user?.userId == null) return;
 
+    // Request-to-join always lands in the Guest Call role — Co-host Mode is
+    // invite-only — so the cap checked here is the guest one.
+    if (!hasSeatFor(LivestreamUserType.guest)) {
+      showSnackBar(LKey.guestSeatsFull.tr);
+      return;
+    }
     await onRequestRefuse(
       user,
       comment: comment,
@@ -1039,7 +1135,7 @@ class LivestreamScreenController extends BaseController
     );
     await updateUserStateToFirestore(
       user!.userId,
-      type: LivestreamUserType.coHost,
+      type: LivestreamUserType.guest,
     );
   }
 
@@ -1281,6 +1377,9 @@ class LivestreamScreenController extends BaseController
               .toList();
           coHostList.value = liveUsersStates
               .where((element) => element.type == LivestreamUserType.coHost)
+              .toList();
+          guestList.value = liveUsersStates
+              .where((element) => element.type == LivestreamUserType.guest)
               .toList();
           audienceMemberList.value = liveUsersStates
               .where(
@@ -1611,6 +1710,9 @@ class LivestreamScreenController extends BaseController
     }
   }
 
+  /// Viewer asks to join as a Guest Call participant. Requests always land
+  /// in the GUEST role (never Co-host — that's invite-only), so the seat
+  /// check here is against the guest cap.
   void onVideoRequestSend(Livestream liveData) {
     LivestreamUserState? state = liveUsersStates.firstWhereOrNull(
       (element) => element.userId == myUserId,
@@ -1619,6 +1721,14 @@ class LivestreamScreenController extends BaseController
       case null:
         break;
       case LivestreamUserType.audience:
+        if (!guestRequestsEnabled) {
+          showSnackBar(LKey.guestRequestsDisabled.tr);
+          return;
+        }
+        if (!hasSeatFor(LivestreamUserType.guest)) {
+          showSnackBar(LKey.guestSeatsFull.tr);
+          return;
+        }
         updateUserStateToFirestore(
           myUserId,
           type: LivestreamUserType.requested,
@@ -1634,6 +1744,7 @@ class LivestreamScreenController extends BaseController
         break;
       case LivestreamUserType.host:
       case LivestreamUserType.coHost:
+      case LivestreamUserType.guest:
       case LivestreamUserType.invited:
       case LivestreamUserType.left:
         break;
@@ -1650,6 +1761,8 @@ class LivestreamScreenController extends BaseController
     bool? isFollow,
     int? joinTime,
     int? currentBattleCoin,
+    LivestreamUserType? invitedRole,
+    bool clearInvitedRole = false,
   }) async {
     if (userId == null) {
       Loggers.error('updateUserStateToFirestore: userId is null');
@@ -1685,6 +1798,8 @@ class LivestreamScreenController extends BaseController
               ? FieldValue.arrayUnion([myUserId])
               : FieldValue.arrayRemove([myUserId]),
         if (joinTime != null) FirebaseConst.joinStreamTime: joinTime,
+        if (invitedRole != null) FirebaseConst.invitedRole: invitedRole.value,
+        if (clearInvitedRole) FirebaseConst.invitedRole: FieldValue.delete(),
       };
       if (battleCoin != null || liveCoin != null) {
         myUser.value?.coinEstimatedValue(
@@ -1699,30 +1814,141 @@ class LivestreamScreenController extends BaseController
     }
   }
 
-  void onInvite(AppUser? user, {bool isInvited = false}) {
+  /// Host invites a viewer who is already in the room into a stage role.
+  /// [isInvited] = true means "cancel the pending invite". The role is
+  /// recorded on the invitee's state doc so accepting lands them in exactly
+  /// what they were invited to (Co-host Mode vs Guest Call).
+  void onInvite(
+    AppUser? user, {
+    bool isInvited = false,
+    LivestreamUserType role = LivestreamUserType.guest,
+  }) {
+    if (isInvited) {
+      updateUserStateToFirestore(
+        user?.userId,
+        type: LivestreamUserType.audience,
+        clearInvitedRole: true,
+      );
+      return;
+    }
+    if (!role.isStageRole) return;
+    if (!hasSeatFor(role)) {
+      showSnackBar(seatsFullMessageFor(role));
+      return;
+    }
     updateUserStateToFirestore(
       user?.userId,
-      type:
-          isInvited ? LivestreamUserType.audience : LivestreamUserType.invited,
+      type: LivestreamUserType.invited,
+      invitedRole: role,
     );
+  }
+
+  /// The most recent out-of-room invite sent to [userId] for this room, if
+  /// any — null means they have never been invited (or any prior invite was
+  /// cancelled/expired and should be treated as a clean slate).
+  LiveInvite? outgoingInviteFor(int userId) {
+    LiveInvite? latest;
+    for (final invite in outgoingInvites) {
+      if (invite.inviteeId != userId) continue;
+      final latestCreated = latest?.createdAt;
+      final created = invite.createdAt;
+      if (latest == null ||
+          (created != null &&
+              (latestCreated == null || created.isAfter(latestCreated)))) {
+        latest = invite;
+      }
+    }
+    return latest;
+  }
+
+  /// Invites someone who is NOT currently in the room (Friends / Recommended
+  /// tab of the Invited page). There is no user_state doc to write to yet, so
+  /// this goes through LiveInviteService + an FCM nudge instead of
+  /// [onInvite]'s direct Firestore write.
+  Future<void> inviteOutOfRoom(User candidate, LivestreamUserType role) async {
+    final inviteeId = candidate.id;
+    if (inviteeId == null || !role.isStageRole) return;
+    if (!hasSeatFor(role)) {
+      showSnackBar(seatsFullMessageFor(role));
+      return;
+    }
+    final existing = outgoingInviteFor(inviteeId);
+    if (existing != null && existing.isPending) return;
+    final host = myUser.value?.appUser;
+    if (host == null) return;
+
+    LiveInvite invite;
+    try {
+      invite = await LiveInviteService.instance.createInvite(
+        host: host,
+        roomId: liveData.value.roomID ?? '',
+        inviteeId: inviteeId,
+        role: role,
+        expiry: Duration(seconds: setting?.pkInviteExpirySeconds ?? 60),
+      );
+    } catch (e) {
+      Loggers.error('Out-of-room invite failed: $e');
+      showSnackBar(LKey.somethingWentWrong.tr);
+      return;
+    }
+    unawaited(_pushLiveInvite(invite));
+  }
+
+  Future<void> cancelOutOfRoomInvite(LiveInvite invite) =>
+      LiveInviteService.instance.updateStatus(
+        invite.id,
+        LiveInviteStatus.cancelled,
+      );
+
+  /// Best-effort nudge for a backgrounded/killed app; the in-app watcher
+  /// already reacts to the Firestore document for a foregrounded one.
+  Future<void> _pushLiveInvite(LiveInvite invite) async {
+    try {
+      final recipient =
+          await UserService.instance.fetchUserDetails(userId: invite.inviteeId);
+      final token = recipient?.deviceToken;
+      if (token == null || token.isEmpty) return;
+      await NotificationService.instance.pushNotification(
+        type: NotificationType.liveInvite,
+        title: myUser.value?.fullname ?? myUser.value?.username ?? '',
+        body: invite.role == LivestreamUserType.coHost
+            ? LKey.invitedYouAsCoHost.tr
+            : LKey.invitedYouAsGuest.tr,
+        data: {
+          'invite_id': invite.id,
+          'room_id': invite.roomId,
+          'host_id': invite.hostId,
+          'role': invite.role.value,
+        },
+        token: token,
+        deviceType: recipient?.device,
+      );
+    } catch (e) {
+      Loggers.error('Live invite push failed: $e');
+    }
   }
 
   void _showJoinStreamSheet(LivestreamUserState state) {
     if (state.userId == myUserId && state.type == LivestreamUserType.invited) {
       AppUser? hostUser = liveData.value.getHostUser(firestoreController.users);
       isJoinSheetOpen = true;
+      final invitedRole = state.invitedRole ?? LivestreamUserType.guest;
       Get.bottomSheet(
         LiveStreamJoinSheet(
           hostUser: hostUser,
           myUser: myUser.value,
+          role: invitedRole,
           onJoined: () async {
             LivestreamUserState? userState = liveUsersStates.firstWhereOrNull(
               (element) => element.userId == myUserId,
             );
             if (userState?.type == LivestreamUserType.invited) {
+              // Land in exactly the role the host invited us into; the seat
+              // itself is claimed (and re-checked) in publishCoHostStream.
               updateUserStateToFirestore(
                 myUserId,
-                type: LivestreamUserType.coHost,
+                type: userState?.invitedRole ?? invitedRole,
+                clearInvitedRole: true,
               );
             } else {
               showSnackBar(LKey.joinCancelledDescription.tr);
@@ -1732,6 +1958,7 @@ class LivestreamScreenController extends BaseController
             updateUserStateToFirestore(
               myUserId,
               type: LivestreamUserType.audience,
+              clearInvitedRole: true,
             );
           },
         ),
@@ -1744,9 +1971,68 @@ class LivestreamScreenController extends BaseController
     }
   }
 
+  /// Atomically takes a seat in the right array (co-host vs guest) for
+  /// [role], re-checking the cap inside the transaction so two people can't
+  /// both squeeze into the last seat, and releasing any reservation this
+  /// user held in pendingSeatIds. Returns false when the room is full/gone.
+  Future<bool> _claimStageSeat(int userId, LivestreamUserType role) async {
+    if (!role.isStageRole) return false;
+    final arrayKey = role == LivestreamUserType.coHost
+        ? FirebaseConst.coHostIds
+        : FirebaseConst.guestIds;
+    final cap = role == LivestreamUserType.coHost ? maxCoHosts : maxGuests;
+    try {
+      return await db.runTransaction<bool>((tx) async {
+        final snap = await tx.get(liveStreamDocRef);
+        if (!snap.exists) return false;
+        final data = snap.data() as Map<String, dynamic>? ?? {};
+        final members = List<int>.from(
+            (data[arrayKey] as List<dynamic>? ?? const []).whereType<num>().map((e) => e.toInt()));
+        final pending = List<int>.from(
+            (data[FirebaseConst.pendingSeatIds] as List<dynamic>? ?? const [])
+                .whereType<num>()
+                .map((e) => e.toInt()));
+        if (members.contains(userId)) {
+          tx.update(liveStreamDocRef, {
+            FirebaseConst.pendingSeatIds: FieldValue.arrayRemove([userId]),
+          });
+          return true;
+        }
+        // My own reservation (if any) is the seat I'm converting, so it
+        // doesn't count against me.
+        final reservedByOthers = pending.where((id) => id != userId).length;
+        if (members.length + reservedByOthers >= cap) return false;
+        tx.update(liveStreamDocRef, {
+          arrayKey: FieldValue.arrayUnion([userId]),
+          FirebaseConst.pendingSeatIds: FieldValue.arrayRemove([userId]),
+        });
+        return true;
+      });
+    } catch (e) {
+      Loggers.error('Failed to claim $role seat: $e');
+      return false;
+    }
+  }
+
   void publishCoHostStream(int streamId) async {
     bool isPermissionGranted = await requestPermission();
     if (isPermissionGranted) {
+      final myState = liveUsersStates.firstWhereOrNull(
+        (element) => element.userId == myUserId,
+      );
+      final role = myState?.type == LivestreamUserType.guest
+          ? LivestreamUserType.guest
+          : LivestreamUserType.coHost;
+      final seated = await _claimStageSeat(streamId, role);
+      if (!seated) {
+        showSnackBar(seatsFullMessageFor(role));
+        await updateUserStateToFirestore(
+          myUserId,
+          type: LivestreamUserType.audience,
+          clearInvitedRole: true,
+        );
+        return;
+      }
       int canvasViewID = -1;
 
       // ✅ Enable camera and microphone
@@ -1770,6 +2056,15 @@ class LivestreamScreenController extends BaseController
         }
       });
 
+      // With 5-10 people each decoding everyone else, 720p per tile is more
+      // bandwidth/CPU than mid-range phones cope with; 360p tiles are plenty
+      // for a grid cell.
+      if (liveData.value.stageIds.length > 4) {
+        await zegoEngine.setVideoConfig(
+          ZegoVideoConfig.preset(ZegoVideoConfigPreset.Preset360P),
+        );
+      }
+
       // ✅ Publish the stream
       await zegoEngine.startPublishingStream('$streamId');
 
@@ -1778,7 +2073,7 @@ class LivestreamScreenController extends BaseController
         zegoEngine.setAudioRouteToSpeaker(true);
       });
 
-      updateLiveStreamData(coHostId: FieldValue.arrayUnion([streamId]));
+      // Seat membership was already written by _claimStageSeat above.
       _sendCommentToFirestore(type: LivestreamCommentType.joinedCoHost);
       updateUserStateToFirestore(
         myUserId,
@@ -1827,7 +2122,11 @@ class LivestreamScreenController extends BaseController
     if (view != null) {
       stopPreview(viewId: view.streamViewId);
       stopPublish();
-      updateLiveStreamData(coHostId: FieldValue.arrayRemove([streamId]));
+      updateLiveStreamData(
+        coHostId: FieldValue.arrayRemove([streamId]),
+        guestId: FieldValue.arrayRemove([streamId]),
+        pendingSeatId: FieldValue.arrayRemove([streamId]),
+      );
       LivestreamComment? comment = comments.firstWhereOrNull(
         (element) =>
             element.senderId == myUserId &&
@@ -1875,8 +2174,14 @@ class LivestreamScreenController extends BaseController
     ''');
     if (newState.userId == myUserId) {
       Loggers.info('Updating state for userId: ${newState.userId}');
-      if (newState.type == LivestreamUserType.coHost &&
-          oldState?.type != LivestreamUserType.coHost) {
+      // Becoming a co-host OR a guest both mean "start publishing"; the role
+      // only decides which seat array publishCoHostStream claims.
+      final wasOnStageNonHost =
+          oldState?.type == LivestreamUserType.coHost ||
+              oldState?.type == LivestreamUserType.guest;
+      final isOnStageNonHost = newState.type == LivestreamUserType.coHost ||
+          newState.type == LivestreamUserType.guest;
+      if (isOnStageNonHost && !wasOnStageNonHost) {
         publishCoHostStream(myUserId);
       }
 
@@ -1884,6 +2189,13 @@ class LivestreamScreenController extends BaseController
           oldState?.type == LivestreamUserType.invited &&
           isJoinSheetOpen) {
         Get.back();
+      }
+
+      // The only way a REQUESTED viewer goes back to AUDIENCE is the host
+      // rejecting them — tell them, instead of the request silently vanishing.
+      if (newState.type == LivestreamUserType.audience &&
+          oldState?.type == LivestreamUserType.requested) {
+        showSnackBar(LKey.requestDeclinedByHost.tr);
       }
 
       if (newState.type == LivestreamUserType.invited &&
@@ -1896,7 +2208,7 @@ class LivestreamScreenController extends BaseController
       if (oldState?.isMuted != newState.isMuted) {
         zegoEngine.muteMicrophone(newState.isMuted);
       }
-      if (oldState?.type == LivestreamUserType.coHost &&
+      if (wasOnStageNonHost &&
           newState.type == LivestreamUserType.audience) {
         closeCoHostStream(newState.userId);
       }
@@ -1908,13 +2220,63 @@ class LivestreamScreenController extends BaseController
       showSnackBar('End the battle before removing a co-host.');
       return;
     }
-    if (state.type == LivestreamUserType.coHost) {
-      updateLiveStreamData(coHostId: FieldValue.arrayRemove([state.userId]));
+    if (state.type == LivestreamUserType.coHost ||
+        state.type == LivestreamUserType.guest) {
+      updateLiveStreamData(
+        coHostId: FieldValue.arrayRemove([state.userId]),
+        guestId: FieldValue.arrayRemove([state.userId]),
+        pendingSeatId: FieldValue.arrayRemove([state.userId]),
+      );
       updateUserStateToFirestore(
         state.userId,
         type: LivestreamUserType.audience,
       );
     }
+  }
+
+  /// Explicit host action moving a Guest Call participant into Co-host Mode
+  /// (never automatic — the client forbids guests silently becoming PK
+  /// players). The guest keeps publishing; only the seat array and role move,
+  /// atomically, so the co-host cap can't be exceeded by two promotions.
+  Future<void> promoteGuestToCoHost(LivestreamUserState state) async {
+    if (state.type != LivestreamUserType.guest) return;
+    if (liveData.value.type == LivestreamType.battle) {
+      showSnackBar(LKey.cannotLeaveDuringBattle.tr);
+      return;
+    }
+    final cap = maxCoHosts;
+    bool moved = false;
+    try {
+      moved = await db.runTransaction<bool>((tx) async {
+        final snap = await tx.get(liveStreamDocRef);
+        if (!snap.exists) return false;
+        final data = snap.data() as Map<String, dynamic>? ?? {};
+        final coHosts = (data[FirebaseConst.coHostIds] as List<dynamic>? ?? const [])
+            .whereType<num>()
+            .map((e) => e.toInt())
+            .toList();
+        final pending = (data[FirebaseConst.pendingSeatIds] as List<dynamic>? ?? const [])
+            .whereType<num>()
+            .length;
+        if (coHosts.contains(state.userId)) return true;
+        if (coHosts.length + pending >= cap) return false;
+        tx.update(liveStreamDocRef, {
+          FirebaseConst.coHostIds: FieldValue.arrayUnion([state.userId]),
+          FirebaseConst.guestIds: FieldValue.arrayRemove([state.userId]),
+        });
+        return true;
+      });
+    } catch (e) {
+      Loggers.error('Failed to promote guest ${state.userId}: $e');
+    }
+    if (!moved) {
+      showSnackBar(LKey.coHostSeatsFull.tr);
+      return;
+    }
+    await updateUserStateToFirestore(
+      state.userId,
+      type: LivestreamUserType.coHost,
+    );
   }
 
   void reportUser(int? userId) {

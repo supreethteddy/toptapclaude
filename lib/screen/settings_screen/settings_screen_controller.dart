@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
+import 'package:shortzz/common/manager/incoming_call_watcher.dart';
+import 'package:shortzz/common/manager/live_invite_watcher.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
@@ -206,6 +208,11 @@ class SettingsScreenController extends BaseController {
           if (result.status == true) {
             await GoogleSignIn().signOut();
             SessionManager.instance.clear();
+            // Neither watcher checks session on its own; leaving them
+            // running would ring the next account logged in on this device
+            // with the previous user's calls/invites.
+            IncomingCallWatcher.instance.stop();
+            LiveInviteWatcher.instance.stop();
             Get.snackbar(
               'Success'.tr,
               'Logged out successfully.'.tr,

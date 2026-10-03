@@ -67,7 +67,10 @@ class LivestreamView extends StatelessWidget {
             streamingView: views.first,
             controller: controller,
           ),
-        _ => const SizedBox(),
+        // 5+ participants (host + co-hosts + Guest Call guests, up to 10):
+        // previously fell through to an empty box - a blank screen as soon as
+        // a 4th guest joined.
+        _ => GridUserView(controller: controller, streamViews: views),
       };
     });
   }
@@ -218,6 +221,46 @@ class FourUserView extends StatelessWidget {
               Expanded(child: _buildEmptyUserView()),
         ],
       ),
+    );
+  }
+}
+
+/// Generic grid for 5–10 participants: 2 columns up to 6 tiles, 3 columns
+/// beyond that, host first (the caller already moved it to index 0). Rows
+/// share the height equally; the last row is padded with empty tiles so the
+/// grid stays rectangular.
+class GridUserView extends StatelessWidget {
+  final LivestreamScreenController controller;
+  final List<StreamView> streamViews;
+
+  const GridUserView(
+      {super.key, required this.controller, required this.streamViews});
+
+  @override
+  Widget build(BuildContext context) {
+    if (streamViews.isEmpty) return _buildEmptyView();
+    final columns = streamViews.length <= 6 ? 2 : 3;
+    final rows = (streamViews.length / columns).ceil();
+    return Column(
+      children: [
+        for (int r = 0; r < rows; r++)
+          Expanded(
+            child: Row(
+              children: [
+                for (int c = 0; c < columns; c++)
+                  Expanded(
+                    child: (r * columns + c) < streamViews.length
+                        ? LiveStreamUserView(
+                            isNameAndSpeakerVisible: (r * columns + c) != 0,
+                            controller: controller,
+                            streamingView: streamViews[r * columns + c],
+                          )
+                        : _buildEmptyUserView(),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

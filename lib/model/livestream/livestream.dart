@@ -14,7 +14,14 @@ class Livestream {
   String? roomID;
   int? likeCount;
   int? hostId;
+  // Co-host Mode participants (PK-eligible, max Setting.maxLiveCohosts).
   List<int>? coHostIds;
+  // Guest Call participants (never PK players, max Setting.maxLiveGuests).
+  List<int>? guestIds;
+  // Seats reserved by accepted-but-not-yet-publishing invitees so two
+  // accepters can't both take the last seat; cleared once they publish or
+  // leave.
+  List<int>? pendingSeatIds;
   AppUser? hostUser;
   List<AppUser>? coHostUsers;
   int? createdAt;
@@ -99,6 +106,8 @@ class Livestream {
     this.likeCount,
     this.hostId,
     this.coHostIds,
+    this.guestIds,
+    this.pendingSeatIds,
     this.createdAt,
     this.lastHeartbeatAt,
     this.battleCreatedAt,
@@ -140,6 +149,10 @@ class Livestream {
     hostId = json['host_id'];
     coHostIds =
         json['co-host_ids'] != null ? json['co-host_ids'].cast<int>() : [];
+    guestIds = json['guest_ids'] != null ? json['guest_ids'].cast<int>() : [];
+    pendingSeatIds = json['pending_seat_ids'] != null
+        ? json['pending_seat_ids'].cast<int>()
+        : [];
     createdAt = json['created_at'];
     lastHeartbeatAt = json['last_heartbeat_at'];
     battleCreatedAt = json['battle_created_at'];
@@ -185,6 +198,8 @@ class Livestream {
     data['like_count'] = likeCount;
     data['host_id'] = hostId;
     data['co-host_ids'] = coHostIds;
+    data['guest_ids'] = guestIds;
+    data['pending_seat_ids'] = pendingSeatIds;
     data['created_at'] = createdAt;
     data['last_heartbeat_at'] = lastHeartbeatAt;
     data['battle_created_at'] = battleCreatedAt;
@@ -215,19 +230,51 @@ class Livestream {
     return data;
   }
 
+  /// Everyone on stage, host first, then co-hosts, then guests.
   List<AppUser> getAllUsers(List<AppUser> users) {
     AppUser? hostUser = users.firstWhereOrNull(
       (element) => element.userId == hostId,
     );
-    final coHostUsers = coHostIds
+    final allUsers = [
+      if (hostUser != null) hostUser,
+      ...getCoHostUsers(users),
+      ...getGuestUsers(users),
+    ];
+    return allUsers;
+  }
+
+  /// Host + co-hosts only — the people PK eligibility is computed from.
+  /// Guest Call participants are deliberately excluded.
+  List<AppUser> getCoHostModeUsers(List<AppUser> users) {
+    AppUser? hostUser = users.firstWhereOrNull(
+      (element) => element.userId == hostId,
+    );
+    return [if (hostUser != null) hostUser, ...getCoHostUsers(users)];
+  }
+
+  List<AppUser> getGuestUsers(List<AppUser> users) {
+    return guestIds
             ?.map((id) => users.firstWhereOrNull((user) => user.userId == id))
             .whereType<AppUser>()
             .toList() ??
         [];
-
-    final allUsers = [if (hostUser != null) hostUser, ...coHostUsers];
-    return allUsers;
   }
+
+  /// Ids of everyone publishing a stream: host, co-hosts, guests.
+  List<int> get stageIds => [
+        if (hostId != null) hostId!,
+        ...?coHostIds,
+        ...?guestIds,
+      ];
+
+  bool isCoHost(int? userId) =>
+      userId != null && (coHostIds ?? const []).contains(userId);
+
+  bool isGuest(int? userId) =>
+      userId != null && (guestIds ?? const []).contains(userId);
+
+  bool isOnStage(int? userId) =>
+      userId != null && (userId == hostId || isCoHost(userId) || isGuest(userId));
 
   AppUser? getHostUser(List<AppUser> users) {
     final controller = Get.find<FirebaseFirestoreController>();

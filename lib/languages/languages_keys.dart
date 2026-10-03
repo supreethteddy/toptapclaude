@@ -251,6 +251,40 @@ class LKey {
   static const String pkNeedsGuest =
       "Add a guest first. PK starts once a co-host is on screen.";
   static const String joinAsGuest = "Join as guest";
+
+  // Co-host Mode vs Guest Call Mode (two distinct on-stage roles).
+  static const String reject = "Reject";
+  static const String decline = "Decline";
+  static const String acceptInvitation = "Accept Invitation";
+  static const String inviteAsCoHost = "Invite as Co-host";
+  static const String inviteAsGuest = "Invite as Guest";
+  static const String promoteToCoHost = "Promote to Co-host";
+  static const String wantsToJoinYourLive = "wants to join your LIVE.";
+  static const String invitedYouAsCoHost =
+      "invited you to join the LIVE as a Co-host";
+  static const String invitedYouAsGuest =
+      "invited you to join the LIVE as a Guest";
+  static const String guestSeatsFull =
+      "Guest seats are full. Please try again later.";
+  static const String coHostSeatsFull =
+      "Co-host seats are full. Please try again later.";
+  static const String guestRequestsDisabled =
+      "The host isn't accepting guest requests right now.";
+  static const String guestListEmptyTitle = "No Guests Yet";
+  static const String guestListEmptyDescription =
+      "Guest Call participants will appear here once they join.";
+  static const String seatsLeft = "@count seats left";
+
+  // Invited tab: In room / Friends / Recommended switcher (out-of-room
+  // invites — the person isn't a viewer yet, so they aren't in audienceList).
+  static const String inRoom = "In room";
+  static const String friends = "Friends";
+  static const String recommended = "Recommended";
+  static const String invitedEllipsis = "Invited…";
+  static const String declinedTapToReinvite = "Declined";
+  static const String seatsFullShort = "Seats full";
+  static const String noInviteCandidates = "No one to show here yet.";
+  static const String noInviteCandidatesTitle = "Nobody Here Yet";
   static const String manageModerators = "Manage moderators";
   static const String searchAccounts = "Search accounts";
   static const String moderator = "Moderator";

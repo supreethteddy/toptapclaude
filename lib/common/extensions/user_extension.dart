@@ -38,6 +38,8 @@ extension UserExtension on User {
         hostViewID: hostViewId,
         likeCount: 0,
         coHostIds: [],
+        guestIds: [],
+        pendingSeatIds: [],
         hostId: id,
         createdAt: time,
         battleType: BattleType.initiate,

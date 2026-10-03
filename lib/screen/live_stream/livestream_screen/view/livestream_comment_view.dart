@@ -97,7 +97,7 @@ class LiveStreamCommentView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              LKey.requestingToJoinTheStream.tr,
+              LKey.wantsToJoinYourLive.tr,
               style: TextStyleCustom.outFitRegular400(
                   color: whitePure(context).withValues(alpha: .80)),
             ),
@@ -116,7 +116,7 @@ class LiveStreamCommentView extends StatelessWidget {
                         color: whitePure(context).withValues(alpha: .2),
                         borderRadius: BorderRadius.circular(30)),
                     alignment: Alignment.center,
-                    child: Text(LKey.refuse.tr,
+                    child: Text(LKey.reject.tr,
                         style: TextStyleCustom.outFitRegular400(
                             fontSize: 13, color: bgGrey(context))),
                   ),

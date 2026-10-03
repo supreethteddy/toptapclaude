@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/manager/call_notification_manager.dart';
+import 'package:shortzz/common/manager/live_invite_watcher.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart'
     show SessionManager;
@@ -17,6 +18,7 @@ import 'package:shortzz/common/service/api/notification_service.dart';
 import 'package:shortzz/common/service/api/post_service.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
 import 'package:shortzz/common/service/call_signaling_service.dart';
+import 'package:shortzz/common/service/live_invite_service.dart';
 import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
 import 'package:shortzz/languages/dynamic_translations.dart';
 import 'package:shortzz/languages/languages_keys.dart';
@@ -599,6 +601,9 @@ class FirebaseNotificationManager {
         controller.selectedPageIndex.value = 2;
         await _handleLivestreamNotification(dataString);
         break;
+      case 'live_invite':
+        await _handleLiveInviteNotification(dataString);
+        break;
       default:
         Loggers.warning('Unknown notification type: $dataType');
     }
@@ -863,6 +868,24 @@ class FirebaseNotificationManager {
       Get.to(() => LiveStreamAudienceScreen(isHost: false, livestream: stream));
     }
   }
+
+  /// Backgrounded/killed-app fallback for an out-of-room LIVE invite: the
+  /// push only carries the invite id, so re-read it (it may have expired or
+  /// been cancelled since it was sent) before presenting it.
+  Future<void> _handleLiveInviteNotification(String dataString) async {
+    try {
+      final map = jsonDecode(dataString) as Map<String, dynamic>;
+      final inviteId = map['invite_id']?.toString();
+      if (inviteId == null || inviteId.isEmpty) return;
+      final invite = await LiveInviteService.instance.fetch(inviteId);
+      if (invite == null || !invite.isPending) return;
+      if (invite.isExpiredAt(DateTime.now())) return;
+      if (LiveInviteWatcher.activeRoomIds.contains(invite.roomId)) return;
+      await LiveInviteWatcher.instance.present(invite);
+    } catch (e) {
+      Loggers.error('Failed to handle live invite notification: $e');
+    }
+  }
 }
 
 enum NotificationType {
@@ -871,6 +894,7 @@ enum NotificationType {
   post('post'),
   user('user'),
   liveStream('live_stream'),
+  liveInvite('live_invite'),
   other('other');
 
   final String type;

@@ -39,6 +39,16 @@ class FirebaseConst {
   static const String battleDuration = 'battle_duration';
   static const String battleType = 'battle_type';
   static const String coHostIds = 'co-host_ids';
+  // Guest Call participants (request-to-join flow). Kept separate from
+  // coHostIds on purpose: only co-hosts can be PK players, and the two have
+  // different seat caps (Setting.maxLiveCohosts / maxLiveGuests).
+  static const String guestIds = 'guest_ids';
+  // Seats reserved by users who accepted an invite but haven't published
+  // yet, so two accepters can't both squeeze into the last seat.
+  static const String pendingSeatIds = 'pending_seat_ids';
+  // On a user_state doc while type == INVITED: which stage role the host
+  // invited them into (CO-HOST or GUEST).
+  static const String invitedRole = 'invited_role';
   static const String joinStreamTime = 'join_stream_time';
   static const String likeCount = 'like_count';
   static const String commentsEnabled = 'comments_enabled';
