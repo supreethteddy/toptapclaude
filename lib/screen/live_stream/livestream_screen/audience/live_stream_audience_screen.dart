@@ -108,7 +108,11 @@ class LiveStreamAudienceScreen extends StatelessWidget {
               Obx(
                 () {
                   Livestream stream = controller.liveData.value;
-                  bool isBattle = stream.battleType == BattleType.waiting;
+                  // Cross-room battles only — a same-room PK Match
+                  // (opponentRoomId null) starts the moment the invite is
+                  // accepted, no countdown (client spec).
+                  bool isBattle = stream.battleType == BattleType.waiting &&
+                      stream.opponentRoomId != null;
                   if (isBattle) {
                     return BattleStartCountdownOverlay(
                         isHost: isHost, stream: stream);

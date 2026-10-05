@@ -1388,6 +1388,11 @@ class LivestreamScreenController extends BaseController
             }
             victoryLapSecondsRemaining.value--;
           });
+          // Bump the winning side's running "WIN xN" tally (the same
+          // battle_round_wins_host/cohost fields cross-room battles already
+          // use, see WinPill) — written once per match end, host-only so
+          // every connected device doesn't race to increment it.
+          if (isHost) unawaited(_recordPkMatchWin(stream));
         }
         if (stream.battleType != BattleType.end) {
           _victoryLapTimer?.cancel();
@@ -3149,14 +3154,27 @@ class LivestreamScreenController extends BaseController
           return;
         }
         final now = DateTime.now().millisecondsSinceEpoch;
+        // "WIN xN" (battle_round_wins_host/cohost) tracks wins across
+        // rematches against the SAME opponent within this LIVE session —
+        // client reference shows it still showing a previous win while a
+        // new match against that same opponent is already under way. A
+        // fresh match against a different pairing starts the tally over.
+        final previousTeamA = (latest.pkTeamAIds ?? const <int>[]).toSet();
+        final previousTeamB = (latest.pkTeamBIds ?? const <int>[]).toSet();
+        final samePairing = previousTeamA.length == teamA.length &&
+            previousTeamB.length == teamB.length &&
+            previousTeamA.containsAll(teamA) &&
+            previousTeamB.containsAll(teamB);
         transaction.update(liveStreamDocRef, {
           FirebaseConst.type: LivestreamType.battle.value,
           FirebaseConst.battleType: BattleType.waiting.value,
           FirebaseConst.battleDuration:
               latest.pkInviteDurationMin ?? pkMatchDurationMinutes,
           FirebaseConst.battleCreatedAt: now,
-          FirebaseConst.battleRoundWinsHost: 0,
-          FirebaseConst.battleRoundWinsCoHost: 0,
+          if (!samePairing) ...{
+            FirebaseConst.battleRoundWinsHost: 0,
+            FirebaseConst.battleRoundWinsCoHost: 0,
+          },
           FirebaseConst.battleTotalRounds: pkMatchTotalRounds,
           FirebaseConst.battleCurrentRound: 1,
           FirebaseConst.firstGiftBonusClaimed: false,
@@ -3180,6 +3198,23 @@ class LivestreamScreenController extends BaseController
       showSnackBar(LKey.pkMatchStartFailed.tr);
     } finally {
       _pkMatchStartInFlight = false;
+    }
+  }
+
+  /// Bumps the winning side's running match-win tally once, called from the
+  /// host's device only (see the BattleType.end branch in
+  /// listenLiveStreamData). A draw increments neither side.
+  Future<void> _recordPkMatchWin(Livestream stream) async {
+    final redTotal = pkTeamAScore().total;
+    final blueTotal = pkTeamBScore().total;
+    if (redTotal == blueTotal) return;
+    final field = redTotal > blueTotal
+        ? FirebaseConst.battleRoundWinsHost
+        : FirebaseConst.battleRoundWinsCoHost;
+    try {
+      await liveStreamDocRef.update({field: FieldValue.increment(1)});
+    } catch (e) {
+      Loggers.error('Failed to record PK match win: $e');
     }
   }
 

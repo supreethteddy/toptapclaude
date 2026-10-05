@@ -378,11 +378,11 @@ class LKey {
       "Too many co-hosts on screen for a PK match.";
   static const String pkMatchBattleDisabled =
       "PK matches are turned off for this LIVE.";
-  static const String pkMatchSetupTitle = "Set Up PK Match";
+  static const String pkMatchSetupTitle = "Start match";
   static const String pkMatchDuration = "Duration";
   static const String pkMatchEligibleGifts = "Eligible Gifts";
   static const String pkMatchAllGiftsCount = "All gifts count";
-  static const String sendMatchInvitation = "Send Match Invitation";
+  static const String sendMatchInvitation = "Start match";
   static const String pkMatchInviteSent = "Match invitation sent!";
   static const String pkMatchInviteFailed =
       "Couldn't send the match invitation. Try again.";

@@ -265,7 +265,12 @@ class LiveStreamBottomView extends StatelessWidget {
       bool isMute = state?.isMuted ?? false;
       bool isVideoOn = state?.isVideoOn ?? false;
       Livestream stream = controller.liveData.value;
-      bool isBattleRunning = stream.battleType == BattleType.running;
+      // A same-room PK Match has no countdown (client spec) and so never
+      // passes through BattleType.running on its way from waiting to end —
+      // it stays in `waiting` for the whole active match. Treat both as
+      // "can't leave" so this guard still protects it.
+      bool isBattleRunning = stream.battleType == BattleType.waiting ||
+          stream.battleType == BattleType.running;
       if (!isHostOrCoHost) return const SizedBox();
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),

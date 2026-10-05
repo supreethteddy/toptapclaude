@@ -12,6 +12,7 @@ import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
+import 'package:shortzz/model/livestream/pk_gifters.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/utilities/app_res.dart';
@@ -96,12 +97,6 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
           ? null
           : streamViews.firstWhereOrNull((v) => v.streamId == '$teamBId');
 
-      // User list
-      List<AppUser> users = [
-        if (hostUser != null) hostUser,
-        if (coHostUser != null) coHostUser,
-      ];
-
       // Team scores (gift coins since this round's baseline, respecting any
       // eligible-gift restriction the match was set up with, plus likes
       // tapped on that side) via the same pkTeamScore the match's saved
@@ -114,6 +109,8 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
       final outcome = determineBattleOutcome(red, blue);
       final isDraw = outcome == BattleOutcome.draw;
       final isRedWin = outcome == BattleOutcome.sideAWins;
+      final hostWins = stream.battleRoundWinsHost ?? 0;
+      final coHostWins = stream.battleRoundWinsCoHost ?? 0;
 
       return SafeArea(
         bottom: false,
@@ -121,54 +118,70 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
           height: Get.height / 2.4,
           width: Get.width,
           margin: widget.margin,
-          child: Stack(
-            alignment: Alignment.topCenter,
+          // The score bar is a Column sibling ABOVE the video, not an
+          // overlay sharing the same top-aligned Stack slot the video
+          // itself uses — client spec: the bar sits above the video, never
+          // behind or below it.
+          child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.only(top: 15.0, bottom: 30),
-                child: Row(
+              BuildProgressBar(red: red, blue: blue, showScoreLabels: true),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.topCenter,
                   children: [
-                    Expanded(
-                        child: _buildSlot(teamAView, hostUser)),
-                    Expanded(
-                        child: _buildSlot(teamBView, coHostUser)),
+                    Container(
+                      padding: const EdgeInsets.only(bottom: 30),
+                      child: Row(
+                        children: [
+                          Expanded(child: _buildSlot(teamAView, hostUser)),
+                          Expanded(child: _buildSlot(teamBView, coHostUser)),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: isEnded
+                            ? VictoryLapTimer(controller: widget.controller)
+                            : BattleTimer(
+                                controller: widget.controller,
+                                livestream: stream),
+                      ),
+                    ),
+                    // Each side's running match-win tally, visible for the
+                    // whole match (client reference shows "WIN x1" already
+                    // up while the next match against that same opponent is
+                    // still in progress) — the losing side swaps to a plain
+                    // LOSE tag only once the match actually ends.
+                    Positioned(
+                      top: 8,
+                      left: 10,
+                      child: (isEnded && !isDraw && !isRedWin)
+                          ? const ResultPill(isDraw: false)
+                          : (isEnded && isDraw)
+                              ? const ResultPill(isDraw: true)
+                              : WinPill(count: hostWins, color: ColorRes.likeRed),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 10,
+                      child: (isEnded && !isDraw && isRedWin)
+                          ? const ResultPill(isDraw: false)
+                          : (isEnded && isDraw)
+                              ? const ResultPill(isDraw: true)
+                              : WinPill(
+                                  count: coHostWins,
+                                  color: ColorRes.battleProgressColor),
+                    ),
+                    BuildBottomInfo(
+                        stream: stream, controller: widget.controller),
+                    BuildLastTenSecondView(controller: widget.controller),
+                    GiftComboBadge(controller: widget.controller),
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: BuildProgressBar(
-                    red: red, blue: blue, showScoreLabels: true),
-              ),
-              Positioned(
-                top: 46,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: isEnded
-                      ? VictoryLapTimer(controller: widget.controller)
-                      : BattleTimer(
-                          controller: widget.controller, livestream: stream),
-                ),
-              ),
-              if (isEnded) ...[
-                Positioned(
-                  top: 46,
-                  left: 10,
-                  child: ResultPill(
-                      isWin: !isDraw && isRedWin, isDraw: isDraw),
-                ),
-                Positioned(
-                  top: 46,
-                  right: 10,
-                  child: ResultPill(
-                      isWin: !isDraw && !isRedWin, isDraw: isDraw),
-                ),
-              ],
-              BuildBottomInfo(
-                  stream: stream, controller: widget.controller, users: users),
-              BuildLastTenSecondView(controller: widget.controller),
-              GiftComboBadge(controller: widget.controller),
             ],
           ),
         ),
@@ -230,21 +243,16 @@ class ReconnectingPlaceholder extends StatelessWidget {
 /// both sides at once with the same top-corner placement the reference
 /// client's PK arena uses.
 class ResultPill extends StatelessWidget {
-  final bool isWin;
   final bool isDraw;
 
-  const ResultPill({super.key, required this.isWin, required this.isDraw});
+  const ResultPill({super.key, required this.isDraw});
 
   @override
   Widget build(BuildContext context) {
-    final label = isDraw
-        ? LKey.battleDraw.tr.toUpperCase()
-        : (isWin ? '${LKey.win.tr} x1' : LKey.lose.tr);
+    final label = isDraw ? LKey.battleDraw.tr.toUpperCase() : LKey.lose.tr;
     final bgColor = isDraw
         ? Colors.grey.withValues(alpha: .85)
-        : (isWin
-            ? ColorRes.likeRed.withValues(alpha: .9)
-            : Colors.black.withValues(alpha: .6));
+        : Colors.black.withValues(alpha: .6);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration:
@@ -439,10 +447,11 @@ class _ScoreLabel extends StatelessWidget {
   }
 }
 
-/// "WIN xN" pill for one side's round-win tally across the current
-/// multi-round match, shown above the score bar throughout the battle.
-/// Cross-room only now (PartyBattleView) — the same-room PK Match arena
-/// shows a result-only ResultPill once a (single-round) match ends instead.
+/// "WIN xN" pill for one side's running match-win tally. Shared by the
+/// cross-room multi-round battle (PartyBattleView, counts rounds within one
+/// match) and the same-room PK Match arena (counts separate matches won
+/// against the same opponent across rematches within this LIVE session —
+/// see battleRoundWinsHost/CoHost and LivestreamScreenController._startPkMatch).
 class WinPill extends StatelessWidget {
   final int count;
   final Color color;
@@ -559,13 +568,9 @@ class _FirstGiftBonusBannerState extends State<FirstGiftBonusBanner> {
 class BuildBottomInfo extends StatelessWidget {
   final Livestream stream;
   final LivestreamScreenController controller;
-  final List<AppUser> users;
 
   const BuildBottomInfo(
-      {super.key,
-      required this.stream,
-      required this.controller,
-      required this.users});
+      {super.key, required this.stream, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -602,61 +607,116 @@ class BuildBottomInfo extends StatelessWidget {
                 ),
               ),
             ),
-          if (users.length == 2)
-            Container(
-              height: 60,
-              alignment: Alignment.topCenter,
-              child: Row(
-                children: [
-                  _buildStreamerInfo(context, isLeft: true, user: users[0]),
-                  _buildStreamerInfo(context, isLeft: false, user: users[1])
-                ],
-              ),
-            )
+          TopGiftersRow(controller: controller),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStreamerInfo(BuildContext context,
-      {required bool isLeft, required AppUser user}) {
-    return Expanded(
-      child: Container(
-        height: 43,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 10,
-        ),
-        color: isLeft ? ColorRes.likeRed : ColorRes.battleProgressColor,
+/// Each side's top-3 gifters for the current match, ranked closest-to-
+/// center outward, empty seats filling whatever's left — replaces the
+/// plain red/blue username strip with the leaderboard row the client's
+/// reference shows between the video and the comment feed. Ranking is
+/// derived from the existing comment stream (see topGiftersForTeam) rather
+/// than a new Firestore field.
+class TopGiftersRow extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const TopGiftersRow({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final stream = controller.liveData.value;
+      final comments = controller.comments;
+      final teamARanks = topGiftersForTeam(
+        comments: comments,
+        teamMemberIds: controller.pkTeamAUserIds,
+        battleCreatedAt: stream.battleCreatedAt,
+        eligibleGiftIds: stream.pkEligibleGiftIds,
+      );
+      final teamBRanks = topGiftersForTeam(
+        comments: comments,
+        teamMemberIds: controller.pkTeamBUserIds,
+        battleCreatedAt: stream.battleCreatedAt,
+        eligibleGiftIds: stream.pkEligibleGiftIds,
+      );
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Row(
-          mainAxisAlignment:
-              isLeft ? MainAxisAlignment.start : MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            if (isLeft)
-              CustomImage(
-                size: const Size(30, 30),
-                strokeColor: whitePure(context),
-                strokeWidth: 1.5,
-                image: user.profile?.addBaseURL(),
-                fullName: user.fullname,
-              ),
-            SizedBox(width: !isLeft ? 30 : 5),
-            Flexible(
-              child: Text(user.username ?? '',
-                  style: TextStyleCustom.unboundedMedium500(
-                      color: whitePure(context), fontSize: 11),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
-            ),
-            SizedBox(width: isLeft ? 30 : 5),
-            if (!isLeft)
-              CustomImage(
-                size: const Size(30, 30),
-                strokeColor: whitePure(context),
-                strokeWidth: 1.5,
-                image: user.profile?.addBaseURL(),
-                fullName: user.fullname,
-              ),
+            _teamSlots(teamARanks, ColorRes.likeRed, rankOneNearCenter: true),
+            _teamSlots(teamBRanks, ColorRes.battleProgressColor,
+                rankOneNearCenter: false),
           ],
+        ),
+      );
+    });
+  }
+
+  // Rank 1 sits nearest the center on both sides. The left team's slots are
+  // built worst-to-best left-to-right so the best (last) lands innermost;
+  // the right team is already worst-to-best outward-to-inward as built.
+  Widget _teamSlots(List<GifterRank> ranks, Color color,
+      {required bool rankOneNearCenter}) {
+    final slots = List<GifterRank?>.generate(
+        3, (i) => i < ranks.length ? ranks[i] : null);
+    final ordered = rankOneNearCenter ? slots.reversed.toList() : slots;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: ordered
+          .map((rank) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: rank == null
+                    ? _EmptySeat(color: color)
+                    : _GifterAvatar(controller: controller, rank: rank, color: color),
+              ))
+          .toList(),
+    );
+  }
+}
+
+class _EmptySeat extends StatelessWidget {
+  final Color color;
+
+  const _EmptySeat({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 34,
+      width: 34,
+      decoration:
+          BoxDecoration(color: color.withValues(alpha: .35), shape: BoxShape.circle),
+      child: const Icon(Icons.event_seat, color: Colors.white70, size: 16),
+    );
+  }
+}
+
+class _GifterAvatar extends StatelessWidget {
+  final LivestreamScreenController controller;
+  final GifterRank rank;
+  final Color color;
+
+  const _GifterAvatar(
+      {required this.controller, required this.rank, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = controller.firestoreController.users
+        .firstWhereOrNull((u) => u.userId == rank.senderId);
+    return Container(
+      height: 34,
+      width: 34,
+      decoration: BoxDecoration(
+          shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
+      child: ClipOval(
+        child: CustomImage(
+          size: const Size(30, 30),
+          image: user?.profile?.addBaseURL(),
+          fullName: user?.fullname,
         ),
       ),
     );
