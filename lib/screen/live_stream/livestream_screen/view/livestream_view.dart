@@ -12,6 +12,7 @@ import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/audience/widget/live_stream_user_info_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/reconnecting_placeholder.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -29,48 +30,41 @@ class LivestreamView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       Livestream stream = controller.liveData.value;
-      final hostId = stream.hostId.toString();
-      final views = List<StreamView>.from(
-          streamViews); // Optional: clone if needed
-
-      final hostIndex =
-          views.indexWhere((v) => v.streamId == hostId);
-      if (hostIndex != -1 && hostIndex != 0) {
-        final hostView = views.removeAt(hostIndex);
-        views.insert(0, hostView);
-      }
-      int coHostCount = views.length;
-      List<AppUser> liveUsers =
-          controller.firestoreController.users;
-      List<AppUser> allUsers =
-          stream.getAllUsers(liveUsers);
+      List<AppUser> liveUsers = controller.firestoreController.users;
+      List<AppUser> allUsers = stream.getAllUsers(liveUsers);
 
       if (allUsers.isEmpty) {
         return _buildEmptyView();
       }
 
-      if (views.isEmpty) {
+      // Seats come from who is actually on stage (stageIds: host, then
+      // co-hosts, then guests) rather than from who currently has a live
+      // Zego stream. A dropped connection used to make that person's tile
+      // vanish and the whole grid reflow around the gap — now the seat
+      // holds with a reconnecting placeholder (see _resolveSeat) until
+      // they're explicitly removed or they leave, which is what actually
+      // shrinks stageIds.
+      final seats = stream.stageIds
+          .map((id) => StageSeat(
+                userId: id,
+                streamView: streamViews
+                    .firstWhereOrNull((v) => v.streamId == '$id'),
+                user: liveUsers.firstWhereOrNull((u) => u.userId == id),
+              ))
+          .toList();
+
+      if (seats.isEmpty) {
         return const LoaderWidget();
       }
 
-      return switch (coHostCount) {
-        2 => OneAndTwoUserView(
-            controller: controller,
-            streamViews: views,
-          ),
-        3 => ThreeUserView(
-            controller: controller, streamViews: views),
-        4 => FourUserView(
-            controller: controller, streamViews: views),
-        1 => LiveStreamUserView(
-            isNameAndSpeakerVisible: false,
-            streamingView: views.first,
-            controller: controller,
-          ),
-        // 5+ participants (host + co-hosts + Guest Call guests, up to 10):
-        // previously fell through to an empty box - a blank screen as soon as
-        // a 4th guest joined.
-        _ => GridUserView(controller: controller, streamViews: views),
+      return switch (seats.length) {
+        2 => OneAndTwoUserView(controller: controller, seats: seats),
+        3 => ThreeUserView(controller: controller, seats: seats),
+        4 => FourUserView(controller: controller, seats: seats),
+        1 => _resolveSeat(seats.first, controller,
+            isNameAndSpeakerVisible: false),
+        // 5+ participants (host + co-hosts + Guest Call guests, up to 10).
+        _ => GridUserView(controller: controller, seats: seats),
       };
     });
   }
@@ -85,27 +79,53 @@ class LivestreamView extends StatelessWidget {
   }
 }
 
+/// One seat in the live layout: a host/co-host/guest who is currently
+/// either streaming ([streamView] set) or seated but not publishing right
+/// now (null — resolved to a [ReconnectingPlaceholder] by [_resolveSeat]).
+class StageSeat {
+  final int userId;
+  final StreamView? streamView;
+  final AppUser? user;
+
+  const StageSeat({required this.userId, this.streamView, this.user});
+}
+
+Widget _resolveSeat(
+  StageSeat seat,
+  LivestreamScreenController controller, {
+  bool isNameAndSpeakerVisible = true,
+}) {
+  if (seat.streamView != null) {
+    return LiveStreamUserView(
+      isNameAndSpeakerVisible: isNameAndSpeakerVisible,
+      streamingView: seat.streamView,
+      controller: controller,
+    );
+  }
+  if (seat.user != null) {
+    return ReconnectingPlaceholder(user: seat.user!);
+  }
+  return const SizedBox();
+}
+
 class OneAndTwoUserView extends StatelessWidget {
   final LivestreamScreenController controller;
-  final List<StreamView> streamViews;
+  final List<StageSeat> seats;
 
   const OneAndTwoUserView({
     super.key,
     required this.controller,
-    required this.streamViews,
+    required this.seats,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: List.generate(
-        streamViews.length,
+        seats.length,
         (index) => Expanded(
-          child: LiveStreamUserView(
-            isNameAndSpeakerVisible: index != 0,
-            controller: controller,
-            streamingView: streamViews[index],
-          ),
+          child: _resolveSeat(seats[index], controller,
+              isNameAndSpeakerVisible: index != 0),
         ),
       ),
     );
@@ -114,48 +134,39 @@ class OneAndTwoUserView extends StatelessWidget {
 
 class ThreeUserView extends StatelessWidget {
   final LivestreamScreenController controller;
-  final List<StreamView> streamViews;
+  final List<StageSeat> seats;
 
   const ThreeUserView({
     super.key,
     required this.controller,
-    required this.streamViews,
+    required this.seats,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildMainUserView(streamViews.first),
-        _buildSecondaryUsersRow(streamViews.sublist(1)),
+        _buildMainUserView(),
+        _buildSecondaryUsersRow(seats.sublist(1)),
       ],
     );
   }
 
-  Widget _buildMainUserView(StreamView user) {
+  Widget _buildMainUserView() {
     return Expanded(
-      child: LiveStreamUserView(
-        isNameAndSpeakerVisible: false,
-        controller: controller,
-        streamingView: streamViews.first,
-      ),
+      child: _resolveSeat(seats.first, controller,
+          isNameAndSpeakerVisible: false),
     );
   }
 
-  Widget _buildSecondaryUsersRow(
-      List<StreamView> streamViews) {
+  Widget _buildSecondaryUsersRow(List<StageSeat> rest) {
     return Expanded(
       child: Row(
         children: [
-          for (final streamView in streamViews.take(2))
-            Expanded(
-              child: LiveStreamUserView(
-                controller: controller,
-                streamingView: streamView,
-              ),
-            ),
-          if (streamViews.length < 2) ...[
-            for (int i = 0; i < 2 - streamViews.length; i++)
+          for (final seat in rest.take(2))
+            Expanded(child: _resolveSeat(seat, controller)),
+          if (rest.length < 2) ...[
+            for (int i = 0; i < 2 - rest.length; i++)
               Expanded(child: _buildEmptyUserView()),
           ],
         ],
@@ -166,58 +177,47 @@ class ThreeUserView extends StatelessWidget {
 
 class FourUserView extends StatelessWidget {
   final LivestreamScreenController controller;
-  final List<StreamView> streamViews;
+  final List<StageSeat> seats;
 
   const FourUserView(
-      {super.key,
-      required this.controller,
-      required this.streamViews});
+      {super.key, required this.controller, required this.seats});
 
   @override
   Widget build(BuildContext context) {
-    if (streamViews.isEmpty) return _buildEmptyView();
+    if (seats.isEmpty) return _buildEmptyView();
 
     return Column(
       children: [
-        _buildTopRow(streamViews.take(2)),
-        _buildBottomRow(streamViews.skip(2)),
+        _buildTopRow(seats.take(2).toList()),
+        _buildBottomRow(seats.skip(2).toList()),
       ],
     );
   }
 
-  Widget _buildTopRow(Iterable<StreamView> streamViews) {
+  Widget _buildTopRow(List<StageSeat> row) {
     return Expanded(
       child: Row(
         children: [
-          for (final user in streamViews.take(2))
+          for (int i = 0; i < row.length; i++)
             Expanded(
-              child: LiveStreamUserView(
-                  isNameAndSpeakerVisible:
-                      streamViews.toList().indexOf(user) !=
-                          0,
-                  controller: controller,
-                  streamingView: user),
+              child: _resolveSeat(row[i], controller,
+                  isNameAndSpeakerVisible: i != 0),
             ),
-          if (streamViews.length < 2)
+          if (row.length < 2)
             Expanded(child: _buildEmptyUserView()),
         ],
       ),
     );
   }
 
-  Widget _buildBottomRow(Iterable<StreamView> streamViews) {
+  Widget _buildBottomRow(List<StageSeat> row) {
     return Expanded(
       child: Row(
         children: [
-          for (final user in streamViews.take(2))
-            Expanded(
-              child: LiveStreamUserView(
-                controller: controller,
-                streamingView: user,
-              ),
-            ),
-          if (streamViews.length < 2)
-            for (int i = 0; i < 2 - streamViews.length; i++)
+          for (final seat in row)
+            Expanded(child: _resolveSeat(seat, controller)),
+          if (row.length < 2)
+            for (int i = 0; i < 2 - row.length; i++)
               Expanded(child: _buildEmptyUserView()),
         ],
       ),
@@ -231,16 +231,16 @@ class FourUserView extends StatelessWidget {
 /// grid stays rectangular.
 class GridUserView extends StatelessWidget {
   final LivestreamScreenController controller;
-  final List<StreamView> streamViews;
+  final List<StageSeat> seats;
 
   const GridUserView(
-      {super.key, required this.controller, required this.streamViews});
+      {super.key, required this.controller, required this.seats});
 
   @override
   Widget build(BuildContext context) {
-    if (streamViews.isEmpty) return _buildEmptyView();
-    final columns = streamViews.length <= 6 ? 2 : 3;
-    final rows = (streamViews.length / columns).ceil();
+    if (seats.isEmpty) return _buildEmptyView();
+    final columns = seats.length <= 6 ? 2 : 3;
+    final rows = (seats.length / columns).ceil();
     return Column(
       children: [
         for (int r = 0; r < rows; r++)
@@ -249,12 +249,9 @@ class GridUserView extends StatelessWidget {
               children: [
                 for (int c = 0; c < columns; c++)
                   Expanded(
-                    child: (r * columns + c) < streamViews.length
-                        ? LiveStreamUserView(
-                            isNameAndSpeakerVisible: (r * columns + c) != 0,
-                            controller: controller,
-                            streamingView: streamViews[r * columns + c],
-                          )
+                    child: (r * columns + c) < seats.length
+                        ? _resolveSeat(seats[r * columns + c], controller,
+                            isNameAndSpeakerVisible: (r * columns + c) != 0)
                         : _buildEmptyUserView(),
                   ),
               ],

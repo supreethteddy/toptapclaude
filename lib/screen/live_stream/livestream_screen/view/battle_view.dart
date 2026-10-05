@@ -15,6 +15,7 @@ import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/pk_gifters.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/reconnecting_placeholder.dart';
 import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
@@ -202,41 +203,9 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
   }
 }
 
-/// A PK team member whose stream has dropped — same slot, same side, not
-/// collapsed out of the layout, so the other tile never silently becomes
-/// "the whole screen".
-class ReconnectingPlaceholder extends StatelessWidget {
-  final AppUser user;
-
-  const ReconnectingPlaceholder({super.key, required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black87,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(
-            height: 26,
-            width: 26,
-            child: CircularProgressIndicator(
-                strokeWidth: 2, color: Colors.white70),
-          ),
-          const SizedBox(height: 10),
-          Text(LKey.reconnectingCreator.tr,
-              style: TextStyleCustom.outFitSemiBold600(
-                  color: Colors.white, fontSize: 13)),
-          const SizedBox(height: 2),
-          Text(LKey.creatorWillBeBackSoon.tr,
-              style: TextStyleCustom.outFitRegular400(
-                  color: Colors.white70, fontSize: 11)),
-        ],
-      ),
-    );
-  }
-}
+// ReconnectingPlaceholder moved to widget/reconnecting_placeholder.dart —
+// shared with the general multi-guest grid (livestream_view.dart), which
+// needed the exact same seat-holding treatment.
 
 /// Per-tile "WIN" / "LOSE" badge shown once the match ends — replaces the
 /// shared gradient VICTORY/DEFEAT tags that used to sit below the video for
