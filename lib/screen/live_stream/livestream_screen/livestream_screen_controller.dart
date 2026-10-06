@@ -47,6 +47,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/league_controller.d
 import 'package:shortzz/screen/live_stream/livestream_screen/live_ranking_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/hourly_ranking_sheet.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/go_live_with_guests_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/league_standings_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
@@ -622,6 +623,17 @@ class LivestreamScreenController extends BaseController
           isHost: true,
           initialTab: initialTab,
           roomID: liveData.value.roomID ?? ''),
+      isScrollControlled: true,
+    );
+  }
+
+  /// Stage-3 entry point (client's 5-stage breakdown) — the primary guest
+  /// icon now opens this instead of the Requests tab of MembersSheet
+  /// directly; MembersSheet itself stays reachable from the "..." menu.
+  void openGoLiveWithGuestsSheet() {
+    HapticManager.shared.light();
+    Get.bottomSheet(
+      GoLiveWithGuestsSheet(roomID: liveData.value.roomID ?? ''),
       isScrollControlled: true,
     );
   }

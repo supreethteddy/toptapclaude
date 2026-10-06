@@ -14,7 +14,6 @@ import 'package:shortzz/screen/live_stream/livestream_screen/widget/livestream_e
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/fan_club_widgets.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/live_stream/manage_moderators_screen/manage_moderators_screen.dart';
 import 'package:shortzz/model/livestream/pk_eligibility.dart';
 import 'package:shortzz/utilities/asset_res.dart';
@@ -107,32 +106,6 @@ class LiveStreamBottomView extends StatelessWidget {
               ],
               ),
             ),
-            // Floating Right Controls (positioned absolutely). Listed last so
-            // it paints - and hit-tests - above the comments feed above: that
-            // Obx's ListView sits inside an Expanded, so even with zero
-            // comments it still claims the full height Expanded gives it and
-            // was silently swallowing taps meant for these buttons when it
-            // was painted after (on top of) them instead.
-            Obx(
-              () => Positioned(
-                right: 15,
-                bottom: 160,
-                child: AnimatedSlide(
-                  duration: const Duration(milliseconds: 300),
-                  offset: controller.isRightControlsVisible.value
-                      ? Offset.zero
-                      : const Offset(0, 1),
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 200),
-                    opacity:
-                        controller.isRightControlsVisible.value ? 1.0 : 0.0,
-                    child: controller.isRightControlsVisible.value
-                        ? _buildRightControls(context)
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -162,9 +135,10 @@ class LiveStreamBottomView extends StatelessWidget {
               ),
             ),
           ),
-          // Share (Figma "Live1"): moved out of the collapsible right-controls
-          // panel so it's always visible, far right of the bottom bar. Same
-          // `_shareStream` logic as before, just a white outline icon here.
+          // Share, Beautify, More: client reference shows all three in this
+          // same bottom row (not a separately floating column) — these two
+          // used to live in a collapsible panel positioned on the right
+          // edge mid-screen; moved in here to match.
           if (isVisible) const SizedBox(width: 8),
           if (isVisible)
             GestureDetector(
@@ -183,6 +157,16 @@ class LiveStreamBottomView extends StatelessWidget {
                 ),
               ),
             ),
+          if (isVisible) const SizedBox(width: 8),
+          if (isVisible)
+            _buildControlButton(context,
+                icon: Icons.face_retouching_natural,
+                onTap: controller.onBeautifyTap),
+          if (isVisible) const SizedBox(width: 8),
+          if (isVisible && !isAudience)
+            _buildControlButton(context,
+                icon: Icons.more_vert,
+                onTap: () => _showMoreOptions(context)),
         ],
       );
     });
@@ -246,24 +230,24 @@ class LiveStreamBottomView extends StatelessWidget {
     );
   }
 
-  // Restyled to TikTok's uniform dark-circle icon language (same look as
-  // the Share/Link/Guests-request buttons elsewhere in this bar) instead of
-  // plain borderless Material IconButtons. About Me and the comments
-  // on/off toggle moved into the "..." sheet below — nothing removed, just
-  // decluttering the always-visible row down to what TikTok keeps visible.
+  // Client reference for the base (pre-invite) screen shows only the link,
+  // guest, share, beautify and more icons — no flip/mic/video and no second
+  // guest icon. Flip/mic/video moved into the "..." sheet (_showMoreOptions)
+  // alongside About Me and the comments toggle; the Guests button here was
+  // a duplicate of the bottom-left guest icon (_HostLinkAndGuestIcons, now
+  // opens GoLiveWithGuestsSheet) and is gone. Only Leave (co-host/guest)
+  // and the PK Match button remain — both are stage-appropriate (leave
+  // only makes sense once you're on stage; PK only once there's someone to
+  // challenge, already gated by PkEligibility).
   Widget _buildHostControls(BuildContext context) {
     return Obx(() {
       int? userId = controller.myUser.value?.id;
       LivestreamUserState? state = controller.liveUsersStates.firstWhereOrNull(
         (element) => element.userId == userId,
       );
-      // Guests get the same camera/mic/leave controls as co-hosts — the
-      // role only matters for PK eligibility, not for running your own feed.
       final isHostOrCoHost = state?.type == LivestreamUserType.host ||
           state?.type == LivestreamUserType.coHost ||
           state?.type == LivestreamUserType.guest;
-      bool isMute = state?.isMuted ?? false;
-      bool isVideoOn = state?.isVideoOn ?? false;
       Livestream stream = controller.liveData.value;
       // A same-room PK Match has no countdown (client spec) and so never
       // passes through BattleType.running on its way from waiting to end —
@@ -272,14 +256,18 @@ class LiveStreamBottomView extends StatelessWidget {
       bool isBattleRunning = stream.battleType == BattleType.waiting ||
           stream.battleType == BattleType.running;
       if (!isHostOrCoHost) return const SizedBox();
+      final showLeave = (LivestreamUserType.coHost == state?.type ||
+              LivestreamUserType.guest == state?.type) &&
+          stream.type == LivestreamType.livestream;
+      final showPkMatch = state?.type == LivestreamUserType.host &&
+          stream.type != LivestreamType.battle;
+      if (!showLeave && !showPkMatch) return const SizedBox();
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if ((LivestreamUserType.coHost == state?.type ||
-                    LivestreamUserType.guest == state?.type) &&
-                stream.type == LivestreamType.livestream) ...[
+            if (showLeave)
               _buildControlButton(
                 context,
                 icon: Icons.close,
@@ -292,66 +280,11 @@ class LiveStreamBottomView extends StatelessWidget {
                   }
                 },
               ),
-              const SizedBox(width: 10),
-            ],
-            _buildControlButton(
-              context,
-              icon: Icons.flip_camera_ios,
-              onTap: controller.toggleFlipCamera,
-            ),
-            const SizedBox(width: 10),
-            _buildControlButton(
-              context,
-              icon: isMute ? Icons.mic_off : Icons.mic,
-              iconColor: isMute ? Colors.red : Colors.white,
-              onTap: () => controller.toggleMic(isMute),
-            ),
-            const SizedBox(width: 10),
-            _buildControlButton(
-              context,
-              icon: isVideoOn ? Icons.videocam : Icons.videocam_off,
-              iconColor: isVideoOn ? Colors.white : Colors.red,
-              onTap: () => controller.toggleVideo(isVideoOn),
-            ),
-            if (state?.type == LivestreamUserType.host &&
-                stream.type != LivestreamType.battle) ...[
-              const SizedBox(width: 10),
-              _PkMatchButton(controller: controller),
-            ],
-            if (state?.type == LivestreamUserType.host) ...[
-              const SizedBox(width: 10),
-              _GuestsButton(controller: controller),
-            ],
+            if (showPkMatch) _PkMatchButton(controller: controller),
           ],
         ),
       );
     });
-  }
-
-  Widget _buildRightControls(BuildContext context) {
-    // Share used to live here too (Figma "Live1" moved it to the always
-    // visible bottom bar, see `_buildBottomControlsRow`), so this collapsible
-    // panel now only holds the beauty filter shortcut plus host-only extras.
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildControlButton(
-          context,
-          icon: Icons.face_retouching_natural,
-          onTap: controller.onBeautifyTap,
-        ),
-        if (!isAudience) ...[
-          const SizedBox(height: 30),
-          _buildControlButton(
-            context,
-            icon: Icons.more_vert,
-            onTap: () {
-              _showMoreOptions(context);
-            },
-          ),
-        ],
-      ],
-    );
   }
 
   void _showMoreOptions(BuildContext context) {
@@ -367,9 +300,58 @@ class LiveStreamBottomView extends StatelessWidget {
         ),
         child: SafeArea(
           top: false,
-          child: Column(
+          // Flip/mic/video joined the previously-shorter list of options
+          // here and overflowed it on shorter screens — now capped and
+          // scrollable instead of a fixed-height Column.
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: Get.height * .7),
+            child: SingleChildScrollView(
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Flip camera / mic / camera toggle — moved here from the
+              // always-visible row to match the client's minimal bottom
+              // bar (link, guest, share, beautify, more only). Only shown
+              // to whoever is actually on stage; this sheet itself is only
+              // reachable via the more icon, already host/co-host/guest
+              // only (see _buildBottomControlsRow).
+              Obx(() {
+                final userId = controller.myUser.value?.id;
+                final state = controller.liveUsersStates
+                    .firstWhereOrNull((e) => e.userId == userId);
+                final isMute = state?.isMuted ?? false;
+                final isVideoOn = state?.isVideoOn ?? false;
+                return Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.flip_camera_ios),
+                      title: const Text('Flip camera'),
+                      onTap: () {
+                        Get.back();
+                        controller.toggleFlipCamera();
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(isMute ? Icons.mic_off : Icons.mic),
+                      title: Text(isMute ? 'Unmute' : 'Mute'),
+                      onTap: () {
+                        Get.back();
+                        controller.toggleMic(isMute);
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(
+                          isVideoOn ? Icons.videocam : Icons.videocam_off),
+                      title:
+                          Text(isVideoOn ? 'Turn camera off' : 'Turn camera on'),
+                      onTap: () {
+                        Get.back();
+                        controller.toggleVideo(isVideoOn);
+                      },
+                    ),
+                  ],
+                );
+              }),
               if (controller.isHost) ...[
                 ListTile(
                   leading: const Icon(Icons.person_outline),
@@ -447,6 +429,8 @@ class LiveStreamBottomView extends StatelessWidget {
                   },
                 ),
             ],
+              ),
+            ),
           ),
         ),
       ),
@@ -547,9 +531,8 @@ class LiveStreamBottomView extends StatelessWidget {
 
 /// TikTok's bottom-left chain-link + friends icon pair: chain opens the
 /// cross-room "link with another host" flow (same screen the "..." menu's
-/// "Find Opponent" item already opens), friends jumps straight to inviting a
-/// viewer on screen as a guest (the Invited tab of the same MembersSheet
-/// _GuestsButton below opens, just defaulted to a different tab).
+/// "Find Opponent" item already opens), friends opens GoLiveWithGuestsSheet
+/// (stage 3 — invite guest) — the sole guest-invite entry point now.
 class _HostLinkAndGuestIcons extends StatelessWidget {
   final LivestreamScreenController controller;
 
@@ -571,11 +554,10 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Obx(() {
-          final pending = controller.invitedList.length;
+          final pending =
+              controller.invitedList.length + controller.requestList.length;
           return _circleIconButton(
-            onTap: () => controller.openMembersSheet(
-              initialTab: MembersSheet.tabInvited,
-            ),
+            onTap: controller.openGoLiveWithGuestsSheet,
             badgeCount: pending,
             child:
                 const Icon(Icons.people, color: Color(0xFF25F4EE), size: 18),
@@ -701,51 +683,6 @@ class _PkMatchButton extends StatelessWidget {
       return;
     }
     controller.openPkMatchSetupSheet();
-  }
-}
-
-/// Guest requests / invites entry point (client items L-01, L-13).
-class _GuestsButton extends StatelessWidget {
-  final LivestreamScreenController controller;
-
-  const _GuestsButton({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final pending = controller.requestList.length;
-      return IconButton(
-        tooltip: LKey.guests.tr,
-        onPressed: () => controller.openMembersSheet(
-          initialTab: MembersSheet.tabRequests,
-        ),
-        icon: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            const Icon(Icons.person_add_alt_1, color: Colors.white),
-            if (pending > 0)
-              Positioned(
-                right: -6,
-                top: -6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: ColorRes.likeRed,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$pending',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
-    });
   }
 }
 

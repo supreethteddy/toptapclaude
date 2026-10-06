@@ -410,6 +410,8 @@ class LKey {
   static const String pts = "pts";
   static const String inviteViewers = "Viewers you can invite";
   static const String noViewersToInvite = "No viewers to invite yet";
+  static const String goLiveWithGuests = "Go LIVE with guests";
+  static const String friendsNotWatching = "Friends not watching this LIVE";
   static const String dailyRanking = "Daily Ranking";
   static const String today = "Today";
   static const String yourRankToday = "Your rank today";
