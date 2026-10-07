@@ -58,13 +58,11 @@ class LivestreamView extends StatelessWidget {
       }
 
       return switch (seats.length) {
-        2 => OneAndTwoUserView(controller: controller, seats: seats),
-        3 => ThreeUserView(controller: controller, seats: seats),
-        4 => FourUserView(controller: controller, seats: seats),
         1 => _resolveSeat(seats.first, controller,
             isNameAndSpeakerVisible: false),
-        // 5+ participants (host + co-hosts + Guest Call guests, up to 10).
-        _ => GridUserView(controller: controller, seats: seats),
+        // 2+ participants (host + co-hosts + Guest Call guests, up to 10):
+        // host left, guests in a grid on the right.
+        _ => HostAndGuestGridView(controller: controller, seats: seats),
       };
     });
   }
@@ -108,156 +106,94 @@ Widget _resolveSeat(
   return const SizedBox();
 }
 
-class OneAndTwoUserView extends StatelessWidget {
+/// Host-left, guest-grid-right layout for every multi-person stage (2+
+/// seats) — matches the client's TikTok reference exactly: the host holds a
+/// large tile on the left at full height; guests fill a 2-column grid on
+/// the right; any open slots up to [_maxGridSlots] show a "+" the host can
+/// tap to invite someone into that spot (plain empty tile for everyone
+/// else, who can't invite).
+class HostAndGuestGridView extends StatelessWidget {
   final LivestreamScreenController controller;
   final List<StageSeat> seats;
 
-  const OneAndTwoUserView({
+  const HostAndGuestGridView({
     super.key,
     required this.controller,
     required this.seats,
   });
 
+  // Guest Call Mode caps at 1 host + 9 guests (client's binding
+  // participant-model clarification); 8 matches the reference's 2x4 grid
+  // exactly, and a 9th seated guest just grows the grid to 2x5 rather than
+  // being dropped.
+  static const int _maxGridSlots = 8;
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(
-        seats.length,
-        (index) => Expanded(
-          child: _resolveSeat(seats[index], controller,
-              isNameAndSpeakerVisible: index != 0),
+    final host = seats.first;
+    final guests = seats.skip(1).toList();
+    final slotCount =
+        guests.length > _maxGridSlots ? guests.length : _maxGridSlots;
+    final rows = (slotCount / 2).ceil();
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 45,
+          child: _resolveSeat(host, controller,
+              isNameAndSpeakerVisible: false),
+        ),
+        Expanded(
+          flex: 55,
+          child: Column(
+            children: [
+              for (int r = 0; r < rows; r++)
+                Expanded(
+                  child: Row(
+                    children: [
+                      for (int c = 0; c < 2; c++)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(1.5),
+                            child: _gridCell(r * 2 + c, guests),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _gridCell(int index, List<StageSeat> guests) {
+    if (index < guests.length) {
+      return _resolveSeat(guests[index], controller);
+    }
+    return _AddGuestSlot(controller: controller);
+  }
+}
+
+class _AddGuestSlot extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const _AddGuestSlot({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!controller.isHost) {
+      return Container(color: Colors.grey[900]);
+    }
+    return InkWell(
+      onTap: controller.openGoLiveWithGuestsSheet,
+      child: Container(
+        color: Colors.grey[900],
+        child: const Center(
+          child: Icon(Icons.add, color: Colors.white54, size: 28),
         ),
       ),
-    );
-  }
-}
-
-class ThreeUserView extends StatelessWidget {
-  final LivestreamScreenController controller;
-  final List<StageSeat> seats;
-
-  const ThreeUserView({
-    super.key,
-    required this.controller,
-    required this.seats,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildMainUserView(),
-        _buildSecondaryUsersRow(seats.sublist(1)),
-      ],
-    );
-  }
-
-  Widget _buildMainUserView() {
-    return Expanded(
-      child: _resolveSeat(seats.first, controller,
-          isNameAndSpeakerVisible: false),
-    );
-  }
-
-  Widget _buildSecondaryUsersRow(List<StageSeat> rest) {
-    return Expanded(
-      child: Row(
-        children: [
-          for (final seat in rest.take(2))
-            Expanded(child: _resolveSeat(seat, controller)),
-          if (rest.length < 2) ...[
-            for (int i = 0; i < 2 - rest.length; i++)
-              Expanded(child: _buildEmptyUserView()),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class FourUserView extends StatelessWidget {
-  final LivestreamScreenController controller;
-  final List<StageSeat> seats;
-
-  const FourUserView(
-      {super.key, required this.controller, required this.seats});
-
-  @override
-  Widget build(BuildContext context) {
-    if (seats.isEmpty) return _buildEmptyView();
-
-    return Column(
-      children: [
-        _buildTopRow(seats.take(2).toList()),
-        _buildBottomRow(seats.skip(2).toList()),
-      ],
-    );
-  }
-
-  Widget _buildTopRow(List<StageSeat> row) {
-    return Expanded(
-      child: Row(
-        children: [
-          for (int i = 0; i < row.length; i++)
-            Expanded(
-              child: _resolveSeat(row[i], controller,
-                  isNameAndSpeakerVisible: i != 0),
-            ),
-          if (row.length < 2)
-            Expanded(child: _buildEmptyUserView()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomRow(List<StageSeat> row) {
-    return Expanded(
-      child: Row(
-        children: [
-          for (final seat in row)
-            Expanded(child: _resolveSeat(seat, controller)),
-          if (row.length < 2)
-            for (int i = 0; i < 2 - row.length; i++)
-              Expanded(child: _buildEmptyUserView()),
-        ],
-      ),
-    );
-  }
-}
-
-/// Generic grid for 5–10 participants: 2 columns up to 6 tiles, 3 columns
-/// beyond that, host first (the caller already moved it to index 0). Rows
-/// share the height equally; the last row is padded with empty tiles so the
-/// grid stays rectangular.
-class GridUserView extends StatelessWidget {
-  final LivestreamScreenController controller;
-  final List<StageSeat> seats;
-
-  const GridUserView(
-      {super.key, required this.controller, required this.seats});
-
-  @override
-  Widget build(BuildContext context) {
-    if (seats.isEmpty) return _buildEmptyView();
-    final columns = seats.length <= 6 ? 2 : 3;
-    final rows = (seats.length / columns).ceil();
-    return Column(
-      children: [
-        for (int r = 0; r < rows; r++)
-          Expanded(
-            child: Row(
-              children: [
-                for (int c = 0; c < columns; c++)
-                  Expanded(
-                    child: (r * columns + c) < seats.length
-                        ? _resolveSeat(seats[r * columns + c], controller,
-                            isNameAndSpeakerVisible: (r * columns + c) != 0)
-                        : _buildEmptyUserView(),
-                  ),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }
@@ -431,22 +367,5 @@ class MuteUnMuteButton extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// Helper extensions for common widgets
-extension on Widget {
-  Widget _buildEmptyUserView() {
-    return Container(
-      color: Colors.grey[800],
-      child: const Center(
-          child: Icon(Icons.person_off,
-              color: Colors.white54)),
-    );
-  }
-
-  Widget _buildEmptyView() {
-    return const Center(
-        child: Text('No users in livestream'));
   }
 }

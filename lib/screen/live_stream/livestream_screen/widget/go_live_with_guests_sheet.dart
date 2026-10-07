@@ -83,7 +83,14 @@ class _GoLiveWithGuestsSheetState extends State<GoLiveWithGuestsSheet> {
                 final requests = controller.requestList;
                 final invited = controller.invitedList;
                 final invitable = controller.audienceList;
-                final friends = inviteCandidates.friends;
+                // Anyone already in the room in any capacity (watching,
+                // invited, requested, on stage) shouldn't also show up as
+                // someone to invite from the Friends list.
+                final inRoomIds =
+                    controller.liveUsersStates.map((s) => s.userId).toSet();
+                final friends = inviteCandidates.friends
+                    .where((user) => !inRoomIds.contains(user.id))
+                    .toList();
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 20),
                   children: [
