@@ -11,11 +11,19 @@ class SessionManager {
   var conversationId = '';
   RxInt notifyCount = 0.obs;
   RxInt isModerator = 0.obs;
+  // Single shared reactive copy of the logged-in user, kept in sync with
+  // every setUser() call (recharge, sendGift, fetchUserDetails, etc.) via
+  // the same storage.listenKey mechanism isModerator already uses below.
+  // Screens that bind to this directly (instead of snapshotting getUser()
+  // into their own local Rx) get coin/earnings balance updates for free as
+  // soon as any other screen or background call updates the stored user.
+  Rx<User?> currentUser = Rx<User?>(null);
 
   SessionManager() {
     listenNotifyCount();
     listenModerator();
     listenSubscription();
+    listenCurrentUser();
   }
 
   void setAuthToken(Token? token) {
@@ -89,6 +97,19 @@ class SessionManager {
       // Loggers.success(user.toJson());
       storage.write(SessionKeys.user, newUser);
     }
+  }
+
+  void listenCurrentUser() {
+    currentUser.value = getUser();
+    storage.listenKey(SessionKeys.user, (value) {
+      if (value == null) {
+        currentUser.value = null;
+      } else if (value is User) {
+        currentUser.value = value;
+      } else if (value is Map<String, dynamic>) {
+        currentUser.value = User.fromJson(value);
+      }
+    });
   }
 
   User? getUser() {

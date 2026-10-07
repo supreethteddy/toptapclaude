@@ -69,6 +69,8 @@ class User {
       this.coinCollectedLifetime,
       this.coinGiftedLifetime,
       this.coinPurchasedLifetime,
+      this.earningsBalanceUsd,
+      this.earningsLifetimeUsd,
       this.bio,
       this.followerCount,
       this.followingCount,
@@ -123,6 +125,8 @@ class User {
     int? coinCollectedLifetime,
     int? coinGiftedLifetime,
     int? coinPurchasedLifetime,
+    num? earningsBalanceUsd,
+    num? earningsLifetimeUsd,
     String? bio,
     int? followerCount,
     int? followingCount,
@@ -180,6 +184,8 @@ class User {
         coinGiftedLifetime: coinGiftedLifetime ?? this.coinGiftedLifetime,
         coinPurchasedLifetime:
             coinPurchasedLifetime ?? this.coinPurchasedLifetime,
+        earningsBalanceUsd: earningsBalanceUsd ?? this.earningsBalanceUsd,
+        earningsLifetimeUsd: earningsLifetimeUsd ?? this.earningsLifetimeUsd,
         bio: bio ?? this.bio,
         followerCount: followerCount ?? this.followerCount,
         followingCount: followingCount ?? this.followingCount,
@@ -233,6 +239,12 @@ class User {
     coinCollectedLifetime = json['coin_collected_lifetime'];
     coinGiftedLifetime = json['coin_gifted_lifetime'];
     coinPurchasedLifetime = json['coin_purchased_lifetime'];
+    earningsBalanceUsd = json['earnings_balance_usd'] == null
+        ? null
+        : num.tryParse(json['earnings_balance_usd'].toString());
+    earningsLifetimeUsd = json['earnings_lifetime_usd'] == null
+        ? null
+        : num.tryParse(json['earnings_lifetime_usd'].toString());
     bio = json['bio'];
     followerCount = json['follower_count'];
     followingCount = json['following_count'];
@@ -302,6 +314,11 @@ class User {
   num? coinCollectedLifetime;
   num? coinGiftedLifetime;
   num? coinPurchasedLifetime;
+  // Real-money creator earnings from gift receipts — a separate balance from
+  // coinWallet (spendable coins). See WalletController::sendGift on the
+  // backend: gifts credit this, never coinWallet, on the receiving side.
+  num? earningsBalanceUsd;
+  num? earningsLifetimeUsd;
   String? bio;
   num? followerCount;
   num? followingCount;
@@ -358,6 +375,8 @@ class User {
     map['coin_collected_lifetime'] = coinCollectedLifetime;
     map['coin_gifted_lifetime'] = coinGiftedLifetime;
     map['coin_purchased_lifetime'] = coinPurchasedLifetime;
+    map['earnings_balance_usd'] = earningsBalanceUsd;
+    map['earnings_lifetime_usd'] = earningsLifetimeUsd;
     map['bio'] = bio;
     map['follower_count'] = followerCount;
     map['following_count'] = followingCount;

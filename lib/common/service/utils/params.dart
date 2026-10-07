@@ -86,6 +86,8 @@ class Params {
   static const String notifyGiftReceived = 'notify_gift_received';
   static const String notifyChat = 'notify_chat';
   static const String giftId = 'gift_id';
+  static const String idempotencyKey = 'idempotency_key';
+  static const String liveHostId = 'live_host_id';
   static const String musicId = 'music_id';
   static const String appLastUsedAt = 'app_last_used_at';
   static const String region = 'region';

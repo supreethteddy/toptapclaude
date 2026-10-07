@@ -44,6 +44,7 @@ class _GiftWallet {
   String submitWithdrawalRequest =
       "${apiURL}misc/submitWithdrawalRequest";
   String buyCoins = "${apiURL}misc/buyCoins";
+  String fetchCoinTransactions = "${apiURL}misc/fetchCoinTransactions";
 }
 
 class _User {

@@ -10,7 +10,7 @@ import 'package:shortzz/model/user_model/user_model.dart';
 
 class RequestWithdrawalScreenController extends BaseController {
   Rx<Setting?> settings = Rx<Setting?>(null);
-  Rx<User?> myUser = Rx<User?>(null);
+  Rx<User?> get myUser => SessionManager.instance.currentUser;
 
   RxString selectedGateway = ''.obs;
   TextEditingController amountController = TextEditingController();

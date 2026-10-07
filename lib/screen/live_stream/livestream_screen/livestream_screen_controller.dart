@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
 import 'package:shortzz/common/extensions/user_extension.dart';
+import 'package:shortzz/common/functions/debounce_action.dart';
 import 'package:shortzz/common/manager/firebase_notification_manager.dart';
 import 'package:shortzz/common/manager/haptic_manager.dart';
 import 'package:shortzz/common/manager/live_invite_watcher.dart';
@@ -251,6 +252,26 @@ class LivestreamScreenController extends BaseController
   RxInt premiumGiftAnimationTrigger = 0.obs;
   Rx<LivestreamComment?> premiumGiftAnimationComment =
       Rx<LivestreamComment?>(null);
+
+  // Own instance (not the app-wide DebounceAction.shared) so a burst of
+  // gifts received in quick succession doesn't fight with unrelated
+  // debounced actions elsewhere for the one shared timer.
+  final DebounceAction _balanceRefreshDebounce = DebounceAction();
+
+  /// Gifts credit the receiver's earnings server-side in real time, but
+  /// nothing pushes that to this device on its own — refresh from the
+  /// server shortly after a gift comment addressed to me arrives, so the
+  /// balance shown here (and everywhere else, via the shared
+  /// SessionManager.currentUser) catches up without leaving the LIVE.
+  void _refreshMyBalanceAfterGift() {
+    _balanceRefreshDebounce.call(() async {
+      final user = await UserService.instance
+          .fetchUserDetails(userId: SessionManager.instance.getUserID());
+      if (user != null) {
+        SessionManager.instance.setUser(user);
+      }
+    }, milliseconds: 1500);
+  }
 
   /// Debug-only: fires the premium gift overlay locally without a real
   /// backend gift send, since every entry in premiumGiftAnimations is a
@@ -1655,6 +1676,9 @@ class LivestreamScreenController extends BaseController
               if (premiumAnimationForGift(comment.giftId) != null) {
                 premiumGiftAnimationComment.value = comment;
                 premiumGiftAnimationTrigger.value++;
+              }
+              if (comment.receiverId == SessionManager.instance.getUserID()) {
+                _refreshMyBalanceAfterGift();
               }
             }
             // Loggers.info('New comment added: ${comment.toJson()}');

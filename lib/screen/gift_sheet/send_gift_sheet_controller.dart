@@ -12,13 +12,21 @@ import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen.dart';
 import 'package:shortzz/screen/gift_sheet/send_gift_dialog.dart';
 import 'package:shortzz/screen/gift_sheet/send_gift_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:shortzz/utilities/app_res.dart';
+import 'package:uuid/uuid.dart';
 
 class SendGiftSheetController extends BaseController {
   Rx<Setting?> settings = Rx<Setting?>(null);
-  Rx<User?> myUser = Rx<User?>(null);
+  // Shared with every other balance-displaying screen via SessionManager —
+  // see CoinWalletScreenController for why.
+  Rx<User?> get myUser => SessionManager.instance.currentUser;
+  // '' means the "All" tab. Defaults to the catalog's first category once
+  // settings load (see _initData).
+  RxString selectedCategory = ''.obs;
   int? userId;
   List<AppUser> liveUsers;
   GiftType? giftType;
@@ -53,7 +61,59 @@ class SendGiftSheetController extends BaseController {
 
   _initData() {
     settings.value = SessionManager.instance.getSettings();
-    myUser.value = SessionManager.instance.getUser();
+  }
+
+  /// Distinct categories in catalog order (admin-controlled via coin_price
+  /// ordering upstream), so "Popular" naturally leads "Premium" etc. without
+  /// a hardcoded category list here.
+  List<String> get categories {
+    final gifts = settings.value?.gifts ?? [];
+    final seen = <String>{};
+    final result = <String>[];
+    for (final g in gifts) {
+      final c = g.category;
+      if (c != null && c.isNotEmpty && seen.add(c)) {
+        result.add(c);
+      }
+    }
+    return result;
+  }
+
+  List<Gift> get giftsForSelectedCategory {
+    final gifts = settings.value?.gifts ?? [];
+    if (selectedCategory.value.isEmpty) return gifts;
+    return gifts.where((g) => g.category == selectedCategory.value).toList();
+  }
+
+  void selectCategory(String category) {
+    selectedCategory.value = category;
+  }
+
+  /// The LIVE room's host id, or null outside a livestream/battle gift.
+  /// Passed to the server so it can apply the guest/host earnings split
+  /// instead of giving the whole creator pool to the recipient alone when
+  /// the recipient is a co-host/guest rather than the host.
+  int? get _liveHostId {
+    final isLiveGift =
+        giftType == GiftType.livestream || giftType == GiftType.battle;
+    if (!isLiveGift) return null;
+    return livestreamController.liveData.value.hostId?.toInt();
+  }
+
+  // One id per distinct send attempt, reused across retries of that SAME
+  // attempt (e.g. a thrown exception the user retries by tapping again) so
+  // the server's idempotency check actually dedupes retries instead of
+  // minting a new, uncorrelated key each time, defeating the point of it.
+  // Reset (and cleared on success) whenever the attempted gift changes.
+  String? _pendingIdempotencyKey;
+  int? _pendingGiftId;
+
+  String _idempotencyKeyFor(int giftId) {
+    if (_pendingGiftId != giftId || _pendingIdempotencyKey == null) {
+      _pendingGiftId = giftId;
+      _pendingIdempotencyKey = const Uuid().v4();
+    }
+    return _pendingIdempotencyKey!;
   }
 
   Future<void> onGiftTap(Gift gift) async {
@@ -69,7 +129,12 @@ class SendGiftSheetController extends BaseController {
     }
 
     if (coinPrice > (myUser.value?.coinWallet ?? 0)) {
-      return showSnackBar('Insufficient fund');
+      return _showInsufficientCoinsPrompt();
+    }
+
+    if (coinPrice >= AppRes.highValueGiftCoinThreshold) {
+      final confirmed = await _confirmHighValueGift(gift);
+      if (confirmed != true) return;
     }
 
     _isSendingGift = true;
@@ -78,6 +143,50 @@ class SendGiftSheetController extends BaseController {
     } finally {
       _isSendingGift = false;
     }
+  }
+
+  Future<bool?> _confirmHighValueGift(Gift gift) {
+    return Get.dialog<bool>(
+      AlertDialog(
+        title: Text(gift.name ?? 'Send this gift?'),
+        content: Text(
+            'Send ${gift.name ?? 'this gift'} for ${gift.coinPrice ?? 0} coins?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInsufficientCoinsPrompt() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Not enough coins'),
+        content: const Text(
+            'You don\'t have enough coins to send this gift. Recharge your coin balance to continue.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.back();
+              Get.to(() => const CoinWalletScreen());
+            },
+            child: const Text('Recharge Coins'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> sendGift(Gift gift) async {
@@ -100,21 +209,36 @@ class SendGiftSheetController extends BaseController {
       return Loggers.error(
           'Invalid coin price: $coinPrice, skipping gift sending.');
     }
+    // Direct gift to the room's own host (liveHostId == recipient) is
+    // indistinguishable from a non-live gift server-side, so only pass it
+    // when the recipient is someone else on the stream (a guest/co-host).
+    final liveHostId =
+        (_liveHostId != null && _liveHostId != recipientId) ? _liveHostId : null;
     var loaderVisible = false;
     try {
       showLoader();
       loaderVisible = true;
-      final response = await GiftWalletService.instance
-          .sendGift(giftId: giftId, userId: recipientId);
+      final response = await GiftWalletService.instance.sendGift(
+        giftId: giftId,
+        userId: recipientId,
+        idempotencyKey: _idempotencyKeyFor(giftId),
+        liveHostId: liveHostId,
+      );
       stopLoader();
       loaderVisible = false;
 
       if (response.status == true) {
-        // Deduct gift coins from user wallet
+        _pendingIdempotencyKey = null;
+        _pendingGiftId = null;
+        // Optimistic deduction for instant feedback, immediately corrected
+        // by the server's own post-deduction figure — the balance is
+        // server-authoritative, never trusted purely from client math.
         myUser.update((val) {
           val?.removeCoinFromWallet(coinPrice);
+          if (response.coinWallet != null) {
+            val?.coinWallet = response.coinWallet;
+          }
         });
-        Loggers.info(myUser.value?.coinWallet);
         SessionManager.instance.setUser(myUser.value);
         if (giftType == GiftType.none) {
           Get.back(result: GiftManager(gift));
@@ -124,7 +248,7 @@ class SendGiftSheetController extends BaseController {
                   streamUser: livestreamController.selectedGiftUser.value));
         }
       } else {
-        showSnackBar(response.message);
+        showSnackBar(response.message ?? 'Unable to send the gift.');
       }
     } catch (e, stack) {
       Loggers.error('Failed to send gift: $e\n$stack');

@@ -96,6 +96,26 @@ class CoinWalletTopView extends StatelessWidget {
                                 color: whitePure(context).withValues(alpha: .8),
                                 fontSize: 18),
                           ),
+                          Obx(() {
+                            // Real-money creator earnings from gifts
+                            // received — a separate balance from the
+                            // spendable coin balance above it.
+                            final earnings =
+                                controller.myUser.value?.earningsBalanceUsd;
+                            if (earnings == null || earnings <= 0) {
+                              return const SizedBox();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'Earnings: ${earnings.currencyFormat}',
+                                style: TextStyleCustom.outFitRegular400(
+                                    color: whitePure(context)
+                                        .withValues(alpha: .9),
+                                    fontSize: 14),
+                              ),
+                            );
+                          }),
                         ],
                       ),
                       const Spacer(),

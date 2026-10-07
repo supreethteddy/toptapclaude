@@ -10,7 +10,10 @@ import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 
 class CoinWalletScreenController extends BaseController {
-  Rx<User?> myUser = Rx<User?>(null);
+  // Shared with every other balance-displaying screen (wallet, recharge,
+  // withdrawal, gift sheet) via SessionManager, so a purchase/gift/withdrawal
+  // made from any of them updates this one too without a manual refetch.
+  Rx<User?> get myUser => SessionManager.instance.currentUser;
   RxList<ProductDetails> offerings = <ProductDetails>[].obs;
 
   Setting? get settings => SessionManager.instance.getSettings();

@@ -484,6 +484,8 @@ class DummyLive {
 
 class Gift {
   int? id;
+  String? name;
+  String? category;
   int? coinPrice;
   String? image;
   DateTime? createdAt;
@@ -491,6 +493,8 @@ class Gift {
 
   Gift({
     this.id,
+    this.name,
+    this.category,
     this.coinPrice,
     this.image,
     this.createdAt,
@@ -499,6 +503,8 @@ class Gift {
 
   factory Gift.fromJson(Map<String, dynamic> json) => Gift(
         id: json["id"],
+        name: json["name"],
+        category: json["category"],
         coinPrice: json["coin_price"],
         image: json["image"],
         createdAt: json["created_at"] == null
@@ -511,6 +517,8 @@ class Gift {
 
   Map<String, dynamic> toJson() => {
         "id": id,
+        "name": name,
+        "category": category,
         "coin_price": coinPrice,
         "image": image,
         "created_at": createdAt?.toIso8601String(),

@@ -140,6 +140,11 @@ class AppRes {
 
   // Send Gift
   static const int giftDialogDismissTime = 2; // enter in second
+  // Gifts at or above this coin price show a confirmation dialog before
+  // sending (spec: "sender must see a confirmation before sending
+  // high-value gifts"). No per-gift/admin flag exists for this yet, so a
+  // flat threshold is the simplest non-invented rule.
+  static const int highValueGiftCoinThreshold = 2000;
 
   // Camera
   static const bool isDeepAR = false;
