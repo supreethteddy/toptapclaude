@@ -42,6 +42,12 @@ class FollowController extends BaseController {
         // Loggers.success(response.message);
         Loggers.success(user.value?.isFollowing);
         User? _user = user.value;
+        // Diagnostic: if a "you have a new follower" push ever silently
+        // doesn't arrive, this is the gate it's being skipped by — one of
+        // these should be false in the next failing repro's logs instead of
+        // guessing further.
+        Loggers.info(
+            'follow-notify gate: userNull=${_user == null} isFollowing=${user.value?.isFollowing} notifyFollow=${_user?.notifyFollow} deviceToken=${(_user?.deviceToken ?? '').isNotEmpty} notSelf=${_user?.id != SessionManager.instance.getUserID()}');
         if (_user != null &&
             user.value?.isFollowing == true &&
             _user.notifyFollow == 1 &&

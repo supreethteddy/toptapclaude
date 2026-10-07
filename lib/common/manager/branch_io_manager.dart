@@ -29,7 +29,7 @@ class BranchIoManager {
       canonicalIdentifier: 'shortzz/${type.name}',
       title: shareData.title,
       imageUrl: shareData.imageUrl,
-      keywords: ['Shortzz', 'Flutter', 'Share'],
+      keywords: ['TopTap', 'Flutter', 'Share'],
       contentMetadata: BranchContentMetaData()
         ..addCustomMetadata(shareData.metadataKey, shareData.metadataValue),
     );

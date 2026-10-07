@@ -1,6 +1,7 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shortzz/common/controller/follow_controller.dart';
 import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
@@ -220,15 +221,27 @@ class _FollowButtonState extends State<_FollowButton> {
   bool _isFollowing = false;
   bool _isLoading = false;
 
+  // Calling UserService.followUser directly here used to skip the "notify
+  // them they have a new follower" push entirely — that trigger lives in
+  // FollowController, which every other Follow button in the app already
+  // goes through. This screen only ever had a bare userId (not the full
+  // User object FollowController needs for the followed user's
+  // notifyFollow/deviceToken), so fetch it first.
   Future<void> _onTap() async {
     if (_isFollowing || _isLoading) return;
     setState(() => _isLoading = true);
-    final response =
-        await UserService.instance.followUser(userId: widget.userId);
+    final user =
+        await UserService.instance.fetchUserDetails(userId: widget.userId);
+    if (user == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    final controller = FollowController(user.obs);
+    final updatedUser = await controller.followUnFollowUser();
     if (!mounted) return;
     setState(() {
       _isLoading = false;
-      if (response.status == true) _isFollowing = true;
+      if (updatedUser?.isFollowing == true) _isFollowing = true;
     });
   }
 

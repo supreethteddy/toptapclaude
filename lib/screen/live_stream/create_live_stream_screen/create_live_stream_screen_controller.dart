@@ -257,6 +257,20 @@ class CreateLiveStreamScreenController extends BaseController
     _isDeepArLiveBusy = true;
     showLoader();
     try {
+      // Release Zego's own camera hold FIRST, before DeepAR ever touches the
+      // camera. deepArController.initialize() calls down into
+      // startCameraAndroid(), which opens the physical camera directly —
+      // while actually LIVE, Zego has held that same camera open and
+      // actively capturing since go-live, so initializing DeepAR before
+      // this point hands two different native layers the same camera
+      // device at once. That's a native-level resource conflict Flutter's
+      // own try/catch here can't intercept, matching "selecting a filter
+      // crashes the app and restarts" rather than a catchable error — see
+      // DeepArZegoBridge.kt's own documented call-order requirement.
+      // Harmless to call before Zego's camera was ever enabled too (the
+      // pre-live filter-setup screen, before Start Live).
+      await zegoEngine.enableCamera(false);
+
       if (!deepArController.isInitialized) {
         final result = await deepArController.initialize(
           androidLicenseKey: _setting?.deeparAndroidKey,
@@ -265,6 +279,7 @@ class CreateLiveStreamScreenController extends BaseController
         );
         if (!result.success) {
           showSnackBar('Could not start filters: ${result.message}');
+          await zegoEngine.enableCamera(true);
           return;
         }
       }
@@ -279,12 +294,10 @@ class CreateLiveStreamScreenController extends BaseController
       final size = deepArController.imageSize;
       if (size == null) {
         showSnackBar('Could not start filters: unknown camera size.');
+        await zegoEngine.enableCamera(true);
         return;
       }
 
-      // Stop Zego's own camera before custom-capture frames start arriving
-      // — see enableCustomVideoCapture's documented call order.
-      await zegoEngine.enableCamera(false);
       await deepArController.enableRawFrameOutput(
           width: size.width.toInt(), height: size.height.toInt());
       await _deepArZegoBridgeChannel.invokeMethod('start');

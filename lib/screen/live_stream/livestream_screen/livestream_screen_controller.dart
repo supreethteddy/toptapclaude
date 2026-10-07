@@ -423,6 +423,16 @@ class LivestreamScreenController extends BaseController
   @override
   void onInit() {
     super.onInit();
+    // Pause the background home-feed reel so its audio doesn't keep playing
+    // under this screen. Two entry points (DiscoverLiveOverlayController,
+    // CreateLiveStreamScreenController) already did this themselves before
+    // navigating here, but several others (a "went live" push notification,
+    // accepting an in-app LIVE invite, Live Stream Search) opened this
+    // screen directly and never did — doing it here instead covers every
+    // entry point uniformly, current and future, matching the unconditional
+    // resumeHomeFeed() this class already calls in onClose(). A harmless
+    // no-op if the reels feed was already paused or was never playing.
+    ReelsScreenController.pauseHomeFeed();
     activeRoomIds.add(liveData.value.roomID ?? '');
     // Tell LiveInviteWatcher this room already has its screen open, so an
     // out-of-room invite for it is handled by the in-room INVITED path
