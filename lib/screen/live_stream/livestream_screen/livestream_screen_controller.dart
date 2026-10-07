@@ -16,6 +16,7 @@ import 'package:shortzz/common/manager/live_invite_watcher.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/utilities/beautify_controls_mixin.dart';
 import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
+import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/notification_service.dart';
@@ -242,6 +243,29 @@ class LivestreamScreenController extends BaseController
     66,
     (i) => 'assets/gifts/eagle/eagle_${(i + 1).toString().padLeft(3, '0')}.png',
   );
+
+  /// Same trigger contract as [eagleGiftAnimationTrigger], generalized for
+  /// any gift in [premiumGiftAnimations] rather than one hardcoded id — see
+  /// PremiumGiftRevealOverlay. Carries the triggering comment along so the
+  /// overlay has the sender to show without a second lookup.
+  RxInt premiumGiftAnimationTrigger = 0.obs;
+  Rx<LivestreamComment?> premiumGiftAnimationComment =
+      Rx<LivestreamComment?>(null);
+
+  /// Debug-only: fires the premium gift overlay locally without a real
+  /// backend gift send, since every entry in premiumGiftAnimations is a
+  /// placeholder id with no real tbl_gifts row yet — there is no real send
+  /// flow to test this through until that exists. Only reachable from a
+  /// kDebugMode-gated menu item (see live_stream_bottom_view.dart).
+  void debugTriggerPremiumGift(int giftId) {
+    premiumGiftAnimationComment.value = LivestreamComment(
+      senderId: myUserId,
+      receiverId: myUserId,
+      commentType: LivestreamCommentType.gift,
+      giftId: giftId,
+    );
+    premiumGiftAnimationTrigger.value++;
+  }
 
   void _registerGiftForCombo(LivestreamComment comment) {
     final last = currentGiftComboComment.value;
@@ -1617,6 +1641,10 @@ class LivestreamScreenController extends BaseController
               _registerGiftForCombo(comment);
               if (comment.giftId == eagleGiftId) {
                 eagleGiftAnimationTrigger.value++;
+              }
+              if (premiumAnimationForGift(comment.giftId) != null) {
+                premiumGiftAnimationComment.value = comment;
+                premiumGiftAnimationTrigger.value++;
               }
             }
             // Loggers.info('New comment added: ${comment.toJson()}');

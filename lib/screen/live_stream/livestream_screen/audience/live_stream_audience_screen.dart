@@ -10,8 +10,10 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/live_video_pla
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/party_battle_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/battle_start_countdown_overlay.dart';
+import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_animation_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_background_blur_image.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/premium_gift_reveal_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_like_button.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -125,6 +127,17 @@ class LiveStreamAudienceScreen extends StatelessWidget {
                     trigger: controller.eagleGiftAnimationTrigger.value,
                     frameAssets: LivestreamScreenController.eagleGiftFrames,
                   )),
+
+              Obx(() {
+                final comment = controller.premiumGiftAnimationComment.value;
+                final entry = premiumAnimationForGift(comment?.giftId);
+                return PremiumGiftRevealOverlay(
+                  trigger: controller.premiumGiftAnimationTrigger.value,
+                  videoUrl: entry?.videoUrl ?? '',
+                  giftName: entry?.name ?? '',
+                  sender: comment?.senderUser,
+                );
+              }),
             ],
           ),
         ),

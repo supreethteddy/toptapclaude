@@ -1,8 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/widget/black_gradient_shadow.dart';
+import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
@@ -426,6 +428,43 @@ class LiveStreamBottomView extends StatelessWidget {
                   onTap: () {
                     Get.back();
                     Get.to(() => FindOpponentScreen(myLive: controller));
+                  },
+                ),
+              // Debug-only: no premium gift has a real tbl_gifts row yet, so
+              // there is no real send flow to exercise this overlay through.
+              // Remove once real gifts exist and this can be verified via
+              // an actual send instead.
+              if (kDebugMode)
+                ListTile(
+                  leading: const Icon(Icons.movie_filter_outlined),
+                  title: const Text('Debug: Test Premium Gift'),
+                  onTap: () {
+                    Get.back();
+                    Get.bottomSheet(
+                      Container(
+                        color: adaptiveBackground(context),
+                        constraints:
+                            const BoxConstraints(maxHeight: 500),
+                        child: ListView(
+                          padding: EdgeInsets.zero,
+                          children: [
+                            for (final entry in premiumGiftAnimations)
+                              ListTile(
+                                title: Text(entry.name),
+                                subtitle: Text(entry.hasVideo
+                                    ? entry.videoUrl
+                                    : '(no videoUrl set)'),
+                                onTap: () {
+                                  Get.back();
+                                  controller
+                                      .debugTriggerPremiumGift(entry.giftId);
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                      isScrollControlled: true,
+                    );
                   },
                 ),
             ],
