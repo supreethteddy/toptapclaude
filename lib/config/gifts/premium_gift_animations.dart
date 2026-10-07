@@ -5,15 +5,13 @@
 /// animation field at all, so both live here until real catalogue rows
 /// exist.
 ///
-/// [videoUrl] is deliberately a network URL, not a bundled asset: these are
-/// multi-megabyte cinematic clips (see
-/// /Users/supreeth/Newtoptap/gift_animations_processed on the dev machine),
-/// and bundling even a handful into every install would bloat the app for
-/// every user whether or not they ever see these gifts. They're meant to be
-/// hosted on the project VPS and swapped in here by URL — every entry below
-/// is a placeholder (empty string) until that upload happens, which is why
-/// [premiumAnimationForGift] always returns an entry with a usable [name]
-/// but callers must treat an empty [videoUrl] as "not ready to play yet".
+/// [videoUrl] points at the project VPS (http://194.164.151.34/gift_animations/),
+/// not a bundled asset: these are multi-megabyte cinematic clips, and
+/// bundling even a handful into every install would bloat the app for every
+/// user whether or not they ever see these gifts. The ids, names, and video
+/// choices below are all still placeholders pending the client's real gift
+/// catalogue decisions (names, prices, which ones are standalone vs. part of
+/// a Vault-style random reveal) — only the hosting is real.
 class PremiumGiftAnimation {
   final int giftId;
   final String name;
@@ -28,23 +26,90 @@ class PremiumGiftAnimation {
   bool get hasVideo => videoUrl.isNotEmpty;
 }
 
+const String _giftAnimationBaseUrl =
+    'http://194.164.151.34/gift_animations';
+
 const List<PremiumGiftAnimation> premiumGiftAnimations = [
-  PremiumGiftAnimation(giftId: -101, name: 'Mech Titan', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -102, name: 'Mystic Rose', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -103, name: 'Lucky Train', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -104, name: 'Celestial Unicorn', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -105, name: 'Dream Castle', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -106, name: 'Inferno Phoenix', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -107, name: 'Shadow Tiger', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -108, name: 'Thunder God', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -109, name: 'Sky Griffin Lion', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -110, name: 'King Leonardo', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -111, name: 'Divine Light', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -112, name: 'Guardian Angel', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -113, name: 'Storm Eagle', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -114, name: 'Street Magic', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -115, name: 'Moon Wolf', videoUrl: ''),
-  PremiumGiftAnimation(giftId: -116, name: 'Crimson Dragon', videoUrl: ''),
+  PremiumGiftAnimation(
+    giftId: -101,
+    name: 'Mech Titan',
+    videoUrl: '$_giftAnimationBaseUrl/01_mech_titan.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -102,
+    name: 'Mystic Rose',
+    videoUrl: '$_giftAnimationBaseUrl/02_mystic_rose.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -103,
+    name: 'Lucky Train',
+    videoUrl: '$_giftAnimationBaseUrl/03_lucky_train.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -104,
+    name: 'Celestial Unicorn',
+    videoUrl: '$_giftAnimationBaseUrl/04_celestial_unicorn.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -105,
+    name: 'Dream Castle',
+    videoUrl: '$_giftAnimationBaseUrl/05_dream_castle.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -106,
+    name: 'Inferno Phoenix',
+    videoUrl: '$_giftAnimationBaseUrl/06_inferno_phoenix.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -107,
+    name: 'Shadow Tiger',
+    videoUrl: '$_giftAnimationBaseUrl/07_shadow_tiger.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -108,
+    name: 'Thunder God',
+    videoUrl: '$_giftAnimationBaseUrl/08_thunder_god.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -109,
+    name: 'Sky Griffin Lion',
+    videoUrl: '$_giftAnimationBaseUrl/09_sky_griffin_lion.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -110,
+    name: 'King Leonardo',
+    videoUrl: '$_giftAnimationBaseUrl/10_king_leonardo.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -111,
+    name: 'Divine Light',
+    videoUrl: '$_giftAnimationBaseUrl/11_divine_light.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -112,
+    name: 'Guardian Angel',
+    videoUrl: '$_giftAnimationBaseUrl/12_guardian_angel.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -113,
+    name: 'Storm Eagle',
+    videoUrl: '$_giftAnimationBaseUrl/13_storm_eagle.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -114,
+    name: 'Street Magic',
+    videoUrl: '$_giftAnimationBaseUrl/14_street_magic.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -115,
+    name: 'Moon Wolf',
+    videoUrl: '$_giftAnimationBaseUrl/15_moon_wolf.mp4',
+  ),
+  PremiumGiftAnimation(
+    giftId: -116,
+    name: 'Crimson Dragon',
+    videoUrl: '$_giftAnimationBaseUrl/16_crimson_dragon.mp4',
+  ),
 ];
 
 /// The reveal entry for this gift id, or null if it's a plain gift with no
