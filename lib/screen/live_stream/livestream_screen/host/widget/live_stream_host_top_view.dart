@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/manager/haptic_manager.dart';
+import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/widget/text_button_custom.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
@@ -157,6 +158,8 @@ class LiveStreamHostTopView extends StatelessWidget {
                           HourlyRankChip(controller: controller),
                           const SizedBox(width: 6),
                           LeagueBadge(controller: controller),
+                          const SizedBox(width: 6),
+                          const MyEarningsBadge(),
                           const SizedBox(width: 6),
                           LiveGoalProgressWidget(
                               controller: controller, compact: true),
@@ -413,6 +416,48 @@ class LeagueBadge extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      );
+    });
+  }
+}
+
+/// Shows the current viewer's own real-money gift-earnings balance
+/// (earningsBalanceUsd) while they're on-stage — self-hides for anyone who
+/// hasn't earned anything yet, which in practice means plain audience
+/// members never see it (they can't earn) without needing an explicit
+/// host/co-host/guest role check. Reads SessionManager.currentUser
+/// directly (not controller.myUser) so it reacts the moment
+/// _refreshMyBalanceAfterGift() updates it mid-LIVE.
+class MyEarningsBadge extends StatelessWidget {
+  const MyEarningsBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final earnings = SessionManager.instance.currentUser.value?.earningsBalanceUsd;
+      if (earnings == null || earnings <= 0) return const SizedBox();
+      return Container(
+        height: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEF6C00), Color(0xFFFFB74D)],
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(AssetRes.icWallet,
+                height: 12, width: 12, color: Colors.white),
+            const SizedBox(width: 3),
+            Text(
+              earnings.currencyFormat,
+              style: TextStyleCustom.outFitSemiBold600(
+                  color: Colors.white, fontSize: 10),
+            ),
+          ],
         ),
       );
     });

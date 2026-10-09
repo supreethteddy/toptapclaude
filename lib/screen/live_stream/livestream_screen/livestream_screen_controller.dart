@@ -434,7 +434,11 @@ class LivestreamScreenController extends BaseController
   Rx<AppUser?> selectedGiftUser = Rx(null);
   Rx<VideoPlayerController?> videoPlayerController = Rx(null);
 
-  Rx<User?> get myUser => SessionManager.instance.getUser().obs;
+  // Forwards the shared Rx so Obx widgets reading controller.myUser.value
+  // actually track future updates (e.g. _refreshMyBalanceAfterGift below) —
+  // SessionManager.instance.getUser().obs previously wrapped a one-off
+  // snapshot in a throwaway .obs that nothing ever updated again.
+  Rx<User?> get myUser => SessionManager.instance.currentUser;
   Rx<Livestream> liveData;
 
   AudioPlayer countdownPlayer = AudioPlayer();
