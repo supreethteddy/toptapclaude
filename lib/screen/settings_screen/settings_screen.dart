@@ -26,6 +26,7 @@ import 'package:shortzz/screen/subscription_screen/subscription_screen.dart';
 import 'package:shortzz/screen/term_and_privacy_screen/term_and_privacy_screen.dart';
 
 import 'package:shortzz/utilities/asset_res.dart';
+import 'package:shortzz/utilities/build_info.dart';
 import 'package:shortzz/utilities/style_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/screen/switch_account_screen/switch_account_screen.dart';
@@ -448,6 +449,21 @@ class SettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
+                  const SizedBox(height: 24),
+                  Obx(() {
+                    final info = controller.packageInfo.value;
+                    if (info == null) return const SizedBox();
+                    return Center(
+                      child: Text(
+                        'v${info.version} (${info.buildNumber}) · $kBuildCommit · $kBuildDate',
+                        style: TextStyleCustom.outFitLight300(
+                          fontSize: 11,
+                          color: textLightGrey(context),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

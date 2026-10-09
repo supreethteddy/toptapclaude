@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
 import 'package:shortzz/common/manager/incoming_call_watcher.dart';
@@ -20,11 +21,13 @@ class SettingsScreenController extends BaseController {
   Rx<Setting?> settings = Rx<Setting?>(null);
   Rx<WhoCanSeePost> selectedWhoCanSeePost = WhoCanSeePost.values.first.obs;
   RxBool isUpdateApiCalled = false.obs;
+  Rx<PackageInfo?> packageInfo = Rx<PackageInfo?>(null);
 
   @override
   void onInit() {
     super.onInit();
     initData();
+    PackageInfo.fromPlatform().then((value) => packageInfo.value = value);
   }
 
   void initData() {
