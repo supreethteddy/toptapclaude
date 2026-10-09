@@ -4,5 +4,5 @@
 /// apart from the current one is a 2-second check instead of a guess (see
 /// the 2026-10-09 PK-arena false alarm that turned out to be a 3-day-old
 /// APK on the test phones).
-const String kBuildCommit = 'b37213d';
+const String kBuildCommit = '2922881';
 const String kBuildDate = '2026-10-09';
