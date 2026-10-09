@@ -41,6 +41,10 @@ class Setting {
   String? currency;
   double? coinValue;
   int? minRedeemCoins;
+  // Minimum USD amount to cash out from earningsBalanceUsd (real-money
+  // gift earnings) — a separate withdrawal flow from the coin-based one
+  // above, see WalletController::submitEarningsWithdrawalRequest.
+  double? minRedeemEarningsUsd;
   int? registrationBonusStatus;
   int? registrationBonusAmount;
   int? minFollowersForLive;
@@ -115,6 +119,7 @@ class Setting {
     this.currency,
     this.coinValue,
     this.minRedeemCoins,
+    this.minRedeemEarningsUsd,
     this.minFollowersForLive,
     this.registrationBonusStatus,
     this.registrationBonusAmount,
@@ -190,6 +195,11 @@ class Setting {
         registrationBonusAmount: json["registration_bonus_amount"],
         coinValue: json["coin_value"]?.toDouble(),
         minRedeemCoins: json["min_redeem_coins"],
+        // tbl_settings.min_redeem_earnings_usd is a DECIMAL column, which
+        // PDO/Eloquent return as a JSON string (unlike coin_value, a FLOAT
+        // column, which comes through as a number) — tryParse handles both.
+        minRedeemEarningsUsd:
+            double.tryParse(json["min_redeem_earnings_usd"]?.toString() ?? ''),
         minFollowersForLive: json["min_followers_for_live"],
         admobBanner: json["admob_banner"],
         admobInt: json["admob_int"],
@@ -296,6 +306,7 @@ class Setting {
         "registration_bonus_amount": registrationBonusAmount,
         "coin_value": coinValue,
         "min_redeem_coins": minRedeemCoins,
+        "min_redeem_earnings_usd": minRedeemEarningsUsd,
         "min_followers_for_live": minFollowersForLive,
         "admob_banner": admobBanner,
         "admob_int": admobInt,

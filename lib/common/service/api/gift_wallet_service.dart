@@ -80,6 +80,22 @@ class GiftWalletService {
     return response;
   }
 
+  Future<StatusModel> submitEarningsWithdrawalRequest(
+      {required String amount,
+      required String gateway,
+      required String account}) async {
+    StatusModel response = await ApiService.instance.call(
+        url: WebService.giftWallet.submitEarningsWithdrawalRequest,
+        fromJson: StatusModel.fromJson,
+        param: {
+          Params.amount: amount,
+          Params.gateway: gateway,
+          Params.account: account
+        });
+
+    return response;
+  }
+
   Future<User?> buyCoins(
       {required int id,
       String? purchasedAt,

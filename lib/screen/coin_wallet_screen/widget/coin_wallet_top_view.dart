@@ -61,6 +61,17 @@ class CoinWalletTopView extends StatelessWidget {
                                         controller.fetchData();
                                       });
                                     }),
+                                    if ((controller.myUser.value
+                                                ?.earningsBalanceUsd ??
+                                            0) >
+                                        0)
+                                      MenuItem('Withdraw Earnings', () {
+                                        Get.to(() => const RequestWithdrawalScreen(
+                                                isEarnings: true))
+                                            ?.then((value) {
+                                          controller.fetchData();
+                                        });
+                                      }),
                                   ],
                                   child: Container(
                                     height: 35,

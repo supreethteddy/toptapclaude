@@ -15,157 +15,157 @@ import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
 class RequestWithdrawalScreen extends StatelessWidget {
-  const RequestWithdrawalScreen({super.key});
+  final bool isEarnings;
+
+  const RequestWithdrawalScreen({super.key, this.isEarnings = false});
 
   @override
   Widget build(BuildContext context) {
     final controller =
-        Get.put(RequestWithdrawalScreenController());
+        Get.put(RequestWithdrawalScreenController(isEarnings: isEarnings));
     return Scaffold(
         body: Column(
       children: [
-        CustomAppBar(title: LKey.requestWithdrawal.tr),
+        CustomAppBar(
+            title: isEarnings
+                ? 'Withdraw Earnings'
+                : LKey.requestWithdrawal.tr),
         Expanded(
             child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                margin: const EdgeInsets.symmetric(
-                    vertical: 10),
-                child: Column(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                          color: bgLightGrey(context)),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 40, vertical: 10),
-                      child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceAround,
-                        children: [
-                          Column(
-                            children: [
-                              Obx(
-                                () => Text(
-                                  (controller.myUser.value
-                                              ?.coinWallet ??
-                                          0)
-                                      .numberFormat,
-                                  style: TextStyleCustom
-                                      .outFitExtraBold800(
-                                          color:
-                                              textDarkGrey(
-                                                  context),
-                                          fontSize: 28),
+              if (isEarnings)
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  color: bgLightGrey(context),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 40, vertical: 16),
+                  alignment: Alignment.center,
+                  child: Obx(
+                    () => Column(
+                      children: [
+                        Text(
+                          (controller.myUser.value?.earningsBalanceUsd ?? 0)
+                              .currencyFormat,
+                          style: TextStyleCustom.outFitExtraBold800(
+                              color: textDarkGrey(context), fontSize: 28),
+                        ),
+                        Text('Available Earnings',
+                            style: TextStyleCustom.outFitLight300(
+                                color: textLightGrey(context))),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  margin: const EdgeInsets.symmetric(
+                      vertical: 10),
+                  child: Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                            color: bgLightGrey(context)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 10),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceAround,
+                          children: [
+                            Column(
+                              children: [
+                                Obx(
+                                  () => Text(
+                                    (controller.myUser.value
+                                                ?.coinWallet ??
+                                            0)
+                                        .numberFormat,
+                                    style: TextStyleCustom
+                                        .outFitExtraBold800(
+                                            color:
+                                                textDarkGrey(
+                                                    context),
+                                            fontSize: 28),
+                                  ),
                                 ),
-                              ),
-                              Text(LKey.coinBalance.tr,
-                                  style: TextStyleCustom
-                                      .outFitLight300(
-                                          color:
-                                              textLightGrey(
-                                                  context))),
-                            ],
-                          ),
-                          Text(AppRes.equal,
-                              style: TextStyleCustom
-                                  .outFitSemiBold600(
-                                      color: textDarkGrey(
-                                          context),
-                                      fontSize: 26)),
-                          Column(
-                            children: [
-                              Text(
-                                controller.myUser.value
-                                        ?.coinEstimatedValue(
-                                            controller
-                                                .settings
-                                                .value
-                                                ?.coinValue
-                                                ?.toDouble())
-                                        .currencyFormat ??
-                                    '',
+                                Text(LKey.coinBalance.tr,
+                                    style: TextStyleCustom
+                                        .outFitLight300(
+                                            color:
+                                                textLightGrey(
+                                                    context))),
+                              ],
+                            ),
+                            Text(AppRes.equal,
                                 style: TextStyleCustom
-                                    .outFitExtraBold800(
+                                    .outFitSemiBold600(
                                         color: textDarkGrey(
                                             context),
-                                        fontSize: 28),
-                              ),
-                              Text(
-                                LKey.estimatedValue.tr,
-                                style: TextStyleCustom
-                                    .outFitLight300(
-                                  color: textLightGrey(
-                                      context),
+                                        fontSize: 26)),
+                            Column(
+                              children: [
+                                Text(
+                                  controller.myUser.value
+                                          ?.coinEstimatedValue(
+                                              controller
+                                                  .settings
+                                                  .value
+                                                  ?.coinValue
+                                                  ?.toDouble())
+                                          .currencyFormat ??
+                                      '',
+                                  style: TextStyleCustom
+                                      .outFitExtraBold800(
+                                          color: textDarkGrey(
+                                              context),
+                                          fontSize: 28),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      color: bgGrey(context),
-                      height: 29,
-                      alignment: Alignment.center,
-                      child: Obx(
-                        () => Text(
-                          '${LKey.currentValue.tr} : ${(controller.settings.value?.coinValue ?? 0).currencyFormat}'
-                          ' ${AppRes.slash} ${LKey.coin.tr} ',
-                          style: TextStyleCustom
-                              .outFitLight300(
-                                  color: textLightGrey(
-                                      context),
-                                  fontSize: 13),
+                                Text(
+                                  LKey.estimatedValue.tr,
+                                  style: TextStyleCustom
+                                      .outFitLight300(
+                                    color: textLightGrey(
+                                        context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    )
-                  ],
+                      Container(
+                        color: bgGrey(context),
+                        height: 29,
+                        alignment: Alignment.center,
+                        child: Obx(
+                          () => Text(
+                            '${LKey.currentValue.tr} : ${(controller.settings.value?.coinValue ?? 0).currencyFormat}'
+                            ' ${AppRes.slash} ${LKey.coin.tr} ',
+                            style: TextStyleCustom
+                                .outFitLight300(
+                                    color: textLightGrey(
+                                        context),
+                                    fontSize: 13),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
                 ),
-              ),
-              TextFieldCustom(
-                onChanged: controller.onChanged,
-                controller: controller.amountController,
-                title: LKey.amount.tr,
-                isPrefixIconShow: true,
-                hintText: LKey.enterCoinAmount.tr,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  // Allow only numbers
-                  LengthLimitingTextInputFormatter(
-                      (controller.myUser.value?.coinWallet
-                                  ?.toInt() ??
-                              0)
-                          .toString()
-                          .length), // Dynamic limit
-                ],
-                prefixIcon: Container(
-                    height: 49,
-                    width: 49,
-                    color: textDarkGrey(context),
-                    alignment: Alignment.center,
-                    margin: EdgeInsets.only(
-                        right: TextDirection.ltr ==
-                                Directionality.of(context)
-                            ? 13
-                            : 0,
-                        left: TextDirection.rtl ==
-                                Directionality.of(context)
-                            ? 13
-                            : 0),
-                    child: Image.asset(AssetRes.icCoin,
-                        width: 23, height: 23)),
-              ),
-              Obx(
-                () => TextFieldCustom(
-                  controller: controller
-                      .estimatedAmountController.value,
-                  title: LKey.estimatedAmount.tr,
-                  enabled: false,
-                  hintText: '',
+              if (isEarnings)
+                TextFieldCustom(
+                  onChanged: controller.onChanged,
+                  controller: controller.amountController,
+                  title: LKey.amount.tr,
                   isPrefixIconShow: true,
+                  hintText: 'Enter amount to withdraw',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}')),
+                  ],
                   prefixIcon: Container(
                       height: 49,
                       width: 49,
@@ -181,16 +181,82 @@ class RequestWithdrawalScreen extends StatelessWidget {
                               ? 13
                               : 0),
                       child: Text(
-                        controller
-                                .settings.value?.currency ??
+                        controller.settings.value?.currency ??
                             AppRes.currency,
-                        style:
-                            TextStyleCustom.outFitLight300(
-                                fontSize: 20,
-                                color: whitePure(context)),
+                        style: TextStyleCustom.outFitLight300(
+                            fontSize: 20,
+                            color: whitePure(context)),
                       )),
+                )
+              else ...[
+                TextFieldCustom(
+                  onChanged: controller.onChanged,
+                  controller: controller.amountController,
+                  title: LKey.amount.tr,
+                  isPrefixIconShow: true,
+                  hintText: LKey.enterCoinAmount.tr,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    // Allow only numbers
+                    LengthLimitingTextInputFormatter(
+                        (controller.myUser.value?.coinWallet
+                                    ?.toInt() ??
+                                0)
+                            .toString()
+                            .length), // Dynamic limit
+                  ],
+                  prefixIcon: Container(
+                      height: 49,
+                      width: 49,
+                      color: textDarkGrey(context),
+                      alignment: Alignment.center,
+                      margin: EdgeInsets.only(
+                          right: TextDirection.ltr ==
+                                  Directionality.of(context)
+                              ? 13
+                              : 0,
+                          left: TextDirection.rtl ==
+                                  Directionality.of(context)
+                              ? 13
+                              : 0),
+                      child: Image.asset(AssetRes.icCoin,
+                          width: 23, height: 23)),
                 ),
-              ),
+                Obx(
+                  () => TextFieldCustom(
+                    controller: controller
+                        .estimatedAmountController.value,
+                    title: LKey.estimatedAmount.tr,
+                    enabled: false,
+                    hintText: '',
+                    isPrefixIconShow: true,
+                    prefixIcon: Container(
+                        height: 49,
+                        width: 49,
+                        color: textDarkGrey(context),
+                        alignment: Alignment.center,
+                        margin: EdgeInsets.only(
+                            right: TextDirection.ltr ==
+                                    Directionality.of(context)
+                                ? 13
+                                : 0,
+                            left: TextDirection.rtl ==
+                                    Directionality.of(context)
+                                ? 13
+                                : 0),
+                        child: Text(
+                          controller
+                                  .settings.value?.currency ??
+                              AppRes.currency,
+                          style:
+                              TextStyleCustom.outFitLight300(
+                                  fontSize: 20,
+                                  color: whitePure(context)),
+                        )),
+                  ),
+                ),
+              ],
               Padding(
                 padding: const EdgeInsets.only(
                     left: 20.0, bottom: 5, right: 20),

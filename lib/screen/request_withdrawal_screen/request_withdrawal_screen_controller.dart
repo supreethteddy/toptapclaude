@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
+import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/gift_wallet_service.dart';
 import 'package:shortzz/languages/languages_keys.dart';
@@ -9,6 +10,15 @@ import 'package:shortzz/model/general/status_model.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 
 class RequestWithdrawalScreenController extends BaseController {
+  // true: cash out earningsBalanceUsd (real-money gift earnings) via
+  // submitEarningsWithdrawalRequest. false (default): the original
+  // coin_wallet -> coinValue flow via submitWithdrawalRequest. Same screen,
+  // same gateway/account fields — only the balance, minimum, and submit
+  // call differ.
+  final bool isEarnings;
+
+  RequestWithdrawalScreenController({this.isEarnings = false});
+
   Rx<Setting?> settings = Rx<Setting?>(null);
   Rx<User?> get myUser => SessionManager.instance.currentUser;
 
@@ -34,6 +44,11 @@ class RequestWithdrawalScreenController extends BaseController {
   }
 
   void onChanged(String value) {
+    if (isEarnings) {
+      // Amount entered here IS the USD value directly — no coin<->currency
+      // conversion to show, unlike the coin flow below.
+      return;
+    }
     if (value.isEmpty) {
       estimatedAmountController.value.text = '0';
       return;
@@ -58,6 +73,8 @@ class RequestWithdrawalScreenController extends BaseController {
   }
 
   Future<void> onSubmit() async {
+    if (isEarnings) return _onSubmitEarnings();
+
     if ((settings.value?.redeemGateways ?? []).isEmpty) {
       return showSnackBar(LKey.redeemGatewayNotFound.tr);
     }
@@ -90,6 +107,48 @@ class RequestWithdrawalScreenController extends BaseController {
     stopLoader();
     if (model.status == true) {
       myUser.value?.coinWallet = (myUser.value?.coinWallet ?? 0) - amount;
+      SessionManager.instance.setUser(myUser.value);
+      Get.back();
+    }
+    showSnackBar(model.message);
+  }
+
+  Future<void> _onSubmitEarnings() async {
+    if ((settings.value?.redeemGateways ?? []).isEmpty) {
+      return showSnackBar(LKey.redeemGatewayNotFound.tr);
+    }
+    final amount = double.tryParse(amountController.text.trim()) ?? 0;
+    final minAmount = settings.value?.minRedeemEarningsUsd ?? 5.0;
+    final availableEarnings = myUser.value?.earningsBalanceUsd ?? 0;
+
+    if (amount <= 0) {
+      return showSnackBar('Enter a valid withdrawal amount');
+    }
+    if (amount < minAmount) {
+      return showSnackBar(
+          'Minimum withdrawal amount is ${minAmount.currencyFormat}');
+    }
+    if (amount > availableEarnings) {
+      return showSnackBar('You do not have enough earnings');
+    }
+    if (selectedGateway.value.trim().isEmpty) {
+      return showSnackBar('Select a withdrawal method');
+    }
+    if (accountDetailsController.text.trim().isEmpty) {
+      return showSnackBar('Enter your account details');
+    }
+
+    showLoader();
+
+    StatusModel model = await GiftWalletService.instance
+        .submitEarningsWithdrawalRequest(
+            amount: amountController.text.trim(),
+            gateway: selectedGateway.value,
+            account: accountDetailsController.text.trim());
+
+    stopLoader();
+    if (model.status == true) {
+      myUser.value?.earningsBalanceUsd = availableEarnings - amount;
       SessionManager.instance.setUser(myUser.value);
       Get.back();
     }
