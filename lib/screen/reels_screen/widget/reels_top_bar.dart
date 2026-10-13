@@ -72,15 +72,12 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/screen/live_stream/discover_live/discover_live_overlay.dart';
+import 'package:shortzz/screen/live_stream/discover_live/live_discovery_feed_screen.dart';
 import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream_search_screen.dart';
 import 'package:shortzz/screen/reels_screen/reels_screen_controller.dart';
 import 'package:shortzz/screen/home_screen/home_screen_controller.dart';
 import 'package:shortzz/screen/search_screen/search_screen.dart';
 import 'package:shortzz/utilities/app_res.dart';
-import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -101,11 +98,9 @@ class ReelsTopBar extends StatelessWidget {
         SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 15.0),
+            padding: const EdgeInsets.symmetric(horizontal: 15.0),
             child: Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Back button (if not home page)
                 // Visibility(
@@ -121,9 +116,11 @@ class ReelsTopBar extends StatelessWidget {
                 // ),
                 IconButton(
                   onPressed: () {
-                    // Browse who else is currently live; going live
-                    // yourself is reached via the create (+) menu.
-                    DiscoverLiveOverlay.show();
+                    // Full-screen, Reels-style browse of who else is
+                    // currently live — scrolling previews never joins a
+                    // room; going live yourself is reached via the create
+                    // (+) menu.
+                    Get.to(() => const LiveDiscoveryFeedScreen());
                   },
                   icon: const Icon(
                     Icons.live_tv_outlined,
@@ -133,17 +130,12 @@ class ReelsTopBar extends StatelessWidget {
                 // Center tab bar
                 const Expanded(
                   child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Spacer(),
-                      _NavTab(
-                          label: 'Following',
-                          tabType: TabType.following),
+                      _NavTab(label: 'Following', tabType: TabType.following),
                       Spacer(),
-                      _NavTab(
-                          label: 'For You',
-                          tabType: TabType.discover),
+                      _NavTab(label: 'For You', tabType: TabType.discover),
                       Spacer(),
                     ],
                   ),
@@ -153,8 +145,7 @@ class ReelsTopBar extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              const SearchScreen()),
+                          builder: (context) => const SearchScreen()),
                     );
                   },
                   icon: Icon(
@@ -215,8 +206,7 @@ class _NavTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<HomeScreenController>();
     return Obx(() {
-      final isSelected =
-          controller.selectedReelCategory.value == tabType;
+      final isSelected = controller.selectedReelCategory.value == tabType;
 
       return InkWell(
         onTap: () {

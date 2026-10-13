@@ -120,6 +120,10 @@ class LKey {
   static const String goLive = "Go Live";
   static const String discoverLive = "Discover LIVE";
   static const String seeAll = "See All";
+  static const String tapToJoin = "Tap to join";
+  static const String noOneLiveTitle = "No one is LIVE right now";
+  static const String noOneLiveDescription =
+      "Check back soon, or go live yourself.";
   static const String levels = "Levels";
   static const String gatherMoreCoins =
       "Gather more coins, ascend to new heights, and proudly showcase your badge on your profile for all to admire.";

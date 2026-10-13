@@ -463,7 +463,7 @@ class LivestreamScreenController extends BaseController
   void onInit() {
     super.onInit();
     // Pause the background home-feed reel so its audio doesn't keep playing
-    // under this screen. Two entry points (DiscoverLiveOverlayController,
+    // under this screen. Some entry points (LiveDiscoveryFeedScreen,
     // CreateLiveStreamScreenController) already did this themselves before
     // navigating here, but several others (a "went live" push notification,
     // accepting an in-app LIVE invite, Live Stream Search) opened this
