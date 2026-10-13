@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/extensions/duration_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
@@ -163,7 +161,8 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                           ? const ResultPill(isDraw: false)
                           : (isEnded && isDraw)
                               ? const ResultPill(isDraw: true)
-                              : WinPill(count: hostWins, color: ColorRes.likeRed),
+                              : WinPill(
+                                  count: hostWins, color: ColorRes.likeRed),
                     ),
                     Positioned(
                       top: 8,
@@ -178,7 +177,6 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                     ),
                     BuildBottomInfo(
                         stream: stream, controller: widget.controller),
-                    BuildLastTenSecondView(controller: widget.controller),
                     GiftComboBadge(controller: widget.controller),
                   ],
                 ),
@@ -224,8 +222,8 @@ class ResultPill extends StatelessWidget {
         : Colors.black.withValues(alpha: .6);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration:
-          BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+          color: bgColor, borderRadius: BorderRadius.circular(20)),
       child: Text(label,
           style: TextStyleCustom.outFitSemiBold600(
               color: Colors.white, fontSize: 12)),
@@ -371,7 +369,8 @@ class BuildProgressBar extends StatelessWidget {
               ),
               Align(
                 alignment: Alignment.centerRight,
-                child: _ScoreLabel(score: blue, color: ColorRes.battleProgressColor),
+                child: _ScoreLabel(
+                    score: blue, color: ColorRes.battleProgressColor),
               ),
             ],
             AnimatedAlign(
@@ -438,8 +437,8 @@ class WinPill extends StatelessWidget {
       ),
       child: Text(
         '${LKey.win.tr} x$count',
-        style:
-            TextStyleCustom.outFitSemiBold600(color: Colors.white, fontSize: 11),
+        style: TextStyleCustom.outFitSemiBold600(
+            color: Colors.white, fontSize: 11),
       ),
     );
   }
@@ -457,8 +456,8 @@ class RoundLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       '${LKey.round.tr} $current/$total',
-      style: TextStyleCustom.outFitMedium500(
-          color: Colors.white70, fontSize: 11),
+      style:
+          TextStyleCustom.outFitMedium500(color: Colors.white70, fontSize: 11),
     );
   }
 }
@@ -640,7 +639,8 @@ class TopGiftersRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: rank == null
                     ? _EmptySeat(color: color)
-                    : _GifterAvatar(controller: controller, rank: rank, color: color),
+                    : _GifterAvatar(
+                        controller: controller, rank: rank, color: color),
               ))
           .toList(),
     );
@@ -657,8 +657,8 @@ class _EmptySeat extends StatelessWidget {
     return Container(
       height: 34,
       width: 34,
-      decoration:
-          BoxDecoration(color: color.withValues(alpha: .35), shape: BoxShape.circle),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: .35), shape: BoxShape.circle),
       child: const Icon(Icons.event_seat, color: Colors.white70, size: 16),
     );
   }
@@ -692,82 +692,6 @@ class _GifterAvatar extends StatelessWidget {
   }
 }
 
-class BuildLastTenSecondView extends StatefulWidget {
-  final LivestreamScreenController controller;
-
-  const BuildLastTenSecondView({super.key, required this.controller});
-
-  @override
-  State<BuildLastTenSecondView> createState() => _BuildLastTenSecondViewState();
-}
-
-class _BuildLastTenSecondViewState extends State<BuildLastTenSecondView>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-
-  @override
-  void initState() {
-    _animationController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 1))
-          ..repeat();
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    Loggers.error('Dispose');
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      Livestream stream = widget.controller.liveData.value;
-      bool isBattleEnd = stream.battleType == BattleType.end;
-      int leftSecond = widget.controller.remainingBattleSeconds.value;
-
-      if (leftSecond == 0 || isBattleEnd) {
-        return const SizedBox();
-      }
-      if (leftSecond <= 10) {
-        return Align(
-          alignment: const Alignment(0, -0.2),
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) => Container(
-              height: 150,
-              width: 150,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: SweepGradient(
-                    colors: <Color>[
-                      whitePure(context).withValues(alpha: 0),
-                      whitePure(context).withValues(alpha: .5)
-                    ],
-                    transform:
-                        GradientRotation(2 * pi * _animationController.value)),
-              ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, animation) {
-                  return ScaleTransition(scale: animation, child: child);
-                },
-                child: Text('$leftSecond',
-                    style: TextStyleCustom.unboundedBlack900(
-                        color: whitePure(context), fontSize: 100),
-                    key: ValueKey<int>(leftSecond)),
-              ),
-            ),
-          ),
-        );
-      }
-      return const SizedBox();
-    });
-  }
-}
-
 class BattleTimer extends StatefulWidget {
   final LivestreamScreenController controller;
   final Livestream livestream;
@@ -793,6 +717,11 @@ class _BattleTimerState extends State<BattleTimer> {
       Duration duration = Duration(seconds: leftSecond);
       Livestream stream = widget.controller.liveData.value;
       bool isBattleEnd = stream.battleType == BattleType.end;
+      // Last 10 seconds: highlight the existing timer pill in red instead
+      // of the old full-screen countdown animation + voice overlay (both
+      // removed per client request — too distracting).
+      bool isLastTenSeconds =
+          !isBattleEnd && leftSecond > 0 && leftSecond <= 10;
 
       return AnimatedOpacity(
         opacity: isBattleEnd
@@ -806,7 +735,7 @@ class _BattleTimerState extends State<BattleTimer> {
             height: 30,
             padding: const EdgeInsets.symmetric(horizontal: 15),
             decoration: BoxDecoration(
-              color: whitePure(context),
+              color: isLastTenSeconds ? ColorRes.likeRed : whitePure(context),
               borderRadius: BorderRadius.circular(30),
             ),
             alignment: Alignment.center,
@@ -815,7 +744,9 @@ class _BattleTimerState extends State<BattleTimer> {
               style: TextStyleCustom.unboundedMedium500(
                   color: isBattleEnd
                       ? ColorRes.likeRed
-                      : themeAccentSolid(context),
+                      : isLastTenSeconds
+                          ? whitePure(context)
+                          : themeAccentSolid(context),
                   fontSize: 18),
             ),
           ),

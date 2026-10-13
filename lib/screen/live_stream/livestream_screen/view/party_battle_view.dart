@@ -82,7 +82,6 @@ class _PartyBattleOverlay extends StatelessWidget {
               BuildProgressBar(red: red, blue: blue),
               _PartyBattleStats(
                   red: red, blue: blue, controller: controller, stream: stream),
-              BuildLastTenSecondView(controller: controller),
               GiftComboBadge(controller: controller),
             ],
           ),
@@ -105,9 +104,8 @@ class _SideStack extends StatelessWidget {
       return Container(color: Colors.grey[900]);
     }
     return Column(
-      children: streamViews
-          .map((view) => Expanded(child: view.streamView))
-          .toList(),
+      children:
+          streamViews.map((view) => Expanded(child: view.streamView)).toList(),
     );
   }
 }
@@ -134,13 +132,12 @@ class _PartyBattleStats extends StatelessWidget {
     final outcome = determineBattleOutcome(red, blue);
     bool isDraw = outcome == BattleOutcome.draw;
     bool isRedWin = outcome == BattleOutcome.sideAWins;
-    AppUser? myHost =
-        controller.firestoreController.users.firstWhereOrNull(
-            (user) => user.userId == controller.liveData.value.hostId);
+    AppUser? myHost = controller.firestoreController.users.firstWhereOrNull(
+        (user) => user.userId == controller.liveData.value.hostId);
     AppUser? opponentHost = controller.opponentLiveData.value == null
         ? null
-        : controller.firestoreController.users.firstWhereOrNull((user) =>
-            user.userId == controller.opponentLiveData.value?.hostId);
+        : controller.firestoreController.users.firstWhereOrNull(
+            (user) => user.userId == controller.opponentLiveData.value?.hostId);
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -155,8 +152,9 @@ class _PartyBattleStats extends StatelessWidget {
                     controller.opponentLiveData.value?.battleRoundWins ?? 0;
                 final currentRound =
                     controller.liveData.value.battleCurrentRound ?? 1;
-                final totalRounds = controller.liveData.value.battleTotalRounds ??
-                    AppRes.battleTotalRounds;
+                final totalRounds =
+                    controller.liveData.value.battleTotalRounds ??
+                        AppRes.battleTotalRounds;
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Row(
@@ -174,8 +172,8 @@ class _PartyBattleStats extends StatelessWidget {
               FirstGiftBonusBanner(controller: controller),
               Obx(() => controller.isOpponentReconnecting.value
                   ? Container(
-                      margin:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -210,11 +208,10 @@ class _PartyBattleStats extends StatelessWidget {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(30),
-                            color:
-                                whitePure(context).withValues(alpha: .15),
+                            color: whitePure(context).withValues(alpha: .15),
                             border: Border.all(
-                                color: whitePure(context)
-                                    .withValues(alpha: .3))),
+                                color:
+                                    whitePure(context).withValues(alpha: .3))),
                         child: Text(
                           LKey.nextRound.tr,
                           style: TextStyleCustom.outFitSemiBold600(
@@ -255,9 +252,7 @@ class _PartyBattleStats extends StatelessWidget {
                   child: Row(
                     children: [
                       _streamerInfo(context,
-                          isLeft: true,
-                          user: myHost,
-                          color: ColorRes.likeRed),
+                          isLeft: true, user: myHost, color: ColorRes.likeRed),
                       _streamerInfo(context,
                           isLeft: false,
                           user: opponentHost,
@@ -277,9 +272,7 @@ class _PartyBattleStats extends StatelessWidget {
   }
 
   Widget _winnerTag(BuildContext context,
-      {required bool rightSide,
-      required bool isWinner,
-      bool isDraw = false}) {
+      {required bool rightSide, required bool isWinner, bool isDraw = false}) {
     final tagColor =
         isDraw ? Colors.grey : (isWinner ? ColorRes.green : ColorRes.likeRed);
     return Expanded(

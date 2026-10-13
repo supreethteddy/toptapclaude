@@ -457,7 +457,6 @@ class LivestreamScreenController extends BaseController
   Rx<User?> get myUser => SessionManager.instance.currentUser;
   Rx<Livestream> liveData;
 
-  AudioPlayer countdownPlayer = AudioPlayer();
   AudioPlayer battleStartPlayer = AudioPlayer();
   AudioPlayer winAudioPlayer = AudioPlayer();
 
@@ -562,7 +561,6 @@ class LivestreamScreenController extends BaseController
     liveStreamCommentsListener?.cancel();
     liveStreamDocListener?.cancel();
     _stopWatchingOpponent();
-    countdownPlayer.dispose();
     battleStartPlayer.dispose();
     winAudioPlayer.dispose();
     stopListenEvent();
@@ -748,7 +746,6 @@ class LivestreamScreenController extends BaseController
   }
 
   void initAudioPlayer() {
-    countdownPlayer.setAsset(AssetRes.endCountdown);
     battleStartPlayer.setAsset(AssetRes.battleStart);
     winAudioPlayer.setAsset(AssetRes.winSound);
   }
@@ -1507,7 +1504,6 @@ class LivestreamScreenController extends BaseController
           remainingBattleSeconds.value = Duration(
             minutes: stream.battleDuration,
           ).inSeconds;
-          countdownPlayer.pause();
         }
 
         if (stream.battleType == BattleType.waiting) {
@@ -3889,15 +3885,6 @@ class LivestreamScreenController extends BaseController
     _timerStart(() {
       final remaining = endTime.difference(DateTime.now()).inSeconds;
       remainingBattleSeconds.value = remaining.clamp(0, totalBattleSecond);
-
-      if (remainingBattleSeconds.value <= 10) {
-        if (!countdownPlayer.playing) {
-          countdownPlayer.seek(
-            Duration(seconds: 10 - remainingBattleSeconds.value),
-          );
-          countdownPlayer.play();
-        }
-      }
 
       Loggers.info(
         '[BATTLE RUNNING] Battle end in ${remainingBattleSeconds.value} sec.',

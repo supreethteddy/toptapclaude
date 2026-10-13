@@ -8,6 +8,7 @@ import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
+import 'package:shortzz/screen/gift_sheet/send_gift_sheet.dart';
 import 'package:shortzz/screen/live_stream/find_opponent_screen/find_opponent_screen.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_comment_view.dart';
@@ -20,6 +21,7 @@ import 'package:shortzz/screen/live_stream/manage_moderators_screen/manage_moder
 import 'package:shortzz/model/livestream/pk_eligibility.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
+import 'package:shortzz/utilities/style_res.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
 class LiveStreamBottomView extends StatelessWidget {
@@ -53,59 +55,59 @@ class LiveStreamBottomView extends StatelessWidget {
             SafeArea(
               top: false,
               child: Column(
-              children: [
-                // Comments Section
-                Expanded(
-                  child: Obx(() {
-                    bool isVisible = controller.isViewVisible.value;
-                    return AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: isVisible ? 1 : 0,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 10),
-                        child: LiveStreamCommentView(controller: controller),
+                children: [
+                  // Comments Section
+                  Expanded(
+                    child: Obx(() {
+                      bool isVisible = controller.isViewVisible.value;
+                      return AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: isVisible ? 1 : 0,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          child: LiveStreamCommentView(controller: controller),
+                        ),
+                      );
+                    }),
+                  ),
+                  // Bottom Controls Row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 2,
+                    ),
+                    child: _buildBottomControlsRow(context),
+                  ),
+                  // Host Controls (if user is host/co-host). These must follow
+                  // the same visibility state as the rest of the LIVE chrome;
+                  // otherwise invisible camera/mic buttons can still be tapped.
+                  Obx(() {
+                    final isVisible = controller.isViewVisible.value;
+                    return IgnorePointer(
+                      ignoring: !isVisible,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: isVisible ? 1 : 0,
+                        child: _buildHostControls(context),
                       ),
                     );
                   }),
-                ),
-                // Bottom Controls Row
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 15,
-                    vertical: 2,
-                  ),
-                  child: _buildBottomControlsRow(context),
-                ),
-                // Host Controls (if user is host/co-host). These must follow
-                // the same visibility state as the rest of the LIVE chrome;
-                // otherwise invisible camera/mic buttons can still be tapped.
-                Obx(() {
-                  final isVisible = controller.isViewVisible.value;
-                  return IgnorePointer(
-                    ignoring: !isVisible,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: isVisible ? 1 : 0,
-                      child: _buildHostControls(context),
-                    ),
-                  );
-                }),
-                // Exit Message Bar
-                Obx(() {
-                  Livestream stream = controller.liveData.value;
-                  if ((stream.type == LivestreamType.battle &&
-                          stream.battleType == BattleType.end) ||
-                      controller.isMinViewerTimeout.value) {
-                    return LivestreamExistMessageBar(
-                      controller: controller,
-                      stream: stream,
-                    );
-                  } else {
-                    return const SizedBox();
-                  }
-                }),
-                const SizedBox(height: 0),
-              ],
+                  // Exit Message Bar
+                  Obx(() {
+                    Livestream stream = controller.liveData.value;
+                    if ((stream.type == LivestreamType.battle &&
+                            stream.battleType == BattleType.end) ||
+                        controller.isMinViewerTimeout.value) {
+                      return LivestreamExistMessageBar(
+                        controller: controller,
+                        stream: stream,
+                      );
+                    } else {
+                      return const SizedBox();
+                    }
+                  }),
+                  const SizedBox(height: 0),
+                ],
               ),
             ),
           ],
@@ -118,11 +120,45 @@ class LiveStreamBottomView extends StatelessWidget {
     return Obx(() {
       bool isVisible = controller.isViewVisible.value;
       Livestream stream = controller.liveData.value;
+      bool isBattleOn = stream.type == LivestreamType.battle;
+      // Viewer-facing PK battle bar: matches the client's TikTok reference
+      // (people / team-A gift / team-B gift / share icons beside the
+      // comment box) in TopTap's own colors — the base (non-battle) row
+      // below is untouched.
+      if (isAudience && isBattleOn) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: isVisible ? 1 : 0,
+                alwaysIncludeSemantics: false,
+                child: IgnorePointer(
+                  ignoring: !isVisible,
+                  child: LiveStreamTextFieldView(
+                    isAudience: isAudience,
+                    controller: controller,
+                  ),
+                ),
+              ),
+            ),
+            if (isVisible) const SizedBox(width: 6),
+            if (isVisible)
+              _BattleViewerActionIcons(
+                controller: controller,
+                onShareTap: () => _shareStream(context),
+              ),
+          ],
+        );
+      }
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          if (isVisible && !isAudience) _HostLinkAndGuestIcons(controller: controller),
-          if (isVisible && isAudience) _buildGuestRequestButton(context, stream),
+          if (isVisible && !isAudience)
+            _HostLinkAndGuestIcons(controller: controller),
+          if (isVisible && isAudience)
+            _buildGuestRequestButton(context, stream),
           Expanded(
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 200),
@@ -167,8 +203,7 @@ class LiveStreamBottomView extends StatelessWidget {
           if (isVisible) const SizedBox(width: 8),
           if (isVisible && !isAudience)
             _buildControlButton(context,
-                icon: Icons.more_vert,
-                onTap: () => _showMoreOptions(context)),
+                icon: Icons.more_vert, onTap: () => _showMoreOptions(context)),
         ],
       );
     });
@@ -309,165 +344,164 @@ class LiveStreamBottomView extends StatelessWidget {
             constraints: BoxConstraints(maxHeight: Get.height * .7),
             child: SingleChildScrollView(
               child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Flip camera / mic / camera toggle — moved here from the
-              // always-visible row to match the client's minimal bottom
-              // bar (link, guest, share, beautify, more only). Only shown
-              // to whoever is actually on stage; this sheet itself is only
-              // reachable via the more icon, already host/co-host/guest
-              // only (see _buildBottomControlsRow).
-              Obx(() {
-                final userId = controller.myUser.value?.id;
-                final state = controller.liveUsersStates
-                    .firstWhereOrNull((e) => e.userId == userId);
-                final isMute = state?.isMuted ?? false;
-                final isVideoOn = state?.isVideoOn ?? false;
-                return Column(
-                  children: [
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Flip camera / mic / camera toggle — moved here from the
+                  // always-visible row to match the client's minimal bottom
+                  // bar (link, guest, share, beautify, more only). Only shown
+                  // to whoever is actually on stage; this sheet itself is only
+                  // reachable via the more icon, already host/co-host/guest
+                  // only (see _buildBottomControlsRow).
+                  Obx(() {
+                    final userId = controller.myUser.value?.id;
+                    final state = controller.liveUsersStates
+                        .firstWhereOrNull((e) => e.userId == userId);
+                    final isMute = state?.isMuted ?? false;
+                    final isVideoOn = state?.isVideoOn ?? false;
+                    return Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.flip_camera_ios),
+                          title: const Text('Flip camera'),
+                          onTap: () {
+                            Get.back();
+                            controller.toggleFlipCamera();
+                          },
+                        ),
+                        ListTile(
+                          leading: Icon(isMute ? Icons.mic_off : Icons.mic),
+                          title: Text(isMute ? 'Unmute' : 'Mute'),
+                          onTap: () {
+                            Get.back();
+                            controller.toggleMic(isMute);
+                          },
+                        ),
+                        ListTile(
+                          leading: Icon(
+                              isVideoOn ? Icons.videocam : Icons.videocam_off),
+                          title: Text(
+                              isVideoOn ? 'Turn camera off' : 'Turn camera on'),
+                          onTap: () {
+                            Get.back();
+                            controller.toggleVideo(isVideoOn);
+                          },
+                        ),
+                      ],
+                    );
+                  }),
+                  if (controller.isHost) ...[
                     ListTile(
-                      leading: const Icon(Icons.flip_camera_ios),
-                      title: const Text('Flip camera'),
+                      leading: const Icon(Icons.person_outline),
+                      title: const Text('About Me'),
                       onTap: () {
                         Get.back();
-                        controller.toggleFlipCamera();
+                        controller.showAboutMeDialog();
                       },
                     ),
-                    ListTile(
-                      leading: Icon(isMute ? Icons.mic_off : Icons.mic),
-                      title: Text(isMute ? 'Unmute' : 'Mute'),
-                      onTap: () {
-                        Get.back();
-                        controller.toggleMic(isMute);
-                      },
-                    ),
-                    ListTile(
-                      leading: Icon(
-                          isVideoOn ? Icons.videocam : Icons.videocam_off),
-                      title:
-                          Text(isVideoOn ? 'Turn camera off' : 'Turn camera on'),
-                      onTap: () {
-                        Get.back();
-                        controller.toggleVideo(isVideoOn);
-                      },
-                    ),
+                    Obx(() {
+                      final enabled = controller.liveData.value.commentsEnabled;
+                      return ListTile(
+                        leading: Icon(enabled
+                            ? Icons.mode_comment_outlined
+                            : Icons.comments_disabled_outlined),
+                        title: Text(
+                            enabled ? 'Turn comments off' : 'Turn comments on'),
+                        onTap: () {
+                          Get.back();
+                          controller.toggleCommentsEnabled();
+                        },
+                      );
+                    }),
                   ],
-                );
-              }),
-              if (controller.isHost) ...[
-                ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: const Text('About Me'),
-                  onTap: () {
-                    Get.back();
-                    controller.showAboutMeDialog();
-                  },
-                ),
-                Obx(() {
-                  final enabled =
-                      controller.liveData.value.commentsEnabled;
-                  return ListTile(
-                    leading: Icon(enabled
-                        ? Icons.mode_comment_outlined
-                        : Icons.comments_disabled_outlined),
-                    title: Text(
-                        enabled ? 'Turn comments off' : 'Turn comments on'),
+                  ListTile(
+                    leading: const Icon(Icons.card_giftcard),
+                    title: Text(LKey.giftGoals.tr),
                     onTap: () {
                       Get.back();
-                      controller.toggleCommentsEnabled();
+                      Get.bottomSheet(
+                        GiftGoalsPanel(controller: controller),
+                        isScrollControlled: true,
+                      );
                     },
-                  );
-                }),
-              ],
-              ListTile(
-                leading: const Icon(Icons.card_giftcard),
-                title: Text(LKey.giftGoals.tr),
-                onTap: () {
-                  Get.back();
-                  Get.bottomSheet(
-                    GiftGoalsPanel(controller: controller),
-                    isScrollControlled: true,
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.poll_outlined),
-                title: Text(LKey.interact.tr),
-                onTap: () {
-                  Get.back();
-                  Get.bottomSheet(
-                    LivePollSheet(controller: controller),
-                    isScrollControlled: true,
-                  );
-                },
-              ),
-              if (controller.liveData.value.hasFanClub == true)
-                ListTile(
-                  leading: const Icon(Icons.diamond_outlined),
-                  title: Text(LKey.fanClub.tr),
-                  onTap: () {
-                    Get.back();
-                    Get.bottomSheet(
-                      FanClubMembersSheet(controller: controller),
-                      isScrollControlled: true,
-                    );
-                  },
-                ),
-              ListTile(
-                leading: const Icon(Icons.shield_outlined),
-                title: Text(LKey.manageModerators.tr),
-                onTap: () {
-                  Get.back();
-                  Get.to(() => const ManageModeratorsScreen());
-                },
-              ),
-              if (controller.liveData.value.type != LivestreamType.battle)
-                ListTile(
-                  leading: Image.asset(AssetRes.icBattleVs, height: 22, width: 22),
-                  title: Text(LKey.findOpponent.tr),
-                  onTap: () {
-                    Get.back();
-                    Get.to(() => FindOpponentScreen(myLive: controller));
-                  },
-                ),
-              // Debug-only: no premium gift has a real tbl_gifts row yet, so
-              // there is no real send flow to exercise this overlay through.
-              // Remove once real gifts exist and this can be verified via
-              // an actual send instead.
-              if (kDebugMode)
-                ListTile(
-                  leading: const Icon(Icons.movie_filter_outlined),
-                  title: const Text('Debug: Test Premium Gift'),
-                  onTap: () {
-                    Get.back();
-                    Get.bottomSheet(
-                      Container(
-                        color: adaptiveBackground(context),
-                        constraints:
-                            const BoxConstraints(maxHeight: 500),
-                        child: ListView(
-                          padding: EdgeInsets.zero,
-                          children: [
-                            for (final entry in premiumGiftAnimations)
-                              ListTile(
-                                title: Text(entry.name),
-                                subtitle: Text(entry.hasVideo
-                                    ? entry.videoUrl
-                                    : '(no videoUrl set)'),
-                                onTap: () {
-                                  Get.back();
-                                  controller
-                                      .debugTriggerPremiumGift(entry.giftId);
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
-                      isScrollControlled: true,
-                    );
-                  },
-                ),
-            ],
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.poll_outlined),
+                    title: Text(LKey.interact.tr),
+                    onTap: () {
+                      Get.back();
+                      Get.bottomSheet(
+                        LivePollSheet(controller: controller),
+                        isScrollControlled: true,
+                      );
+                    },
+                  ),
+                  if (controller.liveData.value.hasFanClub == true)
+                    ListTile(
+                      leading: const Icon(Icons.diamond_outlined),
+                      title: Text(LKey.fanClub.tr),
+                      onTap: () {
+                        Get.back();
+                        Get.bottomSheet(
+                          FanClubMembersSheet(controller: controller),
+                          isScrollControlled: true,
+                        );
+                      },
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.shield_outlined),
+                    title: Text(LKey.manageModerators.tr),
+                    onTap: () {
+                      Get.back();
+                      Get.to(() => const ManageModeratorsScreen());
+                    },
+                  ),
+                  if (controller.liveData.value.type != LivestreamType.battle)
+                    ListTile(
+                      leading: Image.asset(AssetRes.icBattleVs,
+                          height: 22, width: 22),
+                      title: Text(LKey.findOpponent.tr),
+                      onTap: () {
+                        Get.back();
+                        Get.to(() => FindOpponentScreen(myLive: controller));
+                      },
+                    ),
+                  // Debug-only: no premium gift has a real tbl_gifts row yet, so
+                  // there is no real send flow to exercise this overlay through.
+                  // Remove once real gifts exist and this can be verified via
+                  // an actual send instead.
+                  if (kDebugMode)
+                    ListTile(
+                      leading: const Icon(Icons.movie_filter_outlined),
+                      title: const Text('Debug: Test Premium Gift'),
+                      onTap: () {
+                        Get.back();
+                        Get.bottomSheet(
+                          Container(
+                            color: adaptiveBackground(context),
+                            constraints: const BoxConstraints(maxHeight: 500),
+                            child: ListView(
+                              padding: EdgeInsets.zero,
+                              children: [
+                                for (final entry in premiumGiftAnimations)
+                                  ListTile(
+                                    title: Text(entry.name),
+                                    subtitle: Text(entry.hasVideo
+                                        ? entry.videoUrl
+                                        : '(no videoUrl set)'),
+                                    onTap: () {
+                                      Get.back();
+                                      controller.debugTriggerPremiumGift(
+                                          entry.giftId);
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                          isScrollControlled: true,
+                        );
+                      },
+                    ),
+                ],
               ),
             ),
           ),
@@ -567,6 +601,89 @@ class LiveStreamBottomView extends StatelessWidget {
   }
 }
 
+/// Viewer-facing PK battle bottom bar (client's TikTok reference): people /
+/// team-A gift / team-B gift / share, beside the comment box. The two gift
+/// icons reuse the exact same red/blue team-targeted send already built for
+/// the text field's suffix icon (TextFieldSuffixIcon.showGiftIconsForBattle)
+/// — surfaced here persistently instead of only while the field is empty —
+/// so this is a relocation + TopTap-palette restyle, not a new gift
+/// mechanism. Only shown for a 1v1 (exactly 2 on-stage users); 2v2 team
+/// gifting isn't built yet, same limitation the suffix icons already had.
+class _BattleViewerActionIcons extends StatelessWidget {
+  final LivestreamScreenController controller;
+  final VoidCallback onShareTap;
+
+  const _BattleViewerActionIcons({
+    required this.controller,
+    required this.onShareTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final stream = controller.liveData.value;
+      final users = stream.getAllUsers(controller.firestoreController.users);
+      final isNotOnStage = controller.streamViews.firstWhereOrNull(
+            (view) => view.streamId == controller.myUserId.toString(),
+          ) ==
+          null;
+      final showTeamGifts = isNotOnStage && users.length == 2;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 37,
+            width: 37,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: StyleRes.themeGradient,
+              shape: BoxShape.circle,
+            ),
+            child: GestureDetector(
+              onTap: controller.openAudienceSheet,
+              child: const Icon(Icons.people, color: Colors.white, size: 18),
+            ),
+          ),
+          if (showTeamGifts) ...[
+            const SizedBox(width: 6),
+            GiftIcon(
+              bgColor: ColorRes.likeRed,
+              onTap: () => controller.onGiftTap(
+                GiftType.battle,
+                battleViewType: BattleView.red,
+                users: [users.first],
+              ),
+            ),
+            GiftIcon(
+              bgColor: ColorRes.battleProgressColor,
+              onTap: () => controller.onGiftTap(
+                GiftType.battle,
+                battleViewType: BattleView.blue,
+                users: [users.last],
+              ),
+            ),
+          ],
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onShareTap,
+            child: Container(
+              height: 37,
+              width: 37,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
+              ),
+              child: const Icon(Icons.share_outlined,
+                  color: Colors.white, size: 18),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+}
 
 /// TikTok's bottom-left chain-link + friends icon pair: chain opens the
 /// cross-room "link with another host" flow (same screen the "..." menu's
@@ -598,8 +715,7 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
           return _circleIconButton(
             onTap: controller.openGoLiveWithGuestsSheet,
             badgeCount: pending,
-            child:
-                const Icon(Icons.people, color: Color(0xFF25F4EE), size: 18),
+            child: const Icon(Icons.people, color: Color(0xFF25F4EE), size: 18),
           );
         }),
       ],
@@ -714,7 +830,8 @@ class _PkMatchButton extends StatelessWidget {
 
   void _onTap(PkEligibility eligibility) {
     if (!eligibility.isAvailable) {
-      controller.showSnackBar(controller.pkIneligibleMessage(eligibility.reason));
+      controller
+          .showSnackBar(controller.pkIneligibleMessage(eligibility.reason));
       return;
     }
     if (eligibility.mode == PkMode.twoVsTwo) {
@@ -724,4 +841,3 @@ class _PkMatchButton extends StatelessWidget {
     controller.openPkMatchSetupSheet();
   }
 }
-
