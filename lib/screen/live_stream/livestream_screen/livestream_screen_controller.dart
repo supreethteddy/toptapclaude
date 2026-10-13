@@ -211,10 +211,9 @@ class LivestreamScreenController extends BaseController
   RxInt roundBaselineRed = 0.obs;
   RxInt roundBaselineBlue = 0.obs;
 
-  /// Same-room PK Match "Victory lap" countdown — see where it's started in
+  /// One-shot guard for _recordPkMatchWin — see where it's used in
   /// listenLiveStreamData.
-  RxInt victoryLapSecondsRemaining = 0.obs;
-  Timer? _victoryLapTimer;
+  bool _pkMatchWinRecorded = false;
 
   /// Live gift-combo streak: how many times in a row the most recent gift
   /// comment repeats the same sender+gift+receiver, each arriving within
@@ -555,7 +554,6 @@ class LivestreamScreenController extends BaseController
     _giftComboTimer?.cancel();
     _battleInviteExpiryTimer?.cancel();
     _pkInviteExpiryTimer?.cancel();
-    _victoryLapTimer?.cancel();
     videoPlayerController.value?.dispose();
     liveStreamUserStatesListener?.cancel();
     liveStreamCommentsListener?.cancel();
@@ -1512,35 +1510,23 @@ class LivestreamScreenController extends BaseController
           ).inSeconds;
         }
 
-        // Same-room PK Match "Victory lap": a purely cosmetic, local
-        // countdown that starts the moment the match freezes on its result
-        // screen, replacing the plain timer display on every device
-        // watching (see PkVictoryLapTimer in battle_view.dart). Cross-room
-        // battles don't get one — out of scope, and this never collides
-        // with mySideBattleCoins/opponentSideBattleCoins' own cross-room
-        // end-of-match handling.
+        // Bump the winning side's running "WIN xN" tally once per same-room
+        // match end (same battle_round_wins_host/cohost fields cross-room
+        // battles already use, see WinPill) — host-only so every connected
+        // device doesn't race to increment it. _pkMatchWinRecorded guards
+        // against the listener re-firing on every snapshot update while
+        // battleType stays "end" (likes ticking in, viewer count, etc.)
+        // double-counting it; previously piggybacked on the now-removed
+        // cosmetic "Victory lap" countdown timer's own null-check for the
+        // same one-shot purpose.
         if (stream.battleType == BattleType.end &&
             stream.opponentRoomId == null &&
-            _victoryLapTimer == null) {
-          victoryLapSecondsRemaining.value =
-              AppRes.pkVictoryLapDurationInSecond;
-          _victoryLapTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-            if (victoryLapSecondsRemaining.value <= 0) {
-              _victoryLapTimer?.cancel();
-              _victoryLapTimer = null;
-              return;
-            }
-            victoryLapSecondsRemaining.value--;
-          });
-          // Bump the winning side's running "WIN xN" tally (the same
-          // battle_round_wins_host/cohost fields cross-room battles already
-          // use, see WinPill) — written once per match end, host-only so
-          // every connected device doesn't race to increment it.
+            !_pkMatchWinRecorded) {
+          _pkMatchWinRecorded = true;
           if (isHost) unawaited(_recordPkMatchWin(stream));
         }
         if (stream.battleType != BattleType.end) {
-          _victoryLapTimer?.cancel();
-          _victoryLapTimer = null;
+          _pkMatchWinRecorded = false;
         }
 
         // Update LiveData

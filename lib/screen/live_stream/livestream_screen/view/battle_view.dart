@@ -11,6 +11,7 @@ import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/pk_gifters.dart';
+import 'package:shortzz/model/livestream/pk_scores.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/reconnecting_placeholder.dart';
@@ -132,21 +133,46 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                       padding: const EdgeInsets.only(bottom: 30),
                       child: Row(
                         children: [
-                          Expanded(child: _buildSlot(teamAView, hostUser)),
-                          Expanded(child: _buildSlot(teamBView, coHostUser)),
+                          Expanded(
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                _buildSlot(teamAView, hostUser),
+                                if (isEnded)
+                                  _BattleResultEmoji(
+                                      emoji: pkSideEmoji(
+                                          outcome: outcome, isSideA: true)),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                _buildSlot(teamBView, coHostUser),
+                                if (isEnded)
+                                  _BattleResultEmoji(
+                                      emoji: pkSideEmoji(
+                                          outcome: outcome, isSideA: false)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
+                    // BattleTimer fades itself to invisible once the match
+                    // ends (see its own isBattleEnd check) — no separate
+                    // post-match "Victory lap" countdown replacing it here
+                    // anymore (client found the 3-minute cosmetic timer
+                    // unnecessary); the real return-to-main-view countdown
+                    // is LivestreamExistMessageBar, unaffected by this.
                     Positioned(
                       top: 8,
                       left: 0,
                       right: 0,
                       child: Center(
-                        child: isEnded
-                            ? VictoryLapTimer(controller: widget.controller)
-                            : BattleTimer(
-                                controller: widget.controller,
-                                livestream: stream),
+                        child: BattleTimer(
+                            controller: widget.controller, livestream: stream),
                       ),
                     ),
                     // Each side's running match-win tally, visible for the
@@ -231,41 +257,21 @@ class ResultPill extends StatelessWidget {
   }
 }
 
-/// Replaces the plain post-match timer with a "🎉 Victory lap mm:ss"
-/// countdown once the match ends — the same centered slot the running
-/// match's BattleTimer occupies, just relabelled.
-class VictoryLapTimer extends StatelessWidget {
-  final LivestreamScreenController controller;
+/// Centered over a side's video tile once the match ends — client spec:
+/// win with a smiling emoji, lose with a crying one, both sides shake
+/// hands on a draw (pkSideEmoji, previously built but never wired up to
+/// any screen).
+class _BattleResultEmoji extends StatelessWidget {
+  final String emoji;
 
-  const VictoryLapTimer({super.key, required this.controller});
+  const _BattleResultEmoji({required this.emoji});
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final duration =
-          Duration(seconds: controller.victoryLapSecondsRemaining.value);
-      return FittedBox(
-        child: Container(
-          height: 30,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: whitePure(context),
-            borderRadius: BorderRadius.circular(30),
-          ),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🎉', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-              Text('${LKey.victoryLap.tr} ${duration.printDuration}',
-                  style: TextStyleCustom.unboundedMedium500(
-                      color: ColorRes.green, fontSize: 14)),
-            ],
-          ),
-        ),
-      );
-    });
+    if (emoji.isEmpty) return const SizedBox();
+    return IgnorePointer(
+      child: Text(emoji, style: const TextStyle(fontSize: 64)),
+    );
   }
 }
 

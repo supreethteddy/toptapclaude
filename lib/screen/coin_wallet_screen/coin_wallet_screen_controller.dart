@@ -1,4 +1,4 @@
-
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
@@ -36,7 +36,16 @@ class CoinWalletScreenController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    fetchData();
+    // Get.put(CoinWalletScreenController()) runs synchronously inside
+    // CoinWalletScreen.build() (e.g. navigating here from "Recharge" on
+    // the gift sheet), so onInit() itself fires mid-build. myUser is the
+    // app-wide shared SessionManager.currentUser Rx — writing myUser.value
+    // here directly used to notify an Obx on the PREVIOUS screen (still
+    // mid-build/settling during the navigation transition) synchronously,
+    // crashing with "setState() or markNeedsBuild() called during build."
+    // Deferring to the next frame keeps the write, just after this build
+    // pass finishes.
+    WidgetsBinding.instance.addPostFrameCallback((_) => fetchData());
     fetchOfferings();
   }
 
@@ -58,8 +67,8 @@ class CoinWalletScreenController extends BaseController {
         for (var element in items) {
           if ([data.appstoreProductId, data.playStoreProductId]
               .contains(element.id)) {
-            coinPlans.add(CoinPlan(
-                data.coinAmount ?? 0, data.id ?? -1, element.id, element.price));
+            coinPlans.add(CoinPlan(data.coinAmount ?? 0, data.id ?? -1,
+                element.id, element.price));
           }
         }
       }
@@ -108,7 +117,6 @@ class CoinWalletScreenController extends BaseController {
       }
     });
   }
-
 }
 
 class CoinPlan {
