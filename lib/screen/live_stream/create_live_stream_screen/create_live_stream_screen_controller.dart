@@ -104,21 +104,27 @@ class CreateLiveStreamScreenController extends BaseController
     super.onInit();
     // Pause the background home-feed reels so their audio does not keep playing
     // behind the camera preview / LIVE screen.
-    ReelsScreenController.pauseHomeFeed();
+    ReelsScreenController.pauseHomeFeed('createLive');
     initZegoEngine();
   }
 
   @override
   void onClose() {
     super.onClose();
+    // Always pairs with onInit()'s pauseHomeFeed() — ReelsScreenController
+    // ref-counts pause/resume calls itself (_overlayPauseDepth), so this is
+    // safe to call unconditionally even when we went live: the host
+    // screen's own onInit() already called pauseHomeFeed() too, and the
+    // feed only actually resumes once every outstanding pause has a
+    // matching resume (i.e. once the host screen closes as well).
+    ReelsScreenController.resumeHomeFeed('createLive');
     // When the user actually goes live, the host screen REUSES this camera
     // preview canvas (passed as hostPreview). Destroying it here — as
     // stopPreview() does via destroyCanvasView — blacks out the host's own
-    // video on the live screen. So only tear the preview down (and resume the
-    // background feed) when we are cancelling out of create-live instead.
+    // video on the live screen. So only tear the preview down when we are
+    // cancelling out of create-live instead.
     if (LivestreamScreenController.activeRoomIds.isEmpty) {
       stopPreview();
-      ReelsScreenController.resumeHomeFeed();
       // Only torn down when cancelling out of create-live, for the same
       // reason as stopPreview() above — if we actually went live, the host
       // screen keeps relying on DeepAR feeding Zego's custom capture for

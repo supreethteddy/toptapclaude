@@ -10,6 +10,7 @@ import 'package:shortzz/common/widget/loader_widget.dart';
 import 'package:shortzz/model/post_story/post_by_id.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/screen/reels_screen/reel/reel_page_controller.dart';
+import 'package:shortzz/screen/reels_screen/reels_screen_controller.dart';
 import 'package:shortzz/screen/reels_screen/reel/widget/reel_animation_like.dart';
 import 'package:shortzz/screen/reels_screen/reel/widget/reel_seek_bar.dart';
 import 'package:shortzz/screen/reels_screen/reel/widget/side_bar_list.dart';
@@ -199,6 +200,16 @@ class ReelPage extends StatelessWidget {
         // 🔒 Play when mostly visible (>80%), pause when mostly hidden (<20%)
         // Wider gap prevents flickering during scroll
         if (visibilityPercent >= 80) {
+          // VisibilityDetector only measures ancestor clipping, not
+          // Navigator-stack occlusion — a reel fully covered by a
+          // full-screen route (LIVE discovery feed, an actual LIVE
+          // stream, create-live) can still report itself as visible here.
+          // Respect that overlay's pause instead of fighting it, or its
+          // audio leaks into the background. See
+          // ReelsScreenController.isPausedForOverlay.
+          if (ReelsScreenController.isPausedForOverlay) {
+            return;
+          }
           // Apply volume and loop settings
           double volume = settings.getReelVolume();
           videoPlayerController!.setVolume(volume);

@@ -132,16 +132,48 @@ class ReelsScreenController extends BaseController {
     } catch (_) {}
   }
 
+  /// How many overlay screens currently want the home feed paused. Several
+  /// screens can nest (e.g. CreateLiveStreamScreen pushes into the actual
+  /// LIVE host screen without the home feed ever becoming visible again in
+  /// between), and each calls pauseHomeFeed()/resumeHomeFeed() on its own
+  /// onInit()/onClose() independent of the others. Without this counter,
+  /// the inner screen's resumeHomeFeed() call (e.g. ending the LIVE stream)
+  /// would resume reel audio in the background even while an outer screen
+  /// (the discovery feed, create-live) is still on top — see
+  /// pauseHomeFeed()/resumeHomeFeed() below.
+  static int _overlayPauseDepth = 0;
+
+  /// True while any screen (LIVE discovery feed, an actual LIVE stream,
+  /// create-live) wants reel audio silenced. ReelPage's own
+  /// VisibilityDetector-driven autoplay (reel_page.dart) checks this before
+  /// calling play() — VisibilityDetector only measures ancestor clipping,
+  /// not Navigator-stack occlusion, so a reel fully covered by one of these
+  /// full-screen routes can still report itself as visible and would
+  /// otherwise restart its own audio independent of pauseForOverlay().
+  static bool get isPausedForOverlay => _overlayPauseDepth > 0;
+
   /// Pauses the home-feed reels if that controller is currently alive. Safe to
-  /// call from anywhere (e.g. before opening the LIVE screen).
-  static void pauseHomeFeed() {
+  /// call from anywhere (e.g. before opening the LIVE screen). Always pair
+  /// with exactly one resumeHomeFeed() call (e.g. onInit()/onClose()) —
+  /// nesting is handled by _overlayPauseDepth, not by skipping calls.
+  static void pauseHomeFeed([String source = '']) {
+    _overlayPauseDepth++;
+    Loggers.info('pauseHomeFeed source=$source depth=$_overlayPauseDepth');
     if (Get.isRegistered<ReelsScreenController>(tag: tag)) {
       Get.find<ReelsScreenController>(tag: tag).pauseForOverlay();
     }
   }
 
-  /// Resumes the home-feed reels after an overlay screen is closed.
-  static void resumeHomeFeed() {
+  /// Resumes the home-feed reels, but only once every pauseHomeFeed() call
+  /// has been matched by a resumeHomeFeed() call — i.e. only when this is
+  /// the last overlay screen still on top. A resumeHomeFeed() with no
+  /// matching pauseHomeFeed() (depth already 0) is a no-op rather than
+  /// going negative.
+  static void resumeHomeFeed([String source = '']) {
+    if (_overlayPauseDepth > 0) _overlayPauseDepth--;
+    Loggers.info('resumeHomeFeed source=$source depth=$_overlayPauseDepth '
+        'willActuallyResume=${_overlayPauseDepth == 0}');
+    if (_overlayPauseDepth > 0) return;
     if (Get.isRegistered<ReelsScreenController>(tag: tag)) {
       Get.find<ReelsScreenController>(tag: tag).resumeForOverlay();
     }

@@ -12,7 +12,7 @@ import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/create_live_stream_screen/create_live_stream_screen.dart';
 import 'package:shortzz/screen/live_stream/discover_live/live_discovery_feed_screen.dart'
-    show LiveDiscoveryPreviewCard;
+    show LiveVideoPreviewCard;
 import 'package:shortzz/screen/live_stream/live_stream_search_screen/live_stream_search_screen_controller.dart';
 import 'package:shortzz/screen/reels_screen/reels_screen.dart'
     show CustomPageViewScrollPhysics;
@@ -201,23 +201,39 @@ class LiveStreamAvatarCarousel extends StatelessWidget {
 
 /// Full 9:16, Reels-style vertical swipe feed of the current search
 /// results — replaces the old short (310px) fixed-height grid cards.
-/// Reuses the exact same full-bleed LiveDiscoveryPreviewCard the main LIVE
-/// icon's LiveDiscoveryFeedScreen uses, so both "browse who's LIVE"
-/// entry points look identical; this one is sourced from
-/// [controller.livestreamFilterList] instead of LiveStatusController so it
-/// reflects the current search-bar filter. Tapping a card keeps this
-/// screen's existing immediate-join behaviour (onLiveUserTap) — unchanged.
-class LiveStreamListView extends StatelessWidget {
+/// Reuses the exact same real-video LiveVideoPreviewCard the main LIVE
+/// icon's LiveDiscoveryFeedScreen uses (so both "browse who's LIVE" entry
+/// points show actual video, not just a static blurred-photo card), only
+/// the current page gets a real (join-free) Zego login; this one is
+/// sourced from [controller.livestreamFilterList] instead of
+/// LiveStatusController so it reflects the current search-bar filter.
+/// Tapping a card hands off into the same LiveRoomsPageView join flow
+/// LiveVideoPreviewCard already uses elsewhere.
+class LiveStreamListView extends StatefulWidget {
   final LiveStreamSearchScreenController controller;
 
   const LiveStreamListView({super.key, required this.controller});
 
   @override
+  State<LiveStreamListView> createState() => _LiveStreamListViewState();
+}
+
+class _LiveStreamListViewState extends State<LiveStreamListView> {
+  final PageController _pageController = PageController();
+  int _currentIndex = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Obx(() {
-        final streams = controller.livestreamFilterList;
-        if (controller.isLoading.value && streams.isEmpty) {
+        final streams = widget.controller.livestreamFilterList;
+        if (widget.controller.isLoading.value && streams.isEmpty) {
           return const LoaderWidget();
         }
         if (streams.isEmpty) {
@@ -228,15 +244,19 @@ class LiveStreamListView extends StatelessWidget {
             child: const SizedBox(),
           );
         }
+        if (_currentIndex >= streams.length) _currentIndex = 0;
         return PageView.builder(
+          controller: _pageController,
           scrollDirection: Axis.vertical,
           physics: const CustomPageViewScrollPhysics(),
           itemCount: streams.length,
+          onPageChanged: (index) => setState(() => _currentIndex = index),
           itemBuilder: (context, index) {
             final stream = streams[index];
-            return LiveDiscoveryPreviewCard(
+            return LiveVideoPreviewCard(
               room: stream,
-              onTap: () => controller.onLiveUserTap(stream),
+              isActive: index == _currentIndex,
+              allRooms: streams,
             );
           },
         );

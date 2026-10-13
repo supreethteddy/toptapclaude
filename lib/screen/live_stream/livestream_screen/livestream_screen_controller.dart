@@ -483,7 +483,7 @@ class LivestreamScreenController extends BaseController
     // entry point uniformly, current and future, matching the unconditional
     // resumeHomeFeed() this class already calls in onClose(). A harmless
     // no-op if the reels feed was already paused or was never playing.
-    ReelsScreenController.pauseHomeFeed();
+    ReelsScreenController.pauseHomeFeed('livestreamCtrl-isPreview=$isPreviewOnly-room=${liveData.value.roomID}-hash=${identityHashCode(this)}');
     // A preview-only controller isn't "a LIVE screen the viewer has open"
     // for the purposes of these two guards — LiveStatusController.openLive
     // checks activeRoomIds.isNotEmpty (any room, not just this one) before
@@ -611,7 +611,7 @@ class LivestreamScreenController extends BaseController
     leagueController = null;
     // Resume the background home-feed reels that were paused when the LIVE flow
     // opened, now that we are leaving the LIVE screen.
-    ReelsScreenController.resumeHomeFeed();
+    ReelsScreenController.resumeHomeFeed('livestreamCtrl-room=${liveData.value.roomID}-hash=${identityHashCode(this)}');
     super.onClose();
   }
 

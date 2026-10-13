@@ -67,13 +67,13 @@ class _LiveDiscoveryFeedScreenState extends State<LiveDiscoveryFeedScreen> {
   @override
   void initState() {
     super.initState();
-    ReelsScreenController.pauseHomeFeed();
+    ReelsScreenController.pauseHomeFeed('discoveryFeed');
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    ReelsScreenController.resumeHomeFeed();
+    ReelsScreenController.resumeHomeFeed('discoveryFeed');
     super.dispose();
   }
 
@@ -572,6 +572,43 @@ class LiveVideoPreviewCard extends StatefulWidget {
   State<LiveVideoPreviewCard> createState() => _LiveVideoPreviewCardState();
 }
 
+/// Reference-counts preview "holds" on a room's [LivestreamScreenController]
+/// by roomID. Two different screens can legitimately preview the *same*
+/// live room at once — e.g. mid-navigation from LiveDiscoveryFeedScreen to
+/// LiveStreamSearchScreen, both showing the one host currently live —
+/// without this, whichever screen's card disposes first would delete the
+/// shared controller (stopping Zego and logging out of the room) while the
+/// other screen's card is still actively relying on it, leaving that card
+/// stuck on a dead, logged-out controller with no video and no retry.
+class _PreviewRefCounter {
+  static final Map<String, int> _counts = {};
+
+  static void acquire(String roomID) {
+    _counts[roomID] = (_counts[roomID] ?? 0) + 1;
+  }
+
+  /// Returns true once the count for [roomID] reaches zero (the caller is
+  /// the last holder and should tear the controller down). A missing entry
+  /// (already cleared — see [clear]) is treated as nothing left to release.
+  static bool release(String roomID) {
+    final current = _counts[roomID];
+    if (current == null) return false;
+    if (current <= 1) {
+      _counts.remove(roomID);
+      return true;
+    }
+    _counts[roomID] = current - 1;
+    return false;
+  }
+
+  /// Called when a room's controller is handed off to a real join
+  /// (LiveRoomsPageView now owns its lifecycle) — stops ref-counting it so
+  /// any other still-attached preview card's later dispose() is a no-op
+  /// instead of trying to tear down a controller that's now actively in
+  /// use, and so a future fresh preview of the same room starts clean.
+  static void clear(String roomID) => _counts.remove(roomID);
+}
+
 class _LiveVideoPreviewCardState extends State<LiveVideoPreviewCard> {
   LivestreamScreenController? _controller;
   bool _handedOff = false;
@@ -627,6 +664,7 @@ class _LiveVideoPreviewCardState extends State<LiveVideoPreviewCard> {
     // explicitly ourselves (force: true) the moment it's genuinely done
     // with — see _detach() below and LiveRoomsPageView._releaseRoom() — so
     // nothing leaks.
+    _PreviewRefCounter.acquire(roomID);
     _controller = Get.isRegistered<LivestreamScreenController>(tag: roomID)
         ? Get.find<LivestreamScreenController>(tag: roomID)
         : Get.put<LivestreamScreenController>(
@@ -639,15 +677,26 @@ class _LiveVideoPreviewCardState extends State<LiveVideoPreviewCard> {
 
   /// Releases the preview's Zego login the moment this page scrolls off
   /// screen or this widget goes away — unless _enterLive already handed the
-  /// same tagged controller off to LiveRoomsPageView, which now owns its
-  /// lifecycle instead.
+  /// same tagged controller off to LiveRoomsPageView (which now owns its
+  /// lifecycle instead), or another still-attached preview card elsewhere
+  /// (e.g. the same room shown on a different screen reached via
+  /// navigation — see _PreviewRefCounter) is still relying on it.
   void _detach() {
-    if (_handedOff) return;
     final roomID = _roomID;
+    if (_handedOff) {
+      if (roomID != null) _PreviewRefCounter.clear(roomID);
+      return;
+    }
     _controller = null;
     if (roomID == null) return;
+    if (!_PreviewRefCounter.release(roomID)) return;
     if (Get.isRegistered<LivestreamScreenController>(tag: roomID)) {
-      Get.delete<LivestreamScreenController>(tag: roomID, force: true);
+      final existing = Get.find<LivestreamScreenController>(tag: roomID);
+      // Extra safety alongside the clear() above: never tear down a
+      // controller that's already been upgraded into a real join.
+      if (existing.isPreviewOnly) {
+        Get.delete<LivestreamScreenController>(tag: roomID, force: true);
+      }
     }
   }
 
