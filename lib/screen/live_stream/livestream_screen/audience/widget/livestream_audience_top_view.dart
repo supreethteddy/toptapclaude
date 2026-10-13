@@ -30,7 +30,7 @@ import 'package:shortzz/utilities/style_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
-class LiveStreamAudienceTopView extends StatelessWidget {
+class LiveStreamAudienceTopView extends StatefulWidget {
   final bool isAudience;
   final LivestreamScreenController controller;
 
@@ -41,8 +41,29 @@ class LiveStreamAudienceTopView extends StatelessWidget {
   });
 
   @override
+  State<LiveStreamAudienceTopView> createState() =>
+      _LiveStreamAudienceTopViewState();
+}
+
+class _LiveStreamAudienceTopViewState extends State<LiveStreamAudienceTopView> {
+  final GlobalKey _measureKey = GlobalKey();
+  LivestreamScreenController get controller => widget.controller;
+
+  // Same self-measurement as LiveStreamHostTopView (see its comment) — the
+  // PK battle score bar reads controller.topHeaderHeight for its top margin
+  // instead of a fixed guess that used to land it on the title row.
+  void _reportHeight(_) {
+    final height = _measureKey.currentContext?.size?.height;
+    if (height != null && (height - controller.topHeaderHeight.value).abs() > 0.5) {
+      controller.topHeaderHeight.value = height;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback(_reportHeight);
     return SafeArea(
+      key: _measureKey,
       bottom: false,
       minimum: EdgeInsets.only(top: AppBar().preferredSize.height * 0.7),
       child: Obx(() {

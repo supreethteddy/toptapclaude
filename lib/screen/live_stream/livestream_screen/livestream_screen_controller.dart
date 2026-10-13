@@ -265,11 +265,16 @@ class LivestreamScreenController extends BaseController
   /// SessionManager.currentUser) catches up without leaving the LIVE.
   void _refreshMyBalanceAfterGift() {
     _balanceRefreshDebounce.call(() async {
-      final user = await UserService.instance
+      // fetchUserDetails() already calls SessionManager.setUser() itself,
+      // gated on the fetch actually succeeding (status == true) and my id
+      // not having changed mid-flight. Calling setUser() again here on
+      // whatever it returns — with no such gate — used to persist a blank
+      // default User (id defaulting to 0) whenever this self-refresh call
+      // errored, silently corrupting myUserId for the rest of the LIVE
+      // session (every gift triggers this, so one flaky response during a
+      // busy PK battle was enough). Just let fetchUserDetails() own it.
+      await UserService.instance
           .fetchUserDetails(userId: SessionManager.instance.getUserID());
-      if (user != null) {
-        SessionManager.instance.setUser(user);
-      }
     }, milliseconds: 1500);
   }
 
@@ -310,6 +315,15 @@ class LivestreamScreenController extends BaseController
   // to be shown.
   RxBool isRightControlsVisible = true.obs;
   RxBool canPopStreamRoute = false.obs;
+
+  // Actual rendered height of LiveStreamHostTopView (safe-area inset + its
+  // 3 rows, which varies by device and by how many rank/goal/poll chips are
+  // showing). The PK battle score bar used to sit behind a hardcoded
+  // top-margin guess that was routinely too short, landing the score bar's
+  // crown icon on top of the LIVE title text. LiveStreamHostTopView measures
+  // itself post-frame and writes the real value here; the battle view reads
+  // it for its top margin instead of guessing.
+  RxDouble topHeaderHeight = 150.0.obs;
 
   List<LivestreamUserState> memberList = <LivestreamUserState>[];
 
@@ -793,6 +807,28 @@ class LivestreamScreenController extends BaseController
         return result;
       }
 
+      // SessionManager.currentUser can still be transiently null this early
+      // in the screen's lifecycle (session restore from disk racing against
+      // this screen's first frame) — myUserId falls back to 0 in that
+      // window. Every write below is keyed by doc(myUserId.toString()), so
+      // a 0 read here doesn't just fail — it creates/touches a *real*,
+      // separate Firestore doc at userState/0 with no way back to the
+      // actual viewer. That doc then sits in this room (room id = host's
+      // own id, so it's the same room every time this host goes live) and
+      // the invite button on it fails forever with "userId is null" even
+      // though the real viewer is working perfectly otherwise. Wait briefly
+      // for a valid session instead of racing ahead with a bad id.
+      var waited = 0;
+      while (myUserId == 0 && waited < 2000) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        waited += 50;
+      }
+      if (myUserId == 0) {
+        Loggers.error(
+            'loginRoom: myUserId still 0 after ${waited}ms wait — session not restored, aborting audience join to avoid writing a corrupt state doc.');
+        return result;
+      }
+
       final userRef = liveStreamUsersRef.doc(myUserId.toString());
       final stateRef = liveStreamUserStatesRef.doc(myUserId.toString());
 
@@ -1091,6 +1127,12 @@ class LivestreamScreenController extends BaseController
 
   Future<void> _joinAudience() async {
     if (_hasIncrementedWatchingCount) return;
+    // Defense in depth alongside loginRoom()'s own wait: never let a 0 id
+    // reach doc(myUserId.toString()) and create a phantom userState/0.
+    if (myUserId == 0) {
+      Loggers.error('_joinAudience: myUserId is 0, skipping to avoid a corrupt state doc.');
+      return;
+    }
     try {
       _hasIncrementedWatchingCount = await db.runTransaction<bool>((tx) async {
         final streamSnapshot = await tx.get(liveStreamDocRef);
@@ -1102,11 +1144,25 @@ class LivestreamScreenController extends BaseController
         final alreadyCounted = stateData[FirebaseConst.countedAsViewer] == true;
         final now = DateTime.now().millisecondsSinceEpoch;
 
+        // loginRoom()'s full-state creation silently does nothing if
+        // myUser.value is transiently null at that exact moment (just logs
+        // "User not found") — but this merge still runs right after
+        // regardless. Without 'user_id' here, that leaves behind a doc at
+        // the correct path (userState/<myUserId>) whose identity field is
+        // simply absent, which LivestreamUserState.fromJson defaults to 0
+        // (`json['user_id'] ?? 0`). That doc then poisons every future
+        // "Go Live" in this room (room id = host's own id, so it's the same
+        // room every time) — the invite button starts failing with
+        // "userId is null" for a viewer who is, in reality, fine. Always
+        // writing user_id here means this merge can never produce a
+        // document with a missing identity, whether or not it ends up
+        // being the first write to create it.
         tx.set(
             stateRef,
             {
               FirebaseConst.countedAsViewer: true,
               FirebaseConst.lastSeenAt: now,
+              'user_id': myUserId,
             },
             SetOptions(merge: true));
 
@@ -1187,10 +1243,12 @@ class LivestreamScreenController extends BaseController
       return;
     }
 
+    if (myUserId == 0) return;
     try {
       await liveStreamUserStatesRef.doc(myUserId.toString()).set({
         FirebaseConst.lastSeenAt: now,
         FirebaseConst.countedAsViewer: true,
+        'user_id': myUserId,
       }, SetOptions(merge: true));
     } catch (e) {
       Loggers.error('LIVE viewer heartbeat failed: $e');
@@ -1585,7 +1643,6 @@ class LivestreamScreenController extends BaseController
               // Loggers.warning('⚠️ Null state found in change, skipping...');
               continue;
             }
-
             switch (change.type) {
               case DocumentChangeType.added:
                 _showJoinStreamSheet(state);

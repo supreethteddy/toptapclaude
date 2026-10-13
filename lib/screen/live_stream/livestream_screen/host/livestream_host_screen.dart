@@ -56,14 +56,19 @@ class LivestreamHostScreen extends StatelessWidget {
                         streamViews: controller.streamViews,
                         controller: controller);
                   case LivestreamType.battle:
+                    // Top margin matches LiveStreamHostTopView's actual
+                    // measured height (see topHeaderHeight) instead of a
+                    // fixed guess, so the score bar's crown icon never lands
+                    // on top of the badges/title rows above it.
+                    final topMargin =
+                        EdgeInsets.only(top: controller.topHeaderHeight.value);
                     return controller.liveData.value.opponentRoomId != null
                         ? PartyBattleView(
-                            controller: controller,
-                            margin: const EdgeInsets.only(top: 60))
+                            controller: controller, margin: topMargin)
                         : BattleView(
                             isAudience: false,
                             controller: controller,
-                            margin: const EdgeInsets.only(top: 60));
+                            margin: topMargin);
                   case LivestreamType.dummy:
                     return LivestreamVideoPlayer(
                         controller: controller.videoPlayerController);

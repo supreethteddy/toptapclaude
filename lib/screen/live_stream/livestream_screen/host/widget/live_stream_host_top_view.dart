@@ -30,14 +30,35 @@ import 'package:shortzz/utilities/theme_res.dart';
 /// the League badge off-screen the moment the username took any room at
 /// all. Giving it a dedicated row fixes that without dropping any of the
 /// features that had piled up there across phases.
-class LiveStreamHostTopView extends StatelessWidget {
+class LiveStreamHostTopView extends StatefulWidget {
   final LivestreamScreenController controller;
 
   const LiveStreamHostTopView({super.key, required this.controller});
 
   @override
+  State<LiveStreamHostTopView> createState() => _LiveStreamHostTopViewState();
+}
+
+class _LiveStreamHostTopViewState extends State<LiveStreamHostTopView> {
+  final GlobalKey _measureKey = GlobalKey();
+  LivestreamScreenController get controller => widget.controller;
+
+  // Measures this widget's actual rendered height (safe-area inset + its 3
+  // rows) after every layout pass and reports it to the controller, so the
+  // PK battle score bar can clear it exactly instead of guessing a fixed
+  // offset. Cheap: just a RenderBox size read, no extra layout work.
+  void _reportHeight(_) {
+    final height = _measureKey.currentContext?.size?.height;
+    if (height != null && (height - controller.topHeaderHeight.value).abs() > 0.5) {
+      controller.topHeaderHeight.value = height;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback(_reportHeight);
     return SafeArea(
+      key: _measureKey,
       bottom: false,
       minimum: EdgeInsets.only(top: AppBar().preferredSize.height * 0.3),
       child: Obx(() {

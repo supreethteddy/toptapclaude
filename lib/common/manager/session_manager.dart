@@ -71,7 +71,7 @@ class SessionManager {
   void listenModerator() {
     isModerator.value = getUser()?.isModerator ?? 0;
     storage.listenKey(SessionKeys.user, (value) {
-      User? user = value as User?;
+      User? user = _userFromStorageValue(value);
       isModerator.value = user?.isModerator ?? 0;
     });
   }
@@ -79,9 +79,20 @@ class SessionManager {
   void listenSubscription() {
     isModerator.value = getUser()?.isVerify ?? 0;
     storage.listenKey(SessionKeys.user, (value) {
-      User? user = value as User?;
+      User? user = _userFromStorageValue(value);
       isModerator.value = user?.isModerator ?? 0;
     });
+  }
+
+  // setUser() writes the JSON map (see its comment), but GetStorage's
+  // listenKey callback used to be fed the raw User object when callers held
+  // one in memory — both shapes can still reach here, so parse defensively
+  // instead of casting straight to User? like these listeners used to.
+  User? _userFromStorageValue(dynamic value) {
+    if (value == null) return null;
+    if (value is User) return value;
+    if (value is Map<String, dynamic>) return User.fromJson(value);
+    return null;
   }
 
   void setUser(User? user) {
@@ -93,9 +104,13 @@ class SessionManager {
       // Re-create the User object from the modified JSON map
       User newUser = User.fromJson(json);
 
-      // Log the updated user object and store it
-      // Loggers.success(user.toJson());
-      storage.write(SessionKeys.user, newUser);
+      // GetStorage is JSON-file-backed — it must be given the JSON map,
+      // not the raw User object. Writing the object worked within a single
+      // app process (an in-memory cache masked it), but after a real
+      // process restart reading it back from disk silently produced a
+      // broken/default user (id resolving to 0), breaking anything keyed
+      // on the real user id — LIVE room docs, invites, etc.
+      storage.write(SessionKeys.user, newUser.toJson());
     }
   }
 

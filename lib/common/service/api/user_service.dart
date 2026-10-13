@@ -90,12 +90,27 @@ class UserService {
   }
 
   Future<User?> fetchUserDetails({int? userId}) async {
+    // Resolve to the same id actually sent to the API before comparing —
+    // comparing the raw (often-null, defaulting to "my own profile")
+    // parameter against getUserID()'s int meant this never matched on the
+    // common no-arg call, so the session cache never got refreshed here.
+    final targetUserId = userId ?? SessionManager.instance.getUserID();
     UserModel userModel = await ApiService.instance.call(
         url: WebService.user.fetchUserDetails,
-        param: {Params.userId: userId ?? SessionManager.instance.getUserID()},
+        param: {Params.userId: targetUserId},
         fromJson: UserModel.fromJson);
+    // Belt-and-braces alongside the status check: a response that parses
+    // with status true but a blank/defaulted user (id null or 0 — seen from
+    // this endpoint under load, e.g. mid-PK-battle gift bursts) must never
+    // overwrite the session. This call persists my own profile on every
+    // call site that self-refreshes (balance-after-gift, settings, feed,
+    // etc.), so one bad response here used to zero out myUserId for the
+    // rest of the session with no further signal.
+    final fetchedId = userModel.data?.id;
     if (userModel.status == true &&
-        userId == SessionManager.instance.getUserID()) {
+        fetchedId != null &&
+        fetchedId > 0 &&
+        targetUserId == SessionManager.instance.getUserID()) {
       SessionManager.instance.setUser(userModel.data);
     }
     return userModel.data;

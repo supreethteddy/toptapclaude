@@ -1062,10 +1062,29 @@ class CreateLiveStreamScreenController extends BaseController
           db.collection(FirebaseConst.liveStreams).doc('$userId');
       DocumentReference usersRef =
           db.collection(FirebaseConst.appUsers).doc('$userId');
-      DocumentReference userStateRef =
-          livestreamRef.collection(FirebaseConst.userState).doc('$userId');
+      CollectionReference userStateCollection =
+          livestreamRef.collection(FirebaseConst.userState);
+      DocumentReference userStateRef = userStateCollection.doc('$userId');
+
+      // This room's id is this host's own user id, so every stream they
+      // ever start reuses the exact same userState subcollection path.
+      // deleteStreamOnFirebase() clears it on a clean Stop, but a crash,
+      // force-close, or the OS killing the app while live skips that —
+      // leaving old viewers' state docs sitting there. The next stream
+      // then finds a viewer's doc "already exists" on their very first
+      // join, silently skipping the fresh-join branch (no "joined"
+      // announcement, no initial state write) even though it's actually
+      // their first time in this brand new stream. Clearing any leftovers
+      // before this stream's own doc is written guarantees a clean start
+      // regardless of how the previous stream ended.
+      final staleStates = await userStateCollection.get();
+      Loggers.info(
+          'Clearing ${staleStates.docs.length} leftover userState doc(s) from a previous stream before going live.');
 
       WriteBatch batch = db.batch();
+      for (final doc in staleStates.docs) {
+        batch.delete(doc.reference);
+      }
 
       final livestreamData = livestream.toJson();
       livestreamData[FirebaseConst.lastHeartbeatAt] = time;

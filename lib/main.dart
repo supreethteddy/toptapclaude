@@ -44,7 +44,11 @@ Future<void> main() async {
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
     print('❌ FlutterError: ${details.exception}');
-    Loggers.error('FlutterError: ${details.exception}');
+    // presentError's own console dump is useful interactively but gets lost
+    // under logcat's debugPrint throttling on a busy device — log the stack
+    // trace explicitly too so a crash like this is actually diagnosable
+    // from a pulled log, not just "RangeError" with no source.
+    Loggers.error('FlutterError: ${details.exception}\n${details.stack}');
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
