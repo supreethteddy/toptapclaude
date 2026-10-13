@@ -23,6 +23,7 @@ import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/notification_service.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
 import 'package:shortzz/common/service/live_invite_service.dart';
+import 'package:shortzz/common/service/zego_engine_service.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
@@ -124,8 +125,7 @@ class LivestreamScreenController extends BaseController
   StreamSubscription<DocumentSnapshot>? opponentLiveDocListener;
   StreamSubscription<QuerySnapshot>? opponentUserStatesListener;
   Rx<Livestream?> opponentLiveData = Rx(null);
-  RxList<LivestreamUserState> opponentUserStates =
-      <LivestreamUserState>[].obs;
+  RxList<LivestreamUserState> opponentUserStates = <LivestreamUserState>[].obs;
   RxList<StreamView> opponentStreamViews = <StreamView>[].obs;
   int? _lastHandledInviteFromId;
   int? _lastHandledRematchFromId;
@@ -309,6 +309,7 @@ class LivestreamScreenController extends BaseController
       currentGiftComboComment.value = null;
     });
   }
+
   RxBool isViewVisible = true.obs;
   // Always visible now that the up-arrow toggle button is gone - this panel
   // (beauty filter shortcut, host-only more-options menu) has no other way
@@ -383,7 +384,8 @@ class LivestreamScreenController extends BaseController
   }
 
   Map<int, int> get _currentBattleCoinByUser => {
-        for (final state in liveUsersStates) state.userId: state.currentBattleCoin,
+        for (final state in liveUsersStates)
+          state.userId: state.currentBattleCoin,
       };
 
   int _teamRawBattleCoins(List<int> memberIds) {
@@ -783,6 +785,21 @@ class LivestreamScreenController extends BaseController
   }
 
   Future<ZegoRoomLoginResult> loginRoom() async {
+    // The dashboard kicks off engine creation fire-and-forget in onReady()
+    // (ZegoEngineService.ensureEngine isn't awaited there), so a viewer who
+    // taps into a LIVE within the first second or two of a cold app launch
+    // can race ahead of it: zegoEngine.loginRoom() then runs against a
+    // not-yet-created native engine and silently no-ops (no Zego-side log,
+    // no thrown error, no stream ever subscribed) — the join still "looks"
+    // successful (Firestore writes go through) but the viewer is stuck on
+    // "Reconnecting..." forever. ensureEngine() is idempotent/cheap once the
+    // engine already exists, so this costs nothing on the normal path.
+    final engineReady = await ZegoEngineService.instance.ensureEngine();
+    if (!engineReady) {
+      showSnackBar('Unable to connect to the live server. Please try again.');
+      return ZegoRoomLoginResult(-1, {});
+    }
+
     final roomID = liveData.value.roomID ?? '';
     final user = ZegoUser('$myUserId', myUser.value?.username ?? '');
 
@@ -880,8 +897,7 @@ class LivestreamScreenController extends BaseController
       // current state first so a room-state change that raced ahead of us
       // (already promoted, or re-invited to a different room) is not
       // clobbered.
-      final pendingInvite =
-          LiveInviteService.instance.takeAcceptedFor(roomID);
+      final pendingInvite = LiveInviteService.instance.takeAcceptedFor(roomID);
       if (pendingInvite != null) {
         final latestState =
             (await stateRef.get()).data() as Map<String, dynamic>?;
@@ -1130,7 +1146,8 @@ class LivestreamScreenController extends BaseController
     // Defense in depth alongside loginRoom()'s own wait: never let a 0 id
     // reach doc(myUserId.toString()) and create a phantom userState/0.
     if (myUserId == 0) {
-      Loggers.error('_joinAudience: myUserId is 0, skipping to avoid a corrupt state doc.');
+      Loggers.error(
+          '_joinAudience: myUserId is 0, skipping to avoid a corrupt state doc.');
       return;
     }
     try {
@@ -1283,7 +1300,8 @@ class LivestreamScreenController extends BaseController
       if (userId == liveData.value.hostId) continue;
       // Co-hosts and guests are publishing participants, not viewers: a
       // backgrounded one must not be silently dropped from the count.
-      final type = LivestreamUserType.fromString(data[FirebaseConst.type] ?? '');
+      final type =
+          LivestreamUserType.fromString(data[FirebaseConst.type] ?? '');
       if (type.isOnStage) continue;
       final lastSeen = (data[FirebaseConst.lastSeenAt] as num?)?.toInt();
       if (lastSeen != null && now - lastSeen > 45000)
@@ -1508,7 +1526,8 @@ class LivestreamScreenController extends BaseController
         if (stream.battleType == BattleType.end &&
             stream.opponentRoomId == null &&
             _victoryLapTimer == null) {
-          victoryLapSecondsRemaining.value = AppRes.pkVictoryLapDurationInSecond;
+          victoryLapSecondsRemaining.value =
+              AppRes.pkVictoryLapDurationInSecond;
           _victoryLapTimer = Timer.periodic(const Duration(seconds: 1), (_) {
             if (victoryLapSecondsRemaining.value <= 0) {
               _victoryLapTimer?.cancel();
@@ -1585,7 +1604,9 @@ class LivestreamScreenController extends BaseController
 
         // Host: the invite I sent disappeared without the match starting —
         // the invitee declined, or it expired on their side.
-        if (isHost && _awaitingPkInviteResponse && stream.pkInviteFromId == null) {
+        if (isHost &&
+            _awaitingPkInviteResponse &&
+            stream.pkInviteFromId == null) {
           _awaitingPkInviteResponse = false;
           if (stream.type != LivestreamType.battle) {
             showSnackBar(LKey.pkMatchDeclined.tr);
@@ -1995,7 +2016,8 @@ class LivestreamScreenController extends BaseController
         final snap = await tx.get(liveStreamDocRef);
         final data = snap.data() as Map<String, dynamic>? ?? {};
         if (data[FirebaseConst.firstGiftBonusClaimed] == true) return false;
-        tx.update(liveStreamDocRef, {FirebaseConst.firstGiftBonusClaimed: true});
+        tx.update(
+            liveStreamDocRef, {FirebaseConst.firstGiftBonusClaimed: true});
         return true;
       });
       if (claimed) {
@@ -2321,7 +2343,9 @@ class LivestreamScreenController extends BaseController
         if (!snap.exists) return false;
         final data = snap.data() as Map<String, dynamic>? ?? {};
         final members = List<int>.from(
-            (data[arrayKey] as List<dynamic>? ?? const []).whereType<num>().map((e) => e.toInt()));
+            (data[arrayKey] as List<dynamic>? ?? const [])
+                .whereType<num>()
+                .map((e) => e.toInt()));
         final pending = List<int>.from(
             (data[FirebaseConst.pendingSeatIds] as List<dynamic>? ?? const [])
                 .whereType<num>()
@@ -2510,9 +2534,8 @@ class LivestreamScreenController extends BaseController
       Loggers.info('Updating state for userId: ${newState.userId}');
       // Becoming a co-host OR a guest both mean "start publishing"; the role
       // only decides which seat array publishCoHostStream claims.
-      final wasOnStageNonHost =
-          oldState?.type == LivestreamUserType.coHost ||
-              oldState?.type == LivestreamUserType.guest;
+      final wasOnStageNonHost = oldState?.type == LivestreamUserType.coHost ||
+          oldState?.type == LivestreamUserType.guest;
       final isOnStageNonHost = newState.type == LivestreamUserType.coHost ||
           newState.type == LivestreamUserType.guest;
       if (isOnStageNonHost && !wasOnStageNonHost) {
@@ -2542,8 +2565,7 @@ class LivestreamScreenController extends BaseController
       if (oldState?.isMuted != newState.isMuted) {
         zegoEngine.muteMicrophone(newState.isMuted);
       }
-      if (wasOnStageNonHost &&
-          newState.type == LivestreamUserType.audience) {
+      if (wasOnStageNonHost && newState.type == LivestreamUserType.audience) {
         closeCoHostStream(newState.userId);
       }
     }
@@ -2585,13 +2607,15 @@ class LivestreamScreenController extends BaseController
         final snap = await tx.get(liveStreamDocRef);
         if (!snap.exists) return false;
         final data = snap.data() as Map<String, dynamic>? ?? {};
-        final coHosts = (data[FirebaseConst.coHostIds] as List<dynamic>? ?? const [])
-            .whereType<num>()
-            .map((e) => e.toInt())
-            .toList();
-        final pending = (data[FirebaseConst.pendingSeatIds] as List<dynamic>? ?? const [])
-            .whereType<num>()
-            .length;
+        final coHosts =
+            (data[FirebaseConst.coHostIds] as List<dynamic>? ?? const [])
+                .whereType<num>()
+                .map((e) => e.toInt())
+                .toList();
+        final pending =
+            (data[FirebaseConst.pendingSeatIds] as List<dynamic>? ?? const [])
+                .whereType<num>()
+                .length;
         if (coHosts.contains(state.userId)) return true;
         if (coHosts.length + pending >= cap) return false;
         tx.update(liveStreamDocRef, {
@@ -2898,7 +2922,8 @@ class LivestreamScreenController extends BaseController
         }
         transaction.update(targetRef, {
           FirebaseConst.pendingBattleInviteFromId: myUserId,
-          FirebaseConst.battleInviteSentAt: DateTime.now().millisecondsSinceEpoch,
+          FirebaseConst.battleInviteSentAt:
+              DateTime.now().millisecondsSinceEpoch,
         });
       });
       showSnackBar(LKey.battleInviteSent.tr);
@@ -3103,8 +3128,10 @@ class LivestreamScreenController extends BaseController
         FirebaseConst.pkInviteAcceptedIds: null,
       };
 
-  /// Host-only. [eligibleGiftIds] null means every gift counts toward the
-  /// match score.
+  /// Host-only. Auto-picks the sole eligible co-host — only correct when
+  /// exactly 2 are eligible (the Match button's case). A room with more
+  /// on-stage co-hosts than that needs [sendPkMatchInviteTo] instead, so the
+  /// host can say which one.
   Future<void> sendPkMatchInvite({List<int>? eligibleGiftIds}) async {
     if (!isHost) return;
     final eligibility = pkMatchEligibility;
@@ -3113,23 +3140,45 @@ class LivestreamScreenController extends BaseController
       return;
     }
     final hostId = liveData.value.hostId;
-    if (hostId == null) return;
-    final opponentId =
-        eligibility.eligibleIds.firstWhereOrNull((id) => id != hostId);
-    if (opponentId == null) return;
-    final teamA = [hostId];
-    final teamB = [opponentId];
-    final validationError = validatePkTeams(
-      eligibility: eligibility,
-      hostId: hostId,
-      teamA: teamA,
-      teamB: teamB,
-    );
-    if (validationError != null) {
-      Loggers.error('PK match invite rejected locally: $validationError');
+    final opponentId = hostId == null
+        ? null
+        : eligibility.eligibleIds.firstWhereOrNull((id) => id != hostId);
+    if (hostId == null || opponentId == null) return;
+    await sendPkMatchInviteTo(opponentId, eligibleGiftIds: eligibleGiftIds);
+  }
+
+  /// Host-only. Sends a 1v1 PK Match invite to one specific on-stage
+  /// co-host, regardless of how many others are also on stage — e.g. a
+  /// room with 3 co-hosts (not an exact 1v1/2v2 count) still lets the host
+  /// pick any one of them to battle; the rest stay as plain co-hosts.
+  /// [eligibleGiftIds] null means every gift counts toward the match score.
+  Future<void> sendPkMatchInviteTo(int opponentId,
+      {List<int>? eligibleGiftIds}) async {
+    if (!isHost) return;
+    if ((setting?.liveBattle ?? 1) != 1) {
+      showSnackBar(pkIneligibleMessage(PkIneligibleReason.battleDisabled));
+      return;
+    }
+    final hostId = liveData.value.hostId;
+    if (hostId == null || !_publishingUserIds.contains(hostId)) {
+      showSnackBar(pkIneligibleMessage(PkIneligibleReason.hostNotPublishing));
+      return;
+    }
+    if (opponentId == hostId ||
+        !liveData.value.isCoHost(opponentId) ||
+        !_publishingUserIds.contains(opponentId)) {
+      Loggers.error(
+          'PK match invite rejected locally: opponent $opponentId is not an eligible, publishing co-host');
       showSnackBar(LKey.pkMatchStartFailed.tr);
       return;
     }
+    await _sendPkMatchInviteTeams(hostId, [hostId], [opponentId],
+        eligibleGiftIds: eligibleGiftIds);
+  }
+
+  Future<void> _sendPkMatchInviteTeams(
+      int hostId, List<int> teamA, List<int> teamB,
+      {List<int>? eligibleGiftIds}) async {
     try {
       await db.runTransaction((transaction) async {
         final snap = await transaction.get(liveStreamDocRef);
@@ -3512,11 +3561,13 @@ class LivestreamScreenController extends BaseController
       final opponentScore = finalScores['$opponentHostId'] ?? 0;
       final outcome = determineBattleOutcome(myScore, opponentScore);
       final isDraw = outcome == BattleOutcome.draw;
-      final winnerHostId =
-          isDraw ? null : (outcome == BattleOutcome.sideAWins ? myHostId : opponentHostId);
+      final winnerHostId = isDraw
+          ? null
+          : (outcome == BattleOutcome.sideAWins ? myHostId : opponentHostId);
 
       final sortedIds = [myHostId, opponentHostId]..sort();
-      final battleId = '${sortedIds[0]}_${sortedIds[1]}_${stream.battleCreatedAt ?? 0}';
+      final battleId =
+          '${sortedIds[0]}_${sortedIds[1]}_${stream.battleCreatedAt ?? 0}';
 
       final result = BattleResult(
         battleId: battleId,
@@ -3591,9 +3642,8 @@ class LivestreamScreenController extends BaseController
     _stopWatchingOpponent();
     _watchedOpponentRoomId = opponentRoomId;
 
-    opponentLiveDocListener = _roomDocRef(opponentRoomId)
-        .snapshots()
-        .listen((snapshot) {
+    opponentLiveDocListener =
+        _roomDocRef(opponentRoomId).snapshots().listen((snapshot) {
       if (!snapshot.exists) {
         _onOpponentLooksGone();
         return;
@@ -3634,7 +3684,9 @@ class LivestreamScreenController extends BaseController
       opponentUserStates.value = snapshot.docs
           .map((doc) => LivestreamUserState.fromJson(doc.data()))
           .toList();
-    }, onError: (e) => Loggers.error('Opponent user-states listener failed: $e'));
+    },
+            onError: (e) =>
+                Loggers.error('Opponent user-states listener failed: $e'));
   }
 
   Future<void> _playOpponentStream(int opponentHostId) async {
@@ -3666,8 +3718,7 @@ class LivestreamScreenController extends BaseController
   void _onOpponentLooksGone() {
     if (_opponentReconnectGraceTimer != null) return; // grace already running
     isOpponentReconnecting.value = true;
-    _opponentReconnectGraceTimer =
-        Timer(const Duration(seconds: 15), () {
+    _opponentReconnectGraceTimer = Timer(const Duration(seconds: 15), () {
       _opponentReconnectGraceTimer = null;
       isOpponentReconnecting.value = false;
       // Still not a battle after the grace window — treat it as abandoned:
@@ -3675,8 +3726,7 @@ class LivestreamScreenController extends BaseController
       // as a manual Stop, so this room doesn't hang in a dead battle state
       // forever.
       if (liveData.value.type == LivestreamType.battle) {
-        unawaited(
-            _recordBattleHistory(endReason: 'opponent_disconnected'));
+        unawaited(_recordBattleHistory(endReason: 'opponent_disconnected'));
         unawaited(endCrossRoomBattleAndReset());
       }
     });

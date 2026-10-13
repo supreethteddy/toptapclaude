@@ -969,11 +969,6 @@ class CreateLiveStreamScreenController extends BaseController
       return;
     }
 
-    if (titleController.text.trim().isEmpty) {
-      Loggers.info('Title is empty');
-      return showSnackBar(LKey.enterLiveStreamTitle.tr);
-    }
-
     User? user = myUser.value;
     if (user == null) {
       Loggers.error('User Not found. Cannot start live stream.');

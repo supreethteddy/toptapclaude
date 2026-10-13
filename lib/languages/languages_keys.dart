@@ -324,8 +324,7 @@ class LKey {
   static const String addOption = "Add option";
   static const String endPoll = "End poll";
   static const String votes = "votes";
-  static const String shareGoingLiveText =
-      "I'm about to go LIVE, join me!";
+  static const String shareGoingLiveText = "I'm about to go LIVE, join me!";
   static const String beautify = "Beautify";
   static const String effects = "Effects";
   static const String promote = "Promote";
@@ -356,11 +355,12 @@ class LKey {
   static const String findOpponentEmptyDescription =
       "No other creators are LIVE right now. Check back soon.";
   static const String challenge = "Challenge";
+  static const String guestsInYourLive = "Guests in your LIVE";
+  static const String otherCreatorsLive = "Other creators LIVE now";
   static const String battleInviteSent = "PK invite sent!";
   static const String battleInviteFailed =
       "Couldn't send that invite. Try again.";
-  static const String battleInviteExpired =
-      "That invite has expired.";
+  static const String battleInviteExpired = "That invite has expired.";
   static const String battleInviteTitle = "Incoming PK Battle";
   static const String battleInviteDescription =
       "@name wants to battle you. Accept?";
@@ -415,7 +415,8 @@ class LKey {
   static const String dailyRanking = "Daily Ranking";
   static const String today = "Today";
   static const String yourRankToday = "Your rank today";
-  static const String notRankedYet = "Not ranked yet — receive a gift to enter today's ranking";
+  static const String notRankedYet =
+      "Not ranked yet — receive a gift to enter today's ranking";
   static const String noRankingYetTitle = "No ranking yet";
   static const String noRankingYetDescription =
       "Hosts appear here as soon as they receive gifts today.";

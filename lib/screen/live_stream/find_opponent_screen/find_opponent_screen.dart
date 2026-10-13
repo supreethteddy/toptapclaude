@@ -59,23 +59,118 @@ class FindOpponentScreen extends StatelessWidget {
                 if (controller.isLoading.value) {
                   return const LoaderWidget();
                 }
+                final roomCoHosts = controller.roomCoHosts;
                 final candidates = controller.candidates;
                 return NoDataView(
-                  showShow: candidates.isEmpty,
+                  showShow: roomCoHosts.isEmpty && candidates.isEmpty,
                   title: LKey.findOpponentEmptyTitle.tr,
                   description: LKey.findOpponentEmptyDescription.tr,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    itemCount: candidates.length,
-                    itemBuilder: (context, index) => _OpponentCard(
-                        controller: controller, stream: candidates[index]),
+                  child: ListView(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    children: [
+                      if (roomCoHosts.isNotEmpty) ...[
+                        _SectionHeader(title: LKey.guestsInYourLive.tr),
+                        for (final user in roomCoHosts)
+                          _RoomGuestCard(controller: controller, user: user),
+                        const SizedBox(height: 20),
+                      ],
+                      if (candidates.isNotEmpty) ...[
+                        _SectionHeader(title: LKey.otherCreatorsLive.tr),
+                        for (final stream in candidates)
+                          _OpponentCard(controller: controller, stream: stream),
+                      ],
+                    ],
                   ),
                 );
               }),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 4),
+      child: Text(
+        title,
+        style: TextStyleCustom.outFitSemiBold600(
+            color: textLightGrey(context), fontSize: 13),
+      ),
+    );
+  }
+}
+
+class _RoomGuestCard extends StatelessWidget {
+  final FindOpponentScreenController controller;
+  final AppUser user;
+
+  const _RoomGuestCard({required this.controller, required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: ShapeDecoration(
+        color: bgLightGrey(context),
+        shape: SmoothRectangleBorder(
+            borderRadius:
+                SmoothBorderRadius(cornerRadius: 14, cornerSmoothing: 1)),
+      ),
+      child: Row(
+        children: [
+          CustomImage(
+            size: const Size(48, 48),
+            image: user.profile?.addBaseURL(),
+            fullName: user.fullname,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: FullNameWithBlueTick(
+              username: user.username,
+              isVerify: user.isVerify,
+              fontColor: adaptiveTextColor(context),
+              fontSize: 14,
+              iconSize: 16,
+            ),
+          ),
+          Obx(() {
+            final invited = controller.invitedCoHostIds.contains(user.userId);
+            return InkWell(
+              onTap: invited ? null : () => controller.inviteRoomCoHost(user),
+              child: Container(
+                height: 34,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
+                decoration: ShapeDecoration(
+                  color: invited ? bgLightGrey(context) : ColorRes.likeRed,
+                  shape: SmoothRectangleBorder(
+                      borderRadius: SmoothBorderRadius(
+                          cornerRadius: 20, cornerSmoothing: 1),
+                      side: invited
+                          ? BorderSide(color: adaptiveBorderColor(context))
+                          : BorderSide.none),
+                ),
+                child: Text(
+                  invited ? LKey.battleInviteSent.tr : LKey.invite.tr,
+                  style: TextStyleCustom.outFitMedium500(
+                      color: invited ? textLightGrey(context) : Colors.white,
+                      fontSize: 13),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -98,7 +193,8 @@ class _OpponentCard extends StatelessWidget {
       decoration: ShapeDecoration(
         color: bgLightGrey(context),
         shape: SmoothRectangleBorder(
-            borderRadius: SmoothBorderRadius(cornerRadius: 14, cornerSmoothing: 1)),
+            borderRadius:
+                SmoothBorderRadius(cornerRadius: 14, cornerSmoothing: 1)),
       ),
       child: Row(
         children: [
@@ -148,8 +244,7 @@ class _OpponentCard extends StatelessWidget {
                 child: Text(
                   invited ? LKey.battleInviteSent.tr : LKey.challenge.tr,
                   style: TextStyleCustom.outFitMedium500(
-                      color:
-                          invited ? textLightGrey(context) : Colors.white,
+                      color: invited ? textLightGrey(context) : Colors.white,
                       fontSize: 13),
                 ),
               ),
