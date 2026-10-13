@@ -152,42 +152,49 @@ class HostAndGuestGridView extends StatelessWidget {
 
       return Align(
         alignment: Alignment.topCenter,
-        child: SizedBox(
-          height: blockHeight,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: _hostFlex,
-                child: _resolveSeat(host, controller,
-                    isNameAndSpeakerVisible: false),
-              ),
-              const SizedBox(width: _cellSpacing),
-              Expanded(
-                flex: _gridFlex,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (int r = 0; r < rows; r++) ...[
-                      if (r > 0) const SizedBox(height: _cellSpacing),
-                      SizedBox(
-                        height: cellHeight,
-                        child: Row(
-                          children: [
-                            for (int c = 0; c < _gridColumns; c++) ...[
-                              if (c > 0) const SizedBox(width: _cellSpacing),
-                              Expanded(
-                                child: _gridCell(r * _gridColumns + c, guests),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+        child: Padding(
+          // Clears the header (avatar/name/badges) the same way
+          // BattleView's margin does, so a tile's own name/mic overlay
+          // never lands underneath the header's eye-count/power icons.
+          padding: EdgeInsets.only(top: controller.topHeaderHeight.value),
+          child: SizedBox(
+            height: blockHeight,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: _hostFlex,
+                  child: _resolveSeat(host, controller,
+                      isNameAndSpeakerVisible: false),
                 ),
-              ),
-            ],
+                const SizedBox(width: _cellSpacing),
+                Expanded(
+                  flex: _gridFlex,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (int r = 0; r < rows; r++) ...[
+                        if (r > 0) const SizedBox(height: _cellSpacing),
+                        SizedBox(
+                          height: cellHeight,
+                          child: Row(
+                            children: [
+                              for (int c = 0; c < _gridColumns; c++) ...[
+                                if (c > 0) const SizedBox(width: _cellSpacing),
+                                Expanded(
+                                  child:
+                                      _gridCell(r * _gridColumns + c, guests),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
