@@ -54,7 +54,8 @@ class _LiveStreamAudienceTopViewState extends State<LiveStreamAudienceTopView> {
   // instead of a fixed guess that used to land it on the title row.
   void _reportHeight(_) {
     final height = _measureKey.currentContext?.size?.height;
-    if (height != null && (height - controller.topHeaderHeight.value).abs() > 0.5) {
+    if (height != null &&
+        (height - controller.topHeaderHeight.value).abs() > 0.5) {
       controller.topHeaderHeight.value = height;
     }
   }
@@ -484,7 +485,7 @@ class _HostFollowPillState extends State<_HostFollowPill> {
           decoration: BoxDecoration(
             color: isFollowing
                 ? whitePure(context).withValues(alpha: .15)
-                : blueFollow(context),
+                : ColorRes.likeRed,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: whitePure(context).withValues(alpha: .3),

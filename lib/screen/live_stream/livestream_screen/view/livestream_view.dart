@@ -22,9 +22,7 @@ class LivestreamView extends StatelessWidget {
   final LivestreamScreenController controller;
 
   const LivestreamView(
-      {super.key,
-      required this.streamViews,
-      required this.controller});
+      {super.key, required this.streamViews, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +45,8 @@ class LivestreamView extends StatelessWidget {
       final seats = stream.stageIds
           .map((id) => StageSeat(
                 userId: id,
-                streamView: streamViews
-                    .firstWhereOrNull((v) => v.streamId == '$id'),
+                streamView:
+                    streamViews.firstWhereOrNull((v) => v.streamId == '$id'),
                 user: liveUsers.firstWhereOrNull((u) => u.userId == id),
               ))
           .toList();
@@ -58,8 +56,8 @@ class LivestreamView extends StatelessWidget {
       }
 
       return switch (seats.length) {
-        1 => _resolveSeat(seats.first, controller,
-            isNameAndSpeakerVisible: false),
+        1 =>
+          _resolveSeat(seats.first, controller, isNameAndSpeakerVisible: false),
         // 2+ participants (host + co-hosts + Guest Call guests, up to 10):
         // host left, guests in a grid on the right.
         _ => HostAndGuestGridView(controller: controller, seats: seats),
@@ -71,8 +69,7 @@ class LivestreamView extends StatelessWidget {
     return Center(
         child: Text(
       'No users in livestream',
-      style: TextStyleCustom.unboundedMedium500(
-          color: Colors.white),
+      style: TextStyleCustom.unboundedMedium500(color: Colors.white),
     ));
   }
 }
@@ -127,6 +124,15 @@ class HostAndGuestGridView extends StatelessWidget {
   // exactly, and a 9th seated guest just grows the grid to 2x5 rather than
   // being dropped.
   static const int _maxGridSlots = 8;
+  static const int _gridColumns = 2;
+  static const int _hostFlex = 45;
+  static const int _gridFlex = 55;
+
+  // Grid cells are roughly square (reference screenshot), not stretched to
+  // fill the whole screen height — height is derived from the cell's own
+  // width instead of an Expanded filling whatever room the Stack gives it.
+  static const double _cellAspectRatio = 1;
+  static const double _cellSpacing = 3;
 
   @override
   Widget build(BuildContext context) {
@@ -134,38 +140,58 @@ class HostAndGuestGridView extends StatelessWidget {
     final guests = seats.skip(1).toList();
     final slotCount =
         guests.length > _maxGridSlots ? guests.length : _maxGridSlots;
-    final rows = (slotCount / 2).ceil();
+    final rows = (slotCount / _gridColumns).ceil();
 
-    return Row(
-      children: [
-        Expanded(
-          flex: 45,
-          child: _resolveSeat(host, controller,
-              isNameAndSpeakerVisible: false),
-        ),
-        Expanded(
-          flex: 55,
-          child: Column(
+    return LayoutBuilder(builder: (context, constraints) {
+      final gridAreaWidth =
+          constraints.maxWidth * _gridFlex / (_hostFlex + _gridFlex);
+      final cellWidth =
+          (gridAreaWidth - _cellSpacing * (_gridColumns - 1)) / _gridColumns;
+      final cellHeight = cellWidth / _cellAspectRatio;
+      final blockHeight = rows * cellHeight + _cellSpacing * (rows - 1);
+
+      return Align(
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          height: blockHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (int r = 0; r < rows; r++)
-                Expanded(
-                  child: Row(
-                    children: [
-                      for (int c = 0; c < 2; c++)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(1.5),
-                            child: _gridCell(r * 2 + c, guests),
-                          ),
+              Expanded(
+                flex: _hostFlex,
+                child: _resolveSeat(host, controller,
+                    isNameAndSpeakerVisible: false),
+              ),
+              const SizedBox(width: _cellSpacing),
+              Expanded(
+                flex: _gridFlex,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (int r = 0; r < rows; r++) ...[
+                      if (r > 0) const SizedBox(height: _cellSpacing),
+                      SizedBox(
+                        height: cellHeight,
+                        child: Row(
+                          children: [
+                            for (int c = 0; c < _gridColumns; c++) ...[
+                              if (c > 0) const SizedBox(width: _cellSpacing),
+                              Expanded(
+                                child: _gridCell(r * _gridColumns + c, guests),
+                              ),
+                            ],
+                          ],
                         ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
-      ],
-    );
+      );
+    });
   }
 
   Widget _gridCell(int index, List<StageSeat> guests) {
@@ -215,59 +241,51 @@ class LiveStreamUserView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      LivestreamUserState? state = controller
-          .liveUsersStates
-          .firstWhereOrNull((element) =>
-              element.userId ==
-              int.parse(streamingView?.streamId ?? ''));
-      AppUser? liveUser = controller
-          .firestoreController.users
-          .firstWhereOrNull((element) =>
-              element.userId ==
-              int.parse(streamingView?.streamId ?? ''));
+      LivestreamUserState? state = controller.liveUsersStates.firstWhereOrNull(
+          (element) =>
+              element.userId == int.parse(streamingView?.streamId ?? ''));
+      AppUser? liveUser = controller.firestoreController.users.firstWhereOrNull(
+          (element) =>
+              element.userId == int.parse(streamingView?.streamId ?? ''));
 
       return Stack(
         children: [
-          if (streamingView != null)
-            streamingView!.streamView,
+          if (streamingView != null) streamingView!.streamView,
           if (state?.isVideoOn == false)
-            Stack(
-              children: [
-                CustomImage(
-                    size: Size(Get.width, Get.height),
-                    image: liveUser?.profile?.addBaseURL(),
-                    fullName: liveUser?.fullname,
-                    radius: 0),
-                LayoutBuilder(
-                  builder: (context, constraints) =>
-                      ClipRect(
-                    child: BackdropFilter(
-                        filter: ImageFilter.blur(
-                            sigmaX: 30, sigmaY: 30),
-                        child: Container(
-                          width: constraints.maxWidth,
-                          height: constraints.maxHeight,
-                          color: Colors.black
-                              .withValues(alpha: .5),
-                        )),
+            LayoutBuilder(builder: (context, outerConstraints) {
+              return Stack(
+                children: [
+                  CustomImage(
+                      size: Size(outerConstraints.maxWidth,
+                          outerConstraints.maxHeight),
+                      image: liveUser?.profile?.addBaseURL(),
+                      fullName: liveUser?.fullname,
+                      radius: 0),
+                  LayoutBuilder(
+                    builder: (context, constraints) => ClipRect(
+                      child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                          child: Container(
+                            width: constraints.maxWidth,
+                            height: constraints.maxHeight,
+                            color: Colors.black.withValues(alpha: .5),
+                          )),
+                    ),
                   ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: LayoutBuilder(
-                      builder: (context, constraints) {
-                    double width =
-                        ((constraints.maxWidth * 50) / 100);
-                    return CustomImage(
-                        size: Size(width, width),
-                        image:
-                            liveUser?.profile?.addBaseURL(),
-                        fullName: liveUser?.fullname,
-                        strokeWidth: 3);
-                  }),
-                ),
-              ],
-            ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      double width = ((constraints.maxWidth * 50) / 100);
+                      return CustomImage(
+                          size: Size(width, width),
+                          image: liveUser?.profile?.addBaseURL(),
+                          fullName: liveUser?.fullname,
+                          strokeWidth: 3);
+                    }),
+                  ),
+                ],
+              );
+            }),
           if (state?.isMuted == true)
             Align(
                 alignment: Alignment.center,
@@ -275,16 +293,14 @@ class LiveStreamUserView extends StatelessWidget {
                   AssetRes.icMicOff,
                   height: 25,
                   width: 25,
-                  color: whitePure(context)
-                      .withValues(alpha: .6),
+                  color: whitePure(context).withValues(alpha: .6),
                 )),
           if (isNameAndSpeakerVisible)
             _buildUserInfoOverlay(context,
                 streamView: streamingView!,
                 state: state.obs,
                 liveUser: liveUser,
-                isMuteVisible:
-                    liveUser?.userId != controller.myUserId)
+                isMuteVisible: liveUser?.userId != controller.myUserId)
         ],
       );
     });
@@ -307,22 +323,19 @@ class LiveStreamUserView extends StatelessWidget {
             if (alignment != null && isMuteVisible)
               MuteUnMuteButton(
                 isMute: (streamView?.isMuted ?? false).obs,
-                onTap: () => controller
-                    .toggleStreamAudio(liveUser?.userId),
+                onTap: () => controller.toggleStreamAudio(liveUser?.userId),
               ),
             FullNameWithBlueTick(
               username: liveUser?.username,
               fontColor: whitePure(context),
               fontSize: 12,
               isVerify: liveUser?.isVerify,
-              onTap: () =>
-                  _showUserActionSheet(liveUser!, state),
+              onTap: () => _showUserActionSheet(liveUser!, state),
             ),
             if (alignment == null && isMuteVisible)
               MuteUnMuteButton(
                 isMute: (streamView?.isMuted ?? false).obs,
-                onTap: () => controller
-                    .toggleStreamAudio(liveUser?.userId),
+                onTap: () => controller.toggleStreamAudio(liveUser?.userId),
               ),
           ],
         ),
@@ -330,8 +343,7 @@ class LiveStreamUserView extends StatelessWidget {
     );
   }
 
-  void _showUserActionSheet(
-      AppUser user, Rx<LivestreamUserState?> state) {
+  void _showUserActionSheet(AppUser user, Rx<LivestreamUserState?> state) {
     Get.bottomSheet(
       LiveStreamUserInfoSheet(
           isAudience: !controller.isHost,
@@ -346,8 +358,7 @@ class MuteUnMuteButton extends StatelessWidget {
   final RxBool isMute;
   final VoidCallback? onTap;
 
-  const MuteUnMuteButton(
-      {super.key, required this.isMute, this.onTap});
+  const MuteUnMuteButton({super.key, required this.isMute, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -358,9 +369,7 @@ class MuteUnMuteButton extends StatelessWidget {
       },
       child: Obx(
         () => Image.asset(
-          isMute.value
-              ? AssetRes.icSpeakerMute
-              : AssetRes.icSpeaker,
+          isMute.value ? AssetRes.icSpeakerMute : AssetRes.icSpeaker,
           width: 24,
           height: 24,
           color: whitePure(context).withValues(alpha: .5),
