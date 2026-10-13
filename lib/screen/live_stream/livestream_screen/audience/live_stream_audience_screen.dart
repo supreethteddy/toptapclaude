@@ -26,11 +26,20 @@ class LiveStreamAudienceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Explicit <LivestreamScreenController> type argument on Get.put: see
+    // the long comment on LiveVideoPreviewCard._attach() in
+    // live_discovery_feed_screen.dart — without it, this ternary's downward
+    // context can make Dart infer the type argument as
+    // LivestreamScreenController? and silently register under a different
+    // GetX key than every other Get.find/isRegistered<LivestreamScreenController>
+    // call site in the app looks up.
     final controller = Get.isRegistered<LivestreamScreenController>(
             tag: livestream.roomID)
         ? Get.find<LivestreamScreenController>(tag: livestream.roomID)
-        : Get.put(LivestreamScreenController(livestream.obs, isHost),
-            tag: livestream.roomID);
+        : Get.put<LivestreamScreenController>(
+            LivestreamScreenController(livestream.obs, isHost),
+            tag: livestream.roomID,
+          );
 
     return Scaffold(
       backgroundColor: blackPure(context),

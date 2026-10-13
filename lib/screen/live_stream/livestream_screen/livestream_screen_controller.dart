@@ -170,6 +170,17 @@ class LivestreamScreenController extends BaseController
 
   Widget? hostPreview;
 
+  /// True while this controller exists purely so a viewer can browse this
+  /// room's real video in LiveDiscoveryFeedScreen without being a counted
+  /// participant — loginRoom() still does the real Zego room login (that's
+  /// what lets the video stream come through), but skips every Firestore
+  /// read/write an audience join normally does: no watching_count
+  /// increment, no "X joined" comment, no presence heartbeat. Flipped to
+  /// false (and the skipped join completed) by
+  /// upgradeFromPreviewToJoined() once the viewer actually taps in. Always
+  /// false for a host controller and for every other existing entry point.
+  bool isPreviewOnly;
+
   /// Daily ranking (coins received today) for the host of this LIVE.
   LiveRankingController? rankingController;
 
@@ -186,7 +197,8 @@ class LivestreamScreenController extends BaseController
 
   String get _leagueTag => 'league_${liveData.value.roomID}';
 
-  LivestreamScreenController(this.liveData, this.isHost, {this.hostPreview});
+  LivestreamScreenController(this.liveData, this.isHost,
+      {this.hostPreview, this.isPreviewOnly = false});
 
   /// Room IDs of every [LivestreamScreenController] currently alive, tagged
   /// one-per-room so several rooms can be mounted at once (needed for
@@ -472,11 +484,21 @@ class LivestreamScreenController extends BaseController
     // resumeHomeFeed() this class already calls in onClose(). A harmless
     // no-op if the reels feed was already paused or was never playing.
     ReelsScreenController.pauseHomeFeed();
-    activeRoomIds.add(liveData.value.roomID ?? '');
-    // Tell LiveInviteWatcher this room already has its screen open, so an
-    // out-of-room invite for it is handled by the in-room INVITED path
-    // instead of double-prompting with a second sheet.
-    LiveInviteWatcher.activeRoomIds.add(liveData.value.roomID ?? '');
+    // A preview-only controller isn't "a LIVE screen the viewer has open"
+    // for the purposes of these two guards — LiveStatusController.openLive
+    // checks activeRoomIds.isNotEmpty (any room, not just this one) before
+    // letting a LIVE-ring avatar elsewhere in the app open a stream, which
+    // would wrongly refuse while merely browsing the discovery feed. Added
+    // instead inside upgradeFromPreviewToJoined() once the viewer actually
+    // taps in. onClose()'s removal stays unconditional — Set.remove() on an
+    // id that was never added is a harmless no-op.
+    if (!isPreviewOnly) {
+      activeRoomIds.add(liveData.value.roomID ?? '');
+      // Tell LiveInviteWatcher this room already has its screen open, so an
+      // out-of-room invite for it is handled by the in-room INVITED path
+      // instead of double-prompting with a second sheet.
+      LiveInviteWatcher.activeRoomIds.add(liveData.value.roomID ?? '');
+    }
     if (isHost) {
       _outgoingInvitesSub = LiveInviteService.instance
           .watchOutgoing(myUserId, liveData.value.roomID ?? '')
@@ -819,101 +841,136 @@ class LivestreamScreenController extends BaseController
         return result;
       }
 
-      // SessionManager.currentUser can still be transiently null this early
-      // in the screen's lifecycle (session restore from disk racing against
-      // this screen's first frame) — myUserId falls back to 0 in that
-      // window. Every write below is keyed by doc(myUserId.toString()), so
-      // a 0 read here doesn't just fail — it creates/touches a *real*,
-      // separate Firestore doc at userState/0 with no way back to the
-      // actual viewer. That doc then sits in this room (room id = host's
-      // own id, so it's the same room every time this host goes live) and
-      // the invite button on it fails forever with "userId is null" even
-      // though the real viewer is working perfectly otherwise. Wait briefly
-      // for a valid session instead of racing ahead with a bad id.
-      var waited = 0;
-      while (myUserId == 0 && waited < 2000) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        waited += 50;
-      }
-      if (myUserId == 0) {
-        Loggers.error(
-            'loginRoom: myUserId still 0 after ${waited}ms wait — session not restored, aborting audience join to avoid writing a corrupt state doc.');
+      if (isPreviewOnly) {
+        // Browsing-only: the Zego room login above is already enough for
+        // the real video to arrive via onRoomStreamUpdate/streamViews — no
+        // Firestore read or write happens below, so this can never count
+        // as a participant, bump watching_count, or fire the "joined"
+        // comment. upgradeFromPreviewToJoined() runs the skipped join (via
+        // _completeAudienceJoin below) if the viewer taps in to watch for
+        // real.
         return result;
       }
 
-      final userRef = liveStreamUsersRef.doc(myUserId.toString());
-      final stateRef = liveStreamUserStatesRef.doc(myUserId.toString());
-
-      // Set user document if not exists
-      if (!(await userRef.get()).exists) {
-        final userModel = myUser.value?.appUser;
-        if (userModel != null) {
-          await userRef.set(userModel.toJson());
-        }
-      }
-
-      // Fetch user state
-      final stateSnap = await stateRef
-          .withConverter(
-            fromFirestore: (snapshot, _) =>
-                LivestreamUserState.fromJson(snapshot.data()!),
-            toFirestore: (value, _) => value.toJson(),
-          )
-          .get();
-
-      if (!stateSnap.exists) {
-        User? myUser = this.myUser.value;
-        if (myUser != null) {
-          final initialState = myUser.streamState(time: 0);
-          await stateRef.set(initialState.toJson());
-          _sendCommentToFirestore(type: LivestreamCommentType.joined);
-        } else {
-          Loggers.error('User not found');
-        }
-      } else {
-        final state = stateSnap.data();
-        if (state != null) {
-          updateUserStateToFirestore(
-            myUserId,
-            type: state.type,
-            isMuted: state.isMuted,
-            isVideoOn: state.isVideoOn,
-          );
-        }
-      }
-
-      await _joinAudience();
-      _startPresenceMaintenance();
-
-      // Arriving here via an accepted out-of-room invite (Friends /
-      // Recommended tab): land in INVITED so the existing
-      // updateStateAction -> _showJoinStreamSheet -> publishCoHostStream
-      // path takes over, exactly like the in-room invite path. Re-check the
-      // current state first so a room-state change that raced ahead of us
-      // (already promoted, or re-invited to a different room) is not
-      // clobbered.
-      final pendingInvite = LiveInviteService.instance.takeAcceptedFor(roomID);
-      if (pendingInvite != null) {
-        final latestState =
-            (await stateRef.get()).data() as Map<String, dynamic>?;
-        final currentType = LivestreamUserType.fromStringOrNull(
-          latestState?[FirebaseConst.type],
-        );
-        if (currentType == null || currentType == LivestreamUserType.audience) {
-          await updateUserStateToFirestore(
-            myUserId,
-            type: LivestreamUserType.invited,
-            invitedRole: pendingInvite.role,
-          );
-        }
-      }
-
+      await _completeAudienceJoin(roomID);
       return result;
     } catch (e) {
       Loggers.error('Error in loginRoom: $e');
       showSnackBar('Something went wrong while joining the room.');
       rethrow;
     }
+  }
+
+  /// The actual audience-join Firestore work: create the user doc, create
+  /// or sync the user_state doc (firing the "joined" comment exactly once,
+  /// the first time that doc is created), bump watching_count, start the
+  /// presence heartbeat, and resolve any pending out-of-room invite. Split
+  /// out of loginRoom() so it can also run later, standalone, when a
+  /// preview-only controller is upgraded to a real join (see
+  /// [upgradeFromPreviewToJoined]) without repeating the Zego room login
+  /// that already happened.
+  Future<void> _completeAudienceJoin(String roomID) async {
+    // SessionManager.currentUser can still be transiently null this early
+    // in the screen's lifecycle (session restore from disk racing against
+    // this screen's first frame) — myUserId falls back to 0 in that
+    // window. Every write below is keyed by doc(myUserId.toString()), so
+    // a 0 read here doesn't just fail — it creates/touches a *real*,
+    // separate Firestore doc at userState/0 with no way back to the
+    // actual viewer. That doc then sits in this room (room id = host's
+    // own id, so it's the same room every time this host goes live) and
+    // the invite button on it fails forever with "userId is null" even
+    // though the real viewer is working perfectly otherwise. Wait briefly
+    // for a valid session instead of racing ahead with a bad id.
+    var waited = 0;
+    while (myUserId == 0 && waited < 2000) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      waited += 50;
+    }
+    if (myUserId == 0) {
+      Loggers.error(
+          '_completeAudienceJoin: myUserId still 0 after ${waited}ms wait — session not restored, aborting audience join to avoid writing a corrupt state doc.');
+      return;
+    }
+    final userRef = liveStreamUsersRef.doc(myUserId.toString());
+    final stateRef = liveStreamUserStatesRef.doc(myUserId.toString());
+
+    // Set user document if not exists
+    if (!(await userRef.get()).exists) {
+      final userModel = myUser.value?.appUser;
+      if (userModel != null) {
+        await userRef.set(userModel.toJson());
+      }
+    }
+
+    // Fetch user state
+    final stateSnap = await stateRef
+        .withConverter(
+          fromFirestore: (snapshot, _) =>
+              LivestreamUserState.fromJson(snapshot.data()!),
+          toFirestore: (value, _) => value.toJson(),
+        )
+        .get();
+
+    if (!stateSnap.exists) {
+      User? myUser = this.myUser.value;
+      if (myUser != null) {
+        final initialState = myUser.streamState(time: 0);
+        await stateRef.set(initialState.toJson());
+        _sendCommentToFirestore(type: LivestreamCommentType.joined);
+      } else {
+        Loggers.error('User not found');
+      }
+    } else {
+      final state = stateSnap.data();
+      if (state != null) {
+        updateUserStateToFirestore(
+          myUserId,
+          type: state.type,
+          isMuted: state.isMuted,
+          isVideoOn: state.isVideoOn,
+        );
+      }
+    }
+
+    await _joinAudience();
+    _startPresenceMaintenance();
+
+    // Arriving here via an accepted out-of-room invite (Friends /
+    // Recommended tab): land in INVITED so the existing
+    // updateStateAction -> _showJoinStreamSheet -> publishCoHostStream
+    // path takes over, exactly like the in-room invite path. Re-check the
+    // current state first so a room-state change that raced ahead of us
+    // (already promoted, or re-invited to a different room) is not
+    // clobbered.
+    final pendingInvite = LiveInviteService.instance.takeAcceptedFor(roomID);
+    if (pendingInvite != null) {
+      final latestState =
+          (await stateRef.get()).data() as Map<String, dynamic>?;
+      final currentType = LivestreamUserType.fromStringOrNull(
+        latestState?[FirebaseConst.type],
+      );
+      if (currentType == null || currentType == LivestreamUserType.audience) {
+        await updateUserStateToFirestore(
+          myUserId,
+          type: LivestreamUserType.invited,
+          invitedRole: pendingInvite.role,
+        );
+      }
+    }
+  }
+
+  /// Called when a viewer taps into a room they were only previewing in
+  /// LiveDiscoveryFeedScreen — runs the audience join that loginRoom()
+  /// deliberately skipped while isPreviewOnly was true (no re-login needed,
+  /// Zego is already connected). A no-op if this controller was never in
+  /// preview mode, or already upgraded.
+  Future<void> upgradeFromPreviewToJoined() async {
+    if (!isPreviewOnly) return;
+    isPreviewOnly = false;
+    final roomID = liveData.value.roomID ?? '';
+    activeRoomIds.add(roomID);
+    LiveInviteWatcher.activeRoomIds.add(roomID);
+    await _completeAudienceJoin(roomID);
   }
 
   void startListenEvent() async {

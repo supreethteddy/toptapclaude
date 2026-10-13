@@ -190,59 +190,85 @@ class CreateLiveStreamScreen extends StatelessWidget {
                       // for the same reason. Re-enabling it would require new
                       // backend/engine capability, which is out of scope for
                       // this cosmetic pass.
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Obx(() => _buildFeatureButton(
-                                icon: Icons.auto_fix_high,
-                                label: LKey.beautify.tr,
-                                isActive: controller.isBeautifyOn.value,
-                                onTap: controller.onBeautifyTap,
-                              )),
-                          Obx(() => _buildFeatureButton(
-                                icon: Icons.auto_awesome,
-                                label: LKey.effects.tr,
-                                isActive: controller.isColorEnhancementOn.value,
-                                onTap: controller.onEffectsTap,
-                              )),
-                          _buildFeatureButton(
-                            icon: Icons.settings_outlined,
-                            label: LKey.settings.tr,
-                            onTap: controller.onSettingsTap,
+                      // Wrapped in a horizontally-scrollable, centered row
+                      // instead of a bare Row(spaceEvenly): the three pills'
+                      // intrinsic width (padding + icon + label) is right at
+                      // the edge of the screen width on some devices — a
+                      // bare Row has no give and silently overflows/clips a
+                      // few pixels off the right edge there (debug builds
+                      // show it as the yellow/black hazard-stripe banner;
+                      // release builds just clip it). Center still shows it
+                      // exactly as before, evenly spaced, on any screen wide
+                      // enough to fit; only a genuinely narrow screen falls
+                      // back to a short scroll instead of clipping.
+                      Center(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Obx(() => _buildFeatureButton(
+                                    icon: Icons.auto_fix_high,
+                                    label: LKey.beautify.tr,
+                                    isActive: controller.isBeautifyOn.value,
+                                    onTap: controller.onBeautifyTap,
+                                  )),
+                              const SizedBox(width: 16),
+                              Obx(() => _buildFeatureButton(
+                                    icon: Icons.auto_awesome,
+                                    label: LKey.effects.tr,
+                                    isActive:
+                                        controller.isColorEnhancementOn.value,
+                                    onTap: controller.onEffectsTap,
+                                  )),
+                              const SizedBox(width: 16),
+                              _buildFeatureButton(
+                                icon: Icons.settings_outlined,
+                                label: LKey.settings.tr,
+                                onTap: controller.onSettingsTap,
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
 
                       const SizedBox(height: 12),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // _buildFeatureButton(
-                          //   icon: Icons.music_note,
-                          //   label: 'Music',
-                          //   onTap: () {
-                          //     // Handle music functionality
-                          //   },
-                          // ),
-                          Obx(() => _buildFeatureButton(
-                                icon: Icons.flag,
-                                label: 'Live Goal',
-                                isActive: controller.hasLiveGoal.value,
-                                onTap: controller.onLiveGoalTap,
-                              )),
-                          Obx(() => _buildFeatureButton(
-                                icon: Icons.diamond_outlined,
-                                label: LKey.fanClub.tr,
-                                isActive: controller.hasFanClub.value,
-                                onTap: controller.onFanClubTap,
-                              )),
-                          _buildFeatureButton(
-                            icon: Icons.ios_share,
-                            label: LKey.share.tr,
-                            onTap: controller.shareGoingLive,
+                      Center(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // _buildFeatureButton(
+                              //   icon: Icons.music_note,
+                              //   label: 'Music',
+                              //   onTap: () {
+                              //     // Handle music functionality
+                              //   },
+                              // ),
+                              Obx(() => _buildFeatureButton(
+                                    icon: Icons.flag,
+                                    label: 'Live Goal',
+                                    isActive: controller.hasLiveGoal.value,
+                                    onTap: controller.onLiveGoalTap,
+                                  )),
+                              const SizedBox(width: 16),
+                              Obx(() => _buildFeatureButton(
+                                    icon: Icons.diamond_outlined,
+                                    label: LKey.fanClub.tr,
+                                    isActive: controller.hasFanClub.value,
+                                    onTap: controller.onFanClubTap,
+                                  )),
+                              const SizedBox(width: 16),
+                              _buildFeatureButton(
+                                icon: Icons.ios_share,
+                                label: LKey.share.tr,
+                                onTap: controller.shareGoingLive,
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
 
                       const SizedBox(height: 12),
