@@ -1759,7 +1759,20 @@ class LivestreamScreenController extends BaseController
   void fetchLiveStreamComments() {
     Loggers.info('Fetching live stream comments...');
     liveStreamCommentsListener?.cancel();
+    // A room's comments subcollection lives at liveStreams/{roomID} —
+    // roomID is the host's own user id, so it's the exact same Firestore
+    // path every time this host ever goes live. An unfiltered listener on
+    // that path fires every historical comment (including old "joined the
+    // stream" messages from accounts that visited a *previous* session) as
+    // a fresh "added" change the instant it subscribes — Firestore replays
+    // the full current matching set on first snapshot, with no concept of
+    // "only what's new since I opened this screen". Comments are id'd by
+    // their own creation-time epoch millis (see _sendCommentToFirestore),
+    // so scoping to this session's own createdAt excludes everything
+    // written before this particular stream started.
     liveStreamCommentsListener = liveStreamCommentsRef
+        .where(FirebaseConst.id,
+            isGreaterThanOrEqualTo: liveData.value.createdAt ?? 0)
         .withConverter(
           fromFirestore: (snapshot, options) {
             if (!snapshot.exists) {
