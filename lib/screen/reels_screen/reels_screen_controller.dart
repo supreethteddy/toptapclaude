@@ -105,6 +105,7 @@ class ReelsScreenController extends BaseController {
   void _setupDashboardController() {
     dashboardController.onBottomIndexChanged = (index) {
       if (index == 0) {
+        if (isPausedForOverlay) return; // see _playControllerAtIndex
         videoControllers[position.value]?.play();
       } else {
         videoControllers[position.value]?.pause();
@@ -460,6 +461,17 @@ class ReelsScreenController extends BaseController {
     // Validate index and home page state
     if (dashboardController.selectedPageIndex.value != 0 &&
         isHomePage) {
+      return;
+    }
+    // A full-screen LIVE route (Go Live setup, a stream, the discovery feed)
+    // is a pushed route, not a tab: selectedPageIndex stays 0 underneath it,
+    // so the guard above lets autoplay through. Every play path in this
+    // controller funnels through here, so this is the one place to honour
+    // the overlay pause. Reproduced on-device: Home -> "+" -> Go Live leaked
+    // reel audio behind the camera screen, while Home -> other tab -> "+"
+    // -> Go Live did not -- the only difference being that guard.
+    if (isPausedForOverlay) {
+      Loggers.info('Skipping play $index: home feed paused for an overlay');
       return;
     }
 
