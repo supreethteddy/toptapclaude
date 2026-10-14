@@ -278,6 +278,18 @@ class CreateLiveStreamScreenController extends BaseController
       await zegoEngine.enableCamera(false);
 
       if (!deepArController.isInitialized) {
+        // zegoEngine.enableCamera(false) resolving only means Zego has been
+        // told to release the camera, not that the physical device is free
+        // yet. deepArController.initialize() opens that same camera
+        // synchronously on Android's main thread (DeepArPlugin.
+        // initializeDeepAR -> cleanupNativeResources ->
+        // runOnDeepArThreadBlocking), so if Zego hasn't actually let go,
+        // DeepAR's native call blocks the main thread waiting for a camera
+        // handle someone else still holds -- an ANR, not a catchable Dart
+        // exception. Reproduced on-device (two /data/anr dumps logged at
+        // the exact moment of a filter tap). This grace delay gives the
+        // native camera HAL time to finish the release first.
+        await Future.delayed(const Duration(milliseconds: 500));
         final result = await deepArController.initialize(
           androidLicenseKey: _setting?.deeparAndroidKey,
           iosLicenseKey: _setting?.deeparIOSKey,
