@@ -970,6 +970,16 @@ class LivestreamScreenController extends BaseController
     final roomID = liveData.value.roomID ?? '';
     activeRoomIds.add(roomID);
     LiveInviteWatcher.activeRoomIds.add(roomID);
+    // Every stream already playing silently for the preview (see
+    // startPlayStream's isPreviewOnly mute) needs its audio turned back on
+    // now that this is a real join, not just a browse.
+    for (final view in streamViews) {
+      if (view.isMuted) {
+        zegoEngine.mutePlayStreamAudio(view.streamId, false);
+        view.isMuted = false;
+      }
+    }
+    streamViews.refresh();
     await _completeAudienceJoin(roomID);
   }
 
@@ -1100,10 +1110,19 @@ class LivestreamScreenController extends BaseController
           canvas: canvas,
           config: config,
         );
+        // A preview-only controller (LiveDiscoveryFeedScreen browsing, see
+        // isPreviewOnly) is meant to be silent -- real video, no audio --
+        // until the viewer actually taps in. startPlayingStream() has no
+        // muted option of its own, so mute right after starting or every
+        // stream in a previewed room plays its audio out loud the instant
+        // it's detected, with no join on this viewer's part.
+        if (isPreviewOnly) {
+          zegoEngine.mutePlayStreamAudio(streamID, true);
+        }
       }).then((canvasViewWidget) {
         if (canvasViewWidget != null) {
           streamViews.add(
-            StreamView(streamID, streamViewId, canvasViewWidget, false),
+            StreamView(streamID, streamViewId, canvasViewWidget, isPreviewOnly),
           );
         }
         Loggers.success(
