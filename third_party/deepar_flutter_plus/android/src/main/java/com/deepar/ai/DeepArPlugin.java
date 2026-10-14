@@ -34,10 +34,12 @@ import ai.deepar.ar.CameraResolutionPreset;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.StandardMethodCodec;
 
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.view.TextureRegistry;
@@ -66,6 +68,20 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
     /// This local reference serves to register the plugin with the Flutter Engine and unregister it
     /// when the Flutter Engine is detached from the Activity
     private MethodChannel cameraXChannel, channel;
+    // cleanupNativeResources() -> deepAR.release() (closed-source DeepAR SDK)
+    // has been observed on-device to block for 3-5+ seconds, apparently
+    // whenever the camera device is under any contention. Both channels'
+    // handlers run on Android's main thread by default, and that release
+    // call is reachable from both (initializeDeepAR() on this channel,
+    // handleCameraHandlerDestroyed() -> runOnUiThread() on the camera
+    // channel's "destroy"), so either path alone was enough to freeze the
+    // UI past Android's ANR threshold -- confirmed via /data/anr dumps at
+    // the exact moment of a filter tap, even after sequencing fixes on the
+    // Flutter side removed the avoidable *extra* init/destroy calls. A
+    // shared background TaskQueue moves the dispatch itself off the main
+    // thread, so however long the native SDK legitimately takes, it can
+    // only ever slow down the loader -- never block input or trigger ANR.
+    private BinaryMessenger.TaskQueue backgroundTaskQueue;
 
     private final String TAG = "DEEPAR_LOGS";
     private Activity activity;
@@ -110,7 +126,11 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
     }
 
     private void setDeepArMethodChannel() {
-        channel = new MethodChannel(flutterPlugin.getBinaryMessenger(), MethodStrings.generalChannel);
+        if (backgroundTaskQueue == null) {
+            backgroundTaskQueue = flutterPlugin.getBinaryMessenger().makeBackgroundTaskQueue();
+        }
+        channel = new MethodChannel(flutterPlugin.getBinaryMessenger(), MethodStrings.generalChannel,
+                StandardMethodCodec.INSTANCE, backgroundTaskQueue);
         channel.setMethodCallHandler(new MethodCallHandler() {
             @Override
             public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
@@ -632,7 +652,11 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
     }
 
     private void setCameraXChannel(CameraResolutionPreset resolutionPreset) {
-        cameraXChannel = new MethodChannel(flutterPlugin.getBinaryMessenger(), MethodStrings.cameraXChannel);
+        if (backgroundTaskQueue == null) {
+            backgroundTaskQueue = flutterPlugin.getBinaryMessenger().makeBackgroundTaskQueue();
+        }
+        cameraXChannel = new MethodChannel(flutterPlugin.getBinaryMessenger(), MethodStrings.cameraXChannel,
+                StandardMethodCodec.INSTANCE, backgroundTaskQueue);
         // Ensure old handler is cleaned before re-binding.
         if (safeCameraXHandler != null) {
             try {
@@ -975,23 +999,20 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
     }
 
     private void handleCameraHandlerDestroyed(DeepAR destroyedDeepARInstance) {
+        // Deliberately NOT posted via activity.runOnUiThread(): this is
+        // invoked synchronously from SafeCameraXHandler.destroy(), which
+        // now runs on cameraXChannel's background TaskQueue (see
+        // setCameraXChannel). cleanupNativeResources() below can block for
+        // several seconds on this device (closed-source DeepAR SDK camera
+        // teardown) -- jumping back to the UI thread here would put that
+        // same multi-second block right back on the main thread and
+        // reopen the exact ANR this background dispatch exists to avoid.
         try {
-            if (activity != null) {
-                activity.runOnUiThread(() -> {
-                    if (destroyedDeepARInstance != null && deepAR == destroyedDeepARInstance) {
-                        cleanupNativeResources();
-                        cleanupSurfaceResources();
-                    } else {
-                        Log.d(TAG, "Ignoring stale SafeCameraXHandler destroy callback");
-                    }
-                });
+            if (destroyedDeepARInstance != null && deepAR == destroyedDeepARInstance) {
+                cleanupNativeResources();
+                cleanupSurfaceResources();
             } else {
-                if (destroyedDeepARInstance != null && deepAR == destroyedDeepARInstance) {
-                    cleanupNativeResources();
-                    cleanupSurfaceResources();
-                } else {
-                    Log.d(TAG, "Ignoring stale SafeCameraXHandler destroy callback");
-                }
+                Log.d(TAG, "Ignoring stale SafeCameraXHandler destroy callback");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to cleanup DeepAR resources after handler destroy", e);

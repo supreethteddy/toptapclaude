@@ -57,7 +57,22 @@ class CreateLiveStreamScreenController extends BaseController
   // default: everyone keeps using Zego's own camera + native beauty sliders
   // above until a filter other than "None" is explicitly picked, so this
   // never touches the already-working default path.
-  final DeepArControllerPlus deepArController = DeepArControllerPlus();
+  //
+  // static: the native DeepAR plugin is a singleton for the app's whole
+  // process lifetime (one DeepArPlugin per FlutterEngine), but this
+  // controller is recreated fresh every time the user (re)opens this
+  // screen. A non-static field meant each fresh controller got a new
+  // DeepArControllerPlus with isInitialized == false even when the native
+  // side still held a live instance from a previous visit (because leaving
+  // the screen only *starts* an unawaited destroy()) -- the new object had
+  // no way to know that, so its initialize() skipped straight to creating
+  // another native instance instead of awaiting the one still being torn
+  // down, racing two calls into the same native plugin and blocking
+  // Android's main thread long enough to ANR. Sharing one object across
+  // every visit lets DeepArControllerPlus's own destroy-before-reinit
+  // guard (see deep_ar_controller_plus.dart) actually see and await that
+  // in-flight teardown.
+  static final DeepArControllerPlus deepArController = DeepArControllerPlus();
   final Rx<DeepARFilters> selectedLiveFilter = Rx(deepArNoneEffect);
   RxBool isDeepArLiveActive = false.obs;
   bool _isDeepArLiveBusy = false;
@@ -129,7 +144,18 @@ class CreateLiveStreamScreenController extends BaseController
       // reason as stopPreview() above — if we actually went live, the host
       // screen keeps relying on DeepAR feeding Zego's custom capture for
       // the rest of the stream.
-      if (isDeepArLiveActive.value) {
+      //
+      // Gate on isInitialized, not isDeepArLiveActive: switching back to
+      // "None" sets isDeepArLiveActive false but deliberately leaves the
+      // native DeepAR instance alive (so re-picking a filter is a fast
+      // switchEffect() instead of a full re-init). If the user then backs
+      // out of this screen with "None" selected, isDeepArLiveActive is
+      // already false here and that still-alive native instance would leak
+      // -- never destroyed. The next fresh visit to this screen then has
+      // to tear down that stale, possibly still camera-touching instance
+      // from inside the new initialize() call, racing Zego for the camera
+      // and reproducing the same ANR this file already works around above.
+      if (deepArController.isInitialized) {
         unawaited(_deepArZegoBridgeChannel.invokeMethod('stop'));
         unawaited(deepArController.destroy());
       }

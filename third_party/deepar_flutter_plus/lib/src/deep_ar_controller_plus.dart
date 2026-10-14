@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
@@ -110,7 +111,7 @@ class DeepArControllerPlus {
 
   // Track initialization/destruction state to prevent race conditions
   bool _isInitializing = false;
-  bool _isDestroying = false;
+  Future<void>? _destroyFuture;
   DateTime? _lastDestroyTime;
 
   ///Initializes the DeepAR SDK with license keys and asks for required camera and microphone permissions.
@@ -592,20 +593,30 @@ class DeepArControllerPlus {
   }
 
   ///Releases all resources required by DeepAR.
-  Future<void> destroy() async {
-    // Prevent concurrent destroy operations
-    if (_isDestroying) {
-      log("DeepAR destroy already in progress. Skipping.");
-      return;
+  Future<void> destroy() {
+    // A destroy already in flight -- wait for IT to finish rather than
+    // no-op immediately. A caller that no-ops here (the old behaviour)
+    // could see _textureId still non-null and proceed to initialize() a
+    // new native instance while the original destroy's native round trip
+    // is still running, racing two calls into the same singleton native
+    // plugin and blocking Android's main thread long enough to ANR.
+    final inFlight = _destroyFuture;
+    if (inFlight != null) {
+      log("DeepAR destroy already in progress. Awaiting existing operation.");
+      return inFlight;
     }
 
     if (_textureId == null) {
       log("DeepAR controller is already destroyed or not initialized");
-      return;
+      return Future.value();
     }
 
-    _isDestroying = true;
+    final future = _doDestroy();
+    _destroyFuture = future;
+    return future;
+  }
 
+  Future<void> _doDestroy() async {
     try {
       log("Destroying DeepAR controller with textureId: $_textureId");
       await platformRun(
@@ -619,7 +630,7 @@ class DeepArControllerPlus {
       _resetState();
       // Record the time of destruction for initialization cooldown
       _lastDestroyTime = DateTime.now();
-      _isDestroying = false;
+      _destroyFuture = null;
     }
   }
 
