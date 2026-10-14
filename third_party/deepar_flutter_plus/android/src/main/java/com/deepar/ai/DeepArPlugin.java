@@ -234,6 +234,47 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
         return (T) resultHolder[0];
     }
 
+    // FlutterRenderer.createSurfaceTexture() constructs an android.os.Handler
+    // internally, which requires the calling thread to already have a
+    // prepared Looper. The main thread always has one; a background
+    // TaskQueue worker thread (see setDeepArMethodChannel/setCameraXChannel)
+    // does not, so calling this directly from handleMethods() after the
+    // channel moved to a background TaskQueue throws "Can't create handler
+    // inside thread ... that has not called Looper.prepare()" -- reproduced
+    // on-device, not theoretical. Texture registration itself is cheap
+    // (not the slow camera/SDK work this file moved off the main thread for
+    // in the first place), so hop back to the main thread just for this one
+    // call and return synchronously.
+    private TextureRegistry.SurfaceTextureEntry createSurfaceTextureOnMainThread() throws Exception {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            return flutterPlugin.getTextureRegistry().createSurfaceTexture();
+        }
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final TextureRegistry.SurfaceTextureEntry[] resultHolder = new TextureRegistry.SurfaceTextureEntry[1];
+        final Exception[] errorHolder = new Exception[1];
+
+        activity.runOnUiThread(() -> {
+            try {
+                resultHolder[0] = flutterPlugin.getTextureRegistry().createSurfaceTexture();
+            } catch (Exception e) {
+                errorHolder[0] = e;
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        if (!latch.await(2000, TimeUnit.MILLISECONDS)) {
+            throw new IllegalStateException("Timed out creating surface texture on main thread");
+        }
+
+        if (errorHolder[0] != null) {
+            throw errorHolder[0];
+        }
+
+        return resultHolder[0];
+    }
+
     private boolean executeDeepARAction(
             @NonNull Result result,
             @NonNull String operationName,
@@ -714,7 +755,7 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
             int height = resolutionPreset.getWidth();
 
             Log.d(TAG, "Creating surface texture");
-            surfaceTextureEntry = flutterPlugin.getTextureRegistry().createSurfaceTexture();
+            surfaceTextureEntry = createSurfaceTextureOnMainThread();
             tempSurfaceTexture = surfaceTextureEntry.surfaceTexture();
             tempSurfaceTexture.setDefaultBufferSize(width, height);
             surface = new Surface(tempSurfaceTexture);
