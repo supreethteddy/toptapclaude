@@ -241,22 +241,39 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
     // does not, so calling this directly from handleMethods() after the
     // channel moved to a background TaskQueue throws "Can't create handler
     // inside thread ... that has not called Looper.prepare()" -- reproduced
-    // on-device, not theoretical. Texture registration itself is cheap
-    // (not the slow camera/SDK work this file moved off the main thread for
-    // in the first place), so hop back to the main thread just for this one
-    // call and return synchronously.
-    private TextureRegistry.SurfaceTextureEntry createSurfaceTextureOnMainThread() throws Exception {
+    // on-device, not theoretical.
+    //
+    // Before today's background-TaskQueue change, this whole block --
+    // createSurfaceTexture(), setDefaultBufferSize(), and wrapping the
+    // SurfaceTexture in a Surface -- ran on the main thread as a side
+    // effect of handleMethods() itself running there. Only hopping the
+    // createSurfaceTexture() call back to main (leaving
+    // setDefaultBufferSize()/new Surface() on the background thread) fixed
+    // the crash but left the preview rendering nothing (confirmed
+    // on-device: DeepAR init, camera open and frame analysis all report
+    // success with zero errors, yet the Texture widget shows solid black).
+    // Setting up the whole SurfaceTexture -> Surface chain together on the
+    // same thread it's created on restores the original thread assignment
+    // for this specific piece, while the actual slow DeepAR SDK work
+    // (runOnDeepArThreadBlocking, below) still stays off the main thread.
+    private void setUpSurfaceOnMainThread(int width, int height) throws Exception {
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            return flutterPlugin.getTextureRegistry().createSurfaceTexture();
+            surfaceTextureEntry = flutterPlugin.getTextureRegistry().createSurfaceTexture();
+            tempSurfaceTexture = surfaceTextureEntry.surfaceTexture();
+            tempSurfaceTexture.setDefaultBufferSize(width, height);
+            surface = new Surface(tempSurfaceTexture);
+            return;
         }
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final TextureRegistry.SurfaceTextureEntry[] resultHolder = new TextureRegistry.SurfaceTextureEntry[1];
         final Exception[] errorHolder = new Exception[1];
 
         activity.runOnUiThread(() -> {
             try {
-                resultHolder[0] = flutterPlugin.getTextureRegistry().createSurfaceTexture();
+                surfaceTextureEntry = flutterPlugin.getTextureRegistry().createSurfaceTexture();
+                tempSurfaceTexture = surfaceTextureEntry.surfaceTexture();
+                tempSurfaceTexture.setDefaultBufferSize(width, height);
+                surface = new Surface(tempSurfaceTexture);
             } catch (Exception e) {
                 errorHolder[0] = e;
             } finally {
@@ -265,14 +282,12 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
         });
 
         if (!latch.await(2000, TimeUnit.MILLISECONDS)) {
-            throw new IllegalStateException("Timed out creating surface texture on main thread");
+            throw new IllegalStateException("Timed out setting up surface on main thread");
         }
 
         if (errorHolder[0] != null) {
             throw errorHolder[0];
         }
-
-        return resultHolder[0];
     }
 
     private boolean executeDeepARAction(
@@ -755,10 +770,7 @@ public class DeepArPlugin implements FlutterPlugin, AREventListener, ActivityAwa
             int height = resolutionPreset.getWidth();
 
             Log.d(TAG, "Creating surface texture");
-            surfaceTextureEntry = createSurfaceTextureOnMainThread();
-            tempSurfaceTexture = surfaceTextureEntry.surfaceTexture();
-            tempSurfaceTexture.setDefaultBufferSize(width, height);
-            surface = new Surface(tempSurfaceTexture);
+            setUpSurfaceOnMainThread(width, height);
 
             try {
                 runOnDeepArThreadBlocking(() -> {

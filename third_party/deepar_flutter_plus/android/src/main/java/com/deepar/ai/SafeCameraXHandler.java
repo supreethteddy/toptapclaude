@@ -97,6 +97,8 @@ public class SafeCameraXHandler implements MethodChannel.MethodCallHandler {
     private int totalFrames = 0;
     private int invalidFrames = 0;
     private int consecutiveInvalidFrames = 0;
+    private int deliveredFrames = 0;
+    private int timedOutFrames = 0;
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
@@ -316,6 +318,12 @@ public class SafeCameraXHandler implements MethodChannel.MethodCallHandler {
                             );
                             if (receiveError != null) {
                                 if (receiveError.toLowerCase().contains("timed out")) {
+                                    // Counted as delivered so a slow render thread
+                                    // doesn't trip the unstable-pipeline health
+                                    // check, but tracked separately: a camera
+                                    // frame that times out here never reaches
+                                    // DeepAR.receiveFrame at all.
+                                    timedOutFrames++;
                                     delivered = true;
                                 } else {
                                     failureReason = "receive_frame_error";
@@ -355,6 +363,11 @@ public class SafeCameraXHandler implements MethodChannel.MethodCallHandler {
     private void markValidFrame() {
         totalFrames++;
         consecutiveInvalidFrames = 0;
+        deliveredFrames++;
+        if (deliveredFrames == 1 || deliveredFrames % 60 == 0) {
+            Log.d(TAG, "camera frames handed to DeepAR: " + deliveredFrames
+                    + " (receiveFrame timeouts so far: " + timedOutFrames + ")");
+        }
     }
 
     private void markInvalidFrame(String reason, String message) {

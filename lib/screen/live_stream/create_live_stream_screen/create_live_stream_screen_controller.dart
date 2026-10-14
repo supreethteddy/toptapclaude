@@ -73,6 +73,10 @@ class CreateLiveStreamScreenController extends BaseController
   // guard (see deep_ar_controller_plus.dart) actually see and await that
   // in-flight teardown.
   static final DeepArControllerPlus deepArController = DeepArControllerPlus();
+  // Whether enableRawFrameOutput() (DeepAR setOffscreenRendering) has been
+  // called on the CURRENT native DeepAR instance. Static for the same
+  // reason deepArController is; reset whenever a fresh initialize() runs.
+  static bool _deepArOffscreenEnabled = false;
   final Rx<DeepARFilters> selectedLiveFilter = Rx(deepArNoneEffect);
   RxBool isDeepArLiveActive = false.obs;
   bool _isDeepArLiveBusy = false;
@@ -289,6 +293,19 @@ class CreateLiveStreamScreenController extends BaseController
     _isDeepArLiveBusy = true;
     showLoader();
     try {
+      // Already in DeepAR mode: just swap the effect and stop. Re-running
+      // the full handoff below (camera off, preview restart, a second
+      // setOffscreenRendering, bridge start) is not just wasted work --
+      // on-device, the second setOffscreenRendering call stopped DeepAR's
+      // frameAvailable callback outright (the bridge's frame counter froze
+      // at that exact moment), leaving Zego's canvas stuck on the last
+      // frame. This is also what makes switching filters mid-LIVE cheap.
+      if (isDeepArLiveActive.value && deepArController.isInitialized) {
+        await _applyDeepArEffect(filter);
+        selectedLiveFilter.value = filter;
+        return;
+      }
+
       // Release Zego's own camera hold FIRST, before DeepAR ever touches the
       // camera. deepArController.initialize() calls down into
       // startCameraAndroid(), which opens the physical camera directly —
@@ -302,6 +319,13 @@ class CreateLiveStreamScreenController extends BaseController
       // Harmless to call before Zego's camera was ever enabled too (the
       // pre-live filter-setup screen, before Start Live).
       await zegoEngine.enableCamera(false);
+      // enableCamera(false) stops Zego's camera capture; its local preview
+      // (startPreview in _initializeCameraPreview) is stopped separately.
+      // Deliberately the engine call, NOT this controller's stopPreview()
+      // wrapper -- that one also destroyCanvasView()s the local canvas and
+      // nulls localView, and we need that exact canvas back a few lines
+      // down to render DeepAR's frames via Zego's custom video capture.
+      zegoEngine.stopPreview();
 
       if (!deepArController.isInitialized) {
         // zegoEngine.enableCamera(false) resolving only means Zego has been
@@ -316,6 +340,7 @@ class CreateLiveStreamScreenController extends BaseController
         // the exact moment of a filter tap). This grace delay gives the
         // native camera HAL time to finish the release first.
         await Future.delayed(const Duration(milliseconds: 500));
+        _deepArOffscreenEnabled = false;
         final result = await deepArController.initialize(
           androidLicenseKey: _setting?.deeparAndroidKey,
           iosLicenseKey: _setting?.deeparIOSKey,
@@ -323,28 +348,62 @@ class CreateLiveStreamScreenController extends BaseController
         );
         if (!result.success) {
           showSnackBar('Could not start filters: ${result.message}');
-          await zegoEngine.enableCamera(true);
+          await _restoreZegoCameraPreview();
           return;
         }
-      }
-
-      final filterPath = filter.filterFile ?? '';
-      if (filterPath.isNotEmpty) {
-        await deepArController.switchEffect(filterPath);
-      } else {
+        // camera_screen_controller.dart (the pre-existing, working DeepAR
+        // usage elsewhere in the app) always calls switchEffectWithSlot
+        // with the "none" effect once, right after initialize() succeeds,
+        // before ever showing its own DeepArPreviewPlus. This file skipped
+        // straight to the user's actually-selected filter on first init
+        // instead -- confirmed on-device that doing so leaves the preview
+        // permanently blank (white) even though initialize(), the camera
+        // open, and every frame-analysis callback all report success with
+        // no error anywhere. DeepAR's own render pipeline apparently needs
+        // this first no-op switchEffect call to prime itself before it
+        // will actually paint into the output surface.
         await deepArController.switchEffectWithSlot(slot: 'effect', path: 'none');
       }
+
+      await _applyDeepArEffect(filter);
 
       final size = deepArController.imageSize;
       if (size == null) {
         showSnackBar('Could not start filters: unknown camera size.');
-        await zegoEngine.enableCamera(true);
+        await _restoreZegoCameraPreview();
         return;
       }
 
-      await deepArController.enableRawFrameOutput(
-          width: size.width.toInt(), height: size.height.toInt());
+      // Offscreen rendering size. imageSize is reported as the sensor
+      // preset (landscape, e.g. 1280x720) but LIVE is portrait-locked and
+      // DeepAR's own render surface is set up portrait (initializeDeepAR
+      // swaps width/height), so render the offscreen frames portrait too
+      // or Zego receives a landscape frame of a portrait scene.
+      // Once per native DeepAR instance only -- see the fast path above.
+      if (!_deepArOffscreenEnabled) {
+        final shortSide = size.width < size.height ? size.width : size.height;
+        final longSide = size.width < size.height ? size.height : size.width;
+        await deepArController.enableRawFrameOutput(
+            width: shortSide.toInt(), height: longSide.toInt());
+        _deepArOffscreenEnabled = true;
+      }
+      // Enables Zego custom video capture (RAW_DATA) and registers the
+      // frame listener. Zego only applies enableCustomVideoCapture to a
+      // preview/publish that starts AFTER it was enabled -- the preview
+      // started in _initializeCameraPreview() predates it, which is why
+      // the canvas stayed black here before: Zego kept previewing its own
+      // (now disabled) camera and ignored the pushed frames.
       await _deepArZegoBridgeChannel.invokeMethod('start');
+      // enableCamera(false) above was only to make Zego release the physical
+      // camera before DeepAR opened it. It also switches off Zego's video
+      // capture module as a whole -- and with it disabled, Zego never starts
+      // the custom-capture session either: confirmed on-device, the bridge's
+      // onStart callback never fired after startPreview, so not a single
+      // frame was accepted. With custom capture enabled Zego no longer
+      // touches the hardware camera, so turning capture back on here is
+      // safe for DeepAR and is what lets Zego actually consume its frames.
+      await zegoEngine.enableCamera(true);
+      _startZegoPreviewOnExistingCanvas();
 
       selectedLiveFilter.value = filter;
       isDeepArLiveActive.value = true;
@@ -367,8 +426,38 @@ class CreateLiveStreamScreenController extends BaseController
     } catch (e) {
       Loggers.error('Failed to stop DeepAR/Zego bridge: $e');
     }
-    // Hand the camera back to Zego's own capture.
+    // Hand the camera back to Zego's own capture. Same rule as enabling:
+    // the preview has to be restarted after custom capture is switched
+    // off for Zego to go back to its own camera on this canvas.
+    await _restoreZegoCameraPreview();
+  }
+
+  Future<void> _applyDeepArEffect(DeepARFilters filter) async {
+    final filterPath = filter.filterFile ?? '';
+    if (filterPath.isNotEmpty) {
+      await deepArController.switchEffect(filterPath);
+    } else {
+      await deepArController.switchEffectWithSlot(slot: 'effect', path: 'none');
+    }
+  }
+
+  /// (Re)starts Zego's local preview on the canvas this screen already
+  /// created in _initializeCameraPreview(). Zego's custom-video-capture
+  /// setting (on or off) is only picked up by a preview started after it
+  /// changed, so both the DeepAR enable and disable paths end with this.
+  void _startZegoPreviewOnExistingCanvas() {
+    if (localViewID.value == -1) return;
+    zegoEngine.startPreview(
+      canvas: ZegoCanvas(localViewID.value, viewMode: ZegoViewMode.AspectFill),
+    );
+  }
+
+  /// Puts Zego back on its own camera + preview (used when disabling a
+  /// filter, and on every failure path while enabling one).
+  Future<void> _restoreZegoCameraPreview() async {
+    zegoEngine.stopPreview();
     await zegoEngine.enableCamera(true);
+    _startZegoPreviewOnExistingCanvas();
   }
 
   void onEffectsTap() {
@@ -1138,10 +1227,13 @@ class CreateLiveStreamScreenController extends BaseController
 
       Loggers.success('Livestream started successfully!');
 
-      // Navigate to live stream host screen
-      Widget? hostPreview = isDeepArLiveActive.value
-          ? DeepArPreviewPlus(deepArController)
-          : localView.value;
+      // Navigate to live stream host screen. Always Zego's own canvas: with
+      // a LIVE filter active, DeepAR renders offscreen and feeds Zego's
+      // custom video capture, and this canvas is what renders those frames
+      // (see _enableDeepArLive). DeepAR's own DeepArPreviewPlus texture is
+      // stale in that mode -- on-device it showed a frozen half-black /
+      // half-white frame on this very screen.
+      Widget? hostPreview = localView.value;
       Loggers.info('Navigating to host screen...');
 
       Get.off(() => LivestreamHostScreen(

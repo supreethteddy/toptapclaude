@@ -37,6 +37,15 @@ class CreateLiveStreamScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Always Zego's own preview canvas, filter or not. A LIVE filter
+                // doesn't swap the preview widget: _enableDeepArLive() puts
+                // DeepAR into offscreen rendering (setOffscreenRendering) and
+                // pushes its processed frames into Zego's custom video capture
+                // via DeepArZegoBridge, then restarts this same Zego preview so
+                // it renders those frames. That keeps one camera view here and
+                // on the live host screen, which reuses this canvas. (DeepAR's
+                // own DeepArPreviewPlus texture goes stale the moment offscreen
+                // rendering starts, so it is deliberately not used here.)
                 child: (showCamera ? controller.localView.value : null) ??
                     ((user?.profilePhoto ?? '').isNotEmpty
                         ? Image.network(
