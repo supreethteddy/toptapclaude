@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/widget/black_gradient_shadow.dart';
+import 'package:shortzz/common/widget/confirmation_dialog.dart';
 import 'package:shortzz/config/deepar/local_deepar_filters.dart';
 import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/screen/live_stream/create_live_stream_screen/create_live_stream_screen_controller.dart';
@@ -342,9 +343,26 @@ class LiveStreamBottomView extends StatelessWidget {
                 onTap: () {
                   if (isBattleRunning) {
                     controller.showSnackBar('Cannot leave during battle');
-                  } else {
-                    controller.closeCoHostStream(userId);
+                    return;
                   }
+                  // closeCoHostStream used to fire the instant this was
+                  // tapped -- a brush of the thumb while reaching for the
+                  // text field or gift icon right next to it could knock a
+                  // co-host/guest off stage with no way to undo it. Same
+                  // confirm-before-leaving pattern the top-right exit button
+                  // already uses (onCloseAudienceBtn), just worded for
+                  // stepping down from stage rather than leaving the whole
+                  // live.
+                  Get.bottomSheet(
+                    ConfirmationSheet(
+                      title: LKey.leaveStageTitle.tr,
+                      description: LKey.leaveStageDescription.tr,
+                      onTap: () {
+                        Get.back();
+                        controller.closeCoHostStream(userId);
+                      },
+                    ),
+                  );
                 },
               ),
             if (showPkMatch) _PkMatchButton(controller: controller),

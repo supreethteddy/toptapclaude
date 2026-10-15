@@ -107,9 +107,9 @@ Widget _resolveSeat(
 /// Host-left, guest-grid-right layout for every multi-person stage (2+
 /// seats) — matches the client's TikTok reference exactly: the host holds a
 /// large tile on the left at full height; guests fill a 2-column grid on
-/// the right; any open slots up to [_maxGridSlots] show a "+" the host can
-/// tap to invite someone into that spot (plain empty tile for everyone
-/// else, who can't invite).
+/// the right, sized to only as many rows as there are guests (see build());
+/// any open slot in that last row shows a "+" the host can tap to invite
+/// someone into it (plain empty tile for everyone else, who can't invite).
 class HostAndGuestGridView extends StatelessWidget {
   final LivestreamScreenController controller;
   final List<StageSeat> seats;
@@ -121,10 +121,11 @@ class HostAndGuestGridView extends StatelessWidget {
   });
 
   // Guest Call Mode caps at 1 host + 9 guests (client's binding
-  // participant-model clarification); 8 matches the reference's 2x4 grid
-  // exactly, and a 9th seated guest just grows the grid to 2x5 rather than
-  // being dropped.
-  static const int _maxGridSlots = 8;
+  // participant-model clarification) -- a 9th seated guest grows the grid
+  // to 2x5 rather than being dropped. No longer a floor on the row count
+  // itself (see build()): reserving a full 2x4 block even for a single
+  // guest left most of it empty "+" placeholders, stretching the video
+  // area and pushing the comment feed down past where it should start.
   static const int _gridColumns = 2;
   static const int _hostFlex = 45;
   static const int _gridFlex = 55;
@@ -139,9 +140,11 @@ class HostAndGuestGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     final host = seats.first;
     final guests = seats.skip(1).toList();
-    final slotCount =
-        guests.length > _maxGridSlots ? guests.length : _maxGridSlots;
-    final rows = (slotCount / _gridColumns).ceil();
+    // Only as many rows as there are guests to fill, rounded up to
+    // complete the current row (so that row's remaining cells still show
+    // their "+" invite affordance) -- never a whole extra row of nothing
+    // but placeholders. Grows on its own as more guests/co-hosts join.
+    final rows = (guests.length / _gridColumns).ceil();
 
     return LayoutBuilder(builder: (context, constraints) {
       final gridAreaWidth =

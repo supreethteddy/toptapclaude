@@ -452,6 +452,9 @@ class _HostFollowPillState extends State<_HostFollowPill> {
 
     User? updatedUser = await followController.followUnFollowUser();
     final isFollowing = updatedUser?.isFollowing;
+    if (isFollowing == true && !wasFollowing) {
+      widget.controller.showSnackBar(LKey.nowFollowingProfile.tr);
+    }
     widget.controller.updateUserStateToFirestore(userId, isFollow: isFollowing);
     if (isFollowing != null &&
         isFollowing != wasFollowing &&
@@ -477,15 +480,17 @@ class _HostFollowPillState extends State<_HostFollowPill> {
     return Obx(() {
       if (isLoading.value) return const SizedBox.shrink();
       final isFollowing = user.value?.isFollowing ?? false;
+      // Once following, the pill just disappears rather than switching to
+      // a "Following" label -- the client wants that space to go back to
+      // empty, not keep showing a state the viewer already knows.
+      if (isFollowing) return const SizedBox.shrink();
       return GestureDetector(
         onTap: isFollowUnFollowInProcess.value ? null : _followUnFollowHost,
         child: Container(
           height: 20,
           padding: const EdgeInsets.symmetric(horizontal: 9),
           decoration: BoxDecoration(
-            color: isFollowing
-                ? whitePure(context).withValues(alpha: .15)
-                : ColorRes.likeRed,
+            color: ColorRes.likeRed,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: whitePure(context).withValues(alpha: .3),
@@ -502,7 +507,7 @@ class _HostFollowPillState extends State<_HostFollowPill> {
                   ),
                 )
               : Text(
-                  isFollowing ? LKey.following.tr : LKey.follow.tr,
+                  LKey.follow.tr,
                   style: TextStyleCustom.outFitMedium500(
                     color: whitePure(context),
                     fontSize: 10,

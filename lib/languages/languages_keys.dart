@@ -732,6 +732,10 @@ class LKey {
   static const String exitLiveStreamTitle = "Exit Live Stream?";
   static const String exitLiveStreamDescription =
       "Are you sure you want to leave the live stream?\nIf the stream has ended, you won't be able to join again. ";
+  static const String leaveStageTitle = "Leave the stage?";
+  static const String leaveStageDescription =
+      "Are you sure you want to leave? You'll go back to watching as a viewer.";
+  static const String nowFollowingProfile = "You are now following this profile";
   static const String scanQrCode = "Scan QR Code";
   static const String scanQrProfileSearch =
       "Scan the QR of the profile you want to search.";
