@@ -65,7 +65,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
 
 class LivestreamScreenController extends BaseController
-    with BeautifyControlsMixin {
+    with BeautifyControlsMixin, WidgetsBindingObserver {
   FirebaseFirestore db = FirebaseFirestore.instance;
   @override
   ZegoExpressEngine zegoEngine = ZegoExpressEngine.instance;
@@ -92,6 +92,26 @@ class LivestreamScreenController extends BaseController
   int get timeoutMinutes => setting?.liveTimeout ?? 0;
 
   int get myUserId => SessionManager.instance.getUserID();
+
+  /// This device's own currently-publishing stream ID (host publishes
+  /// under the room ID -- see startHostPublish -- co-hosts/guests under
+  /// their own user ID -- see publishCoHostStream's startPublishingStream
+  /// call). Used below to keep this device's own stream out of the
+  /// generic remote-stream Add/Delete handling in onRoomStreamUpdate: that
+  /// pipeline (startPlayStream/stopPlayStream) decodes and renders *other*
+  /// people's video over the network -- meaningless for a stream that's
+  /// mine, since my own video is already rendered locally straight off
+  /// the camera/DeepAR canvas with zero round trip. Before this guard, a
+  /// brief Zego-level republish of this device's own stream (e.g.
+  /// toggling enableCustomVideoCapture while switching a live filter --
+  /// create_live_stream_screen_controller.dart) fell through to
+  /// stopPlayStream's destroyCanvasView call on this device's own live
+  /// preview canvas, which doesn't just hide the tile -- it destroys that
+  /// canvas view id for good, so nothing could render there again for the
+  /// rest of the LIVE. That, not a timing gap in publish-state handling,
+  /// is the actual cause of the tile getting stuck on "Reconnecting"
+  /// forever after switching filters.
+  String get _myOwnStreamId => isHost ? (liveData.value.roomID ?? '') : '$myUserId';
 
   RxBool isPlayerMute = false.obs;
   RxBool isMinViewerTimeout = false.obs;
@@ -455,6 +475,10 @@ class LivestreamScreenController extends BaseController
   RxList<LivestreamUserState> guestList = <LivestreamUserState>[].obs;
   RxList<LivestreamUserState> audienceMemberList = <LivestreamUserState>[].obs;
   RxList<StreamView> streamViews = <StreamView>[].obs;
+  // Cache of this device's own StreamView entry (host or co-host), kept so
+  // onPublisherStateUpdate's Publishing case below can restore it without
+  // re-creating a canvas view. See that callback for why it's needed.
+  StreamView? _lastOwnStreamView;
   RxList<LivestreamComment> comments = <LivestreamComment>[].obs;
   RxList<LivestreamUserState> liveUsersStates = <LivestreamUserState>[].obs;
 
@@ -474,6 +498,7 @@ class LivestreamScreenController extends BaseController
   @override
   void onInit() {
     super.onInit();
+    if (isHost) WidgetsBinding.instance.addObserver(this);
     // Pause the background home-feed reel so its audio doesn't keep playing
     // under this screen. Some entry points (LiveDiscoveryFeedScreen,
     // CreateLiveStreamScreenController) already did this themselves before
@@ -566,6 +591,7 @@ class LivestreamScreenController extends BaseController
 
   @override
   void onClose() {
+    if (isHost) WidgetsBinding.instance.removeObserver(this);
     activeRoomIds.remove(liveData.value.roomID ?? '');
     LiveInviteWatcher.activeRoomIds.remove(liveData.value.roomID ?? '');
     _outgoingInvitesSub?.cancel();
@@ -613,6 +639,30 @@ class LivestreamScreenController extends BaseController
     // opened, now that we are leaving the LIVE screen.
     ReelsScreenController.resumeHomeFeed('livestreamCtrl-room=${liveData.value.roomID}-hash=${identityHashCode(this)}');
     super.onClose();
+  }
+
+  bool _detachedCleanupDone = false;
+
+  /// Only acts on [AppLifecycleState.detached] (the Flutter engine actually
+  /// being torn down), never on [AppLifecycleState.paused]/[inactive] --
+  /// those fire on completely normal, temporary backgrounding (switching
+  /// apps for a moment, answering a call, checking a notification), and a
+  /// host still fully intends to keep streaming through those. Reacting to
+  /// detached is still only a best-effort speed-up, not a guarantee: a
+  /// process killed outright by the OS (e.g. swiping the task away under
+  /// memory pressure) can die before this callback -- or the awaited
+  /// Firestore delete inside it -- ever completes. The real guarantee
+  /// against a room being stuck LIVE forever is LiveStatusController's own
+  /// heartbeat-staleness watchdog, which cleans up this same doc from any
+  /// other client's device without depending on this one surviving at all.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (isHost &&
+        state == AppLifecycleState.detached &&
+        !_detachedCleanupDone) {
+      _detachedCleanupDone = true;
+      unawaited(deleteStreamOnFirebase());
+    }
   }
 
   void openRankingSheet() {
@@ -1017,11 +1067,13 @@ class LivestreamScreenController extends BaseController
       switch (updateType) {
         case ZegoUpdateType.Add:
           for (final stream in streamList) {
+            if (stream.streamID == _myOwnStreamId) continue;
             startPlayStream(stream.streamID);
           }
           break;
         case ZegoUpdateType.Delete:
           for (final stream in streamList) {
+            if (stream.streamID == _myOwnStreamId) continue;
             if (liveData.value.roomID == stream.streamID) {
               unawaited(_handleRemoteStreamEnded());
             }
@@ -1046,9 +1098,31 @@ class LivestreamScreenController extends BaseController
         (streamID, state, errorCode, extendedData) {
       switch (state) {
         case ZegoPublisherState.NoPublish:
+          final mine = streamViews.firstWhereOrNull(
+            (element) => element.streamId == streamID,
+          );
+          if (mine != null) _lastOwnStreamView = mine;
           streamViews.removeWhere((element) => element.streamId == streamID);
+          break;
         case ZegoPublisherState.PublishRequesting:
+          break;
         case ZegoPublisherState.Publishing:
+          // Toggling the local capture source (e.g. switching DeepAR
+          // filters live — create_live_stream_screen_controller.dart's
+          // enableCamera(false)/enableCustomVideoCapture/enableCamera(true)
+          // handoff) briefly flips this device's own publish state through
+          // NoPublish and back, even though the canvas view itself is never
+          // torn down. Without restoring the entry here, the NoPublish
+          // branch above leaves this seat's StreamView gone for good and
+          // the host/co-host's own tile is stuck on the "Reconnecting..."
+          // placeholder forever, despite video actually flowing again.
+          final stillMissing = !streamViews.any(
+            (element) => element.streamId == streamID,
+          );
+          if (stillMissing && _lastOwnStreamView?.streamId == streamID) {
+            streamViews.add(_lastOwnStreamView!);
+          }
+          break;
       }
       debugPrint(
         'onPublisherStateUpdate: streamID: $streamID, state: ${state.name}, errorCode: $errorCode, extendedData: $extendedData',
@@ -2502,8 +2576,17 @@ class LivestreamScreenController extends BaseController
         zegoEngine.setAudioRouteToSpeaker(true);
       });
 
-      // Seat membership was already written by _claimStageSeat above.
-      _sendCommentToFirestore(type: LivestreamCommentType.joinedCoHost);
+      // Seat membership was already written by _claimStageSeat above. Must
+      // match the role actually claimed above -- this used to always send
+      // joinedCoHost regardless of role, so a plain Guest Call join request
+      // (acceptJoinRequest sets type: guest directly, no co-host anywhere
+      // in that path) announced "joined as a co-host" in chat, which the
+      // host understandably read as co-host rights being granted without
+      // their say-so.
+      _sendCommentToFirestore(
+          type: role == LivestreamUserType.guest
+              ? LivestreamCommentType.joinedGuest
+              : LivestreamCommentType.joinedCoHost);
       updateUserStateToFirestore(
         myUserId,
         joinTime: DateTime.now().millisecondsSinceEpoch,
@@ -2559,7 +2642,8 @@ class LivestreamScreenController extends BaseController
       LivestreamComment? comment = comments.firstWhereOrNull(
         (element) =>
             element.senderId == myUserId &&
-            element.commentType == LivestreamCommentType.joinedCoHost,
+            (element.commentType == LivestreamCommentType.joinedCoHost ||
+                element.commentType == LivestreamCommentType.joinedGuest),
       );
       if (comment != null) {
         liveStreamCommentsRef.doc(comment.id.toString()).delete();
@@ -2705,6 +2789,49 @@ class LivestreamScreenController extends BaseController
     await updateUserStateToFirestore(
       state.userId,
       type: LivestreamUserType.coHost,
+    );
+  }
+
+  /// The reverse of [promoteGuestToCoHost] -- moves a co-host back to Guest
+  /// Call (no longer PK-eligible), e.g. for someone the host invited as
+  /// co-host by mistake or no longer wants battling. Same atomic seat-array
+  /// swap, just in the other direction and against the guest cap instead.
+  Future<void> demoteCoHostToGuest(LivestreamUserState state) async {
+    if (state.type != LivestreamUserType.coHost) return;
+    if (liveData.value.type == LivestreamType.battle) {
+      showSnackBar(LKey.cannotLeaveDuringBattle.tr);
+      return;
+    }
+    final cap = maxGuests;
+    bool moved = false;
+    try {
+      moved = await db.runTransaction<bool>((tx) async {
+        final snap = await tx.get(liveStreamDocRef);
+        if (!snap.exists) return false;
+        final data = snap.data() as Map<String, dynamic>? ?? {};
+        final guests =
+            (data[FirebaseConst.guestIds] as List<dynamic>? ?? const [])
+                .whereType<num>()
+                .map((e) => e.toInt())
+                .toList();
+        if (guests.contains(state.userId)) return true;
+        if (guests.length >= cap) return false;
+        tx.update(liveStreamDocRef, {
+          FirebaseConst.guestIds: FieldValue.arrayUnion([state.userId]),
+          FirebaseConst.coHostIds: FieldValue.arrayRemove([state.userId]),
+        });
+        return true;
+      });
+    } catch (e) {
+      Loggers.error('Failed to demote co-host ${state.userId}: $e');
+    }
+    if (!moved) {
+      showSnackBar(LKey.guestSeatsFull.tr);
+      return;
+    }
+    await updateUserStateToFirestore(
+      state.userId,
+      type: LivestreamUserType.guest,
     );
   }
 

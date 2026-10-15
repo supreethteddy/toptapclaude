@@ -233,6 +233,10 @@ class LiveStreamCommentView extends StatelessWidget {
         return Text(LKey.joinedAsACoHost.tr,
             style: TextStyleCustom.outFitRegular400(
                 color: whitePure(context).withValues(alpha: .80)));
+      case LivestreamCommentType.joinedGuest:
+        return Text(LKey.joinedAsAGuest.tr,
+            style: TextStyleCustom.outFitRegular400(
+                color: whitePure(context).withValues(alpha: .80)));
     }
   }
 }

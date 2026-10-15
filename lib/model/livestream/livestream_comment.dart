@@ -105,7 +105,8 @@ enum LivestreamCommentType {
   text('TEXT'),
   gift('GIFT'),
   joined('JOINED'),
-  joinedCoHost('JOINED_CO_HOST');
+  joinedCoHost('JOINED_CO_HOST'),
+  joinedGuest('JOINED_GUEST');
 
   final String value;
 

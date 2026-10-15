@@ -1,10 +1,14 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/widget/black_gradient_shadow.dart';
+import 'package:shortzz/config/deepar/local_deepar_filters.dart';
 import 'package:shortzz/config/gifts/premium_gift_animations.dart';
+import 'package:shortzz/screen/live_stream/create_live_stream_screen/create_live_stream_screen_controller.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
@@ -63,9 +67,35 @@ class LiveStreamBottomView extends StatelessWidget {
                       return AnimatedOpacity(
                         duration: const Duration(milliseconds: 200),
                         opacity: isVisible ? 1 : 0,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          child: LiveStreamCommentView(controller: controller),
+                        // The comment list sits structurally above the
+                        // full-screen double-tap-to-like GestureDetector in
+                        // livestream_host_screen.dart/live_stream_audience_
+                        // screen.dart (it's part of the control chrome drawn
+                        // after/over the video in the Stack, not the video
+                        // itself) -- its own ListView claims taps within its
+                        // bounds for scrolling, so a double-tap landing on
+                        // the comment feed never reached that detector
+                        // underneath, even though the semi-transparent
+                        // overlay still visually reads as "the video" to a
+                        // viewer. This wraps just the comment feed with its
+                        // own double-tap handler so liking works there too,
+                        // without affecting the real interactive bits below
+                        // it (gift/share/more/text field), which aren't
+                        // wrapped. globalPosition (not localPosition) because
+                        // LiveStreamLikeButton's heart-burst anchor expects
+                        // screen coordinates, not this nested widget's own.
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onDoubleTapDown: (details) =>
+                              controller.onLikeButtonTap(
+                            details.globalPosition,
+                            details.globalPosition.dx <
+                                MediaQuery.sizeOf(context).width / 2,
+                          ),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            child: LiveStreamCommentView(controller: controller),
+                          ),
                         ),
                       );
                     }),
@@ -389,7 +419,24 @@ class LiveStreamBottomView extends StatelessWidget {
                       ],
                     );
                   }),
+                  if (controller.isHost && Platform.isAndroid)
+                    ListTile(
+                      leading: const Icon(Icons.auto_awesome_outlined),
+                      title: const Text('Filters'),
+                      onTap: () {
+                        Get.back();
+                        _showLiveFilterSheet(context);
+                      },
+                    ),
                   if (controller.isHost) ...[
+                    ListTile(
+                      leading: const Icon(Icons.groups_outlined),
+                      title: Text(LKey.members.tr),
+                      onTap: () {
+                        Get.back();
+                        controller.openMembersSheet();
+                      },
+                    ),
                     ListTile(
                       leading: const Icon(Icons.person_outline),
                       title: const Text('About Me'),
@@ -509,6 +556,129 @@ class LiveStreamBottomView extends StatelessWidget {
       ),
     );
   }
+  /// Same DeepAR filter picker as the pre-LIVE Effects sheet
+  /// (create_live_stream_screen_controller.dart's onEffectsTap), reachable
+  /// from here while actually LIVE via the "Filters" entry above. Calls the
+  /// same (now static) onLiveFilterSelected, so a host who went live with
+  /// "None" can turn a filter on mid-stream, and one who went live with a
+  /// filter can switch between them -- both go through the fast
+  /// switchEffect-only path there once DeepAR is already active, and the
+  /// full Zego<->DeepAR camera handoff the first time a filter is picked.
+  void _showLiveFilterSheet(BuildContext context) {
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: adaptiveBackground(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: SafeArea(
+          top: false,
+          child: Obx(() => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Filters',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(
+                    CreateLiveStreamScreenController.isDeepArLiveActive.value
+                        ? (CreateLiveStreamScreenController
+                                .selectedLiveFilter.value.title ??
+                            'None')
+                        : 'None',
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 92,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: CreateLiveStreamScreenController
+                          .availableLiveFilters.length,
+                      itemBuilder: (context, index) {
+                        final filter = CreateLiveStreamScreenController
+                            .availableLiveFilters[index];
+                        // selectedLiveFilter.value is the single source of
+                        // truth regardless of isDeepArLiveActive -- picking
+                        // "None" after DeepAR is already active keeps
+                        // isDeepArLiveActive true (DeepAR stays in the
+                        // pipeline, just rendering the plain camera; see
+                        // onLiveFilterSelected's own comment on why), so
+                        // that flag alone can't be used to detect "None" is
+                        // selected.
+                        final isSelected = filter.id ==
+                            CreateLiveStreamScreenController
+                                .selectedLiveFilter.value.id;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: InkWell(
+                            onTap: () => CreateLiveStreamScreenController
+                                .onLiveFilterSelected(filter),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  height: 56,
+                                  width: 56,
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Colors.orange
+                                          : Colors.white24,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                    color: Colors.white12,
+                                  ),
+                                  child: _liveFilterThumbnail(filter.image),
+                                ),
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  width: 60,
+                                  child: Text(
+                                    filter.title ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.orange
+                                            : Colors.white70,
+                                        fontSize: 10),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              )),
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _liveFilterThumbnail(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return const Icon(Icons.block, color: Colors.white38, size: 28);
+    }
+    final uri = Uri.tryParse(imagePath);
+    final isNetwork = uri != null && uri.hasScheme && uri.host.isNotEmpty;
+    return isNetwork
+        ? Image.network(imagePath, fit: BoxFit.cover)
+        : Image.asset(imagePath, fit: BoxFit.cover);
+  }
+
 
   Widget _buildControlButton(
     BuildContext context, {

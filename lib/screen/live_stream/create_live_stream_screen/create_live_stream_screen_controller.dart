@@ -77,20 +77,26 @@ class CreateLiveStreamScreenController extends BaseController
   // called on the CURRENT native DeepAR instance. Static for the same
   // reason deepArController is; reset whenever a fresh initialize() runs.
   static bool _deepArOffscreenEnabled = false;
-  final Rx<DeepARFilters> selectedLiveFilter = Rx(deepArNoneEffect);
-  RxBool isDeepArLiveActive = false.obs;
-  bool _isDeepArLiveBusy = false;
+  // See the setVideoConfig/invokeMethod('start', ...) call sites below.
+  static const int _deepArLiveFps = 24;
+  // static alongside deepArController/localViewID: both the pre-live
+  // setup screen and the actual LIVE host screen's filter picker share
+  // this state and must agree on it (see onLiveFilterSelected below,
+  // now static and called directly from LiveStreamBottomView too).
+  static final Rx<DeepARFilters> selectedLiveFilter = Rx(deepArNoneEffect);
+  static RxBool isDeepArLiveActive = false.obs;
+  static bool _isDeepArLiveBusy = false;
   static const MethodChannel _deepArZegoBridgeChannel =
       MethodChannel('toptap/deepar_zego_bridge');
 
-  bool get _hasDeepArLicenseForCurrentPlatform => Platform.isAndroid
+  static bool get _hasDeepArLicenseForCurrentPlatform => Platform.isAndroid
       ? (_setting?.deeparAndroidKey?.trim().isNotEmpty ?? false)
       : (_setting?.deeparIOSKey?.trim().isNotEmpty ?? false);
 
   /// Same merge logic as CameraScreenController.availableDeepArFilters (the
   /// post/story camera) — local bundled presets plus anything the admin has
   /// uploaded via Setting.deepARFilters, deduplicated by filter file.
-  List<DeepARFilters> get availableLiveFilters {
+  static List<DeepARFilters> get availableLiveFilters {
     final Map<String, DeepARFilters> uniqueMap = {};
     void addFilter(DeepARFilters filter) {
       final key = (filter.filterFile?.isNotEmpty == true)
@@ -112,9 +118,14 @@ class CreateLiveStreamScreenController extends BaseController
 
   Rx<User?> get myUser => SessionManager.instance.getUser().obs;
 
-  Setting? get _setting => SessionManager.instance.getSettings();
+  static Setting? get _setting => SessionManager.instance.getSettings();
   Rx<Widget?> localView = Rx(null);
-  RxInt localViewID = RxInt(-1);
+  // static for the same reason as deepArController above -- the LIVE
+  // host screen's filter picker restarts Zego's preview on this exact
+  // canvas (see _startZegoPreviewOnExistingCanvas), and that canvas is
+  // the one originally created on this (possibly already-disposed)
+  // controller's behalf.
+  static RxInt localViewID = RxInt(-1);
   TextEditingController titleController = TextEditingController();
   Future<void>? _previewInitFuture;
 
@@ -272,26 +283,53 @@ class CreateLiveStreamScreenController extends BaseController
   /// camera to DeepAR's (Android only) — see DeepArZegoBridge.kt for why
   /// that has to happen at the native level rather than in Flutter. Picking
   /// "None" reverses it, handing the camera back to Zego untouched.
-  Future<void> onLiveFilterSelected(DeepARFilters filter) async {
+  ///
+  /// static: called from both this screen's own Effects sheet (pre-LIVE)
+  /// and LiveStreamBottomView's "Filters" entry (while actually LIVE, see
+  /// _showMoreOptions in live_stream_bottom_view.dart) -- same shared
+  /// deepArController/isDeepArLiveActive/localViewID either way, so this
+  /// has to be reachable without an instance of this controller, which
+  /// onClose() may well have already torn down by the time the user is on
+  /// the live host screen. showLoader/stopLoader/showSnackBar come from
+  /// BaseController.share, the same static singleton instance those mixin
+  /// methods are themselves backed by, so this is pixel-identical UX to
+  /// calling them on a real controller instance.
+  static Future<void> onLiveFilterSelected(DeepARFilters filter) async {
     if (_isDeepArLiveBusy) return;
-    if (filter.id == deepArNoneEffect.id) {
+    // "None" only means "hand the camera back to Zego's own capture" when
+    // DeepAR was never activated this screen visit -- that's the only case
+    // where Zego's own camera is actually the one live right now. Once a
+    // real filter has been picked, DeepAR's native camera session stays
+    // open underneath for fast re-switching (see the fast path in
+    // _enableDeepArLive), so handing the camera back to Zego's
+    // enableCamera(true) at that point means asking Zego to open hardware
+    // DeepAR is still holding -- the exact two-owners-one-camera problem
+    // this whole feature was built to avoid, just in the other direction.
+    // Confirmed on-device: picking a filter then switching back to None
+    // froze the preview. Once DeepAR is already active, "None" instead
+    // goes through the same effect-switch fast path as any other filter
+    // (see _applyDeepArEffect) -- DeepAR keeps rendering the unprocessed
+    // camera feed through the existing Zego custom-capture pipeline rather
+    // than Zego's own camera ever reopening mid-session.
+    if (filter.id == deepArNoneEffect.id && !isDeepArLiveActive.value) {
       await _disableDeepArLive();
       return;
     }
     if (!Platform.isAndroid) {
-      showSnackBar('Filters during LIVE are only available on Android right now.');
+      BaseController.share.showSnackBar(
+          'Filters during LIVE are only available on Android right now.');
       return;
     }
     if (!_hasDeepArLicenseForCurrentPlatform) {
-      showSnackBar('Filters are not configured for this app yet.');
+      BaseController.share.showSnackBar('Filters are not configured for this app yet.');
       return;
     }
     await _enableDeepArLive(filter);
   }
 
-  Future<void> _enableDeepArLive(DeepARFilters filter) async {
+  static Future<void> _enableDeepArLive(DeepARFilters filter) async {
     _isDeepArLiveBusy = true;
-    showLoader();
+    BaseController.share.showLoader();
     try {
       // Already in DeepAR mode: just swap the effect and stop. Re-running
       // the full handoff below (camera off, preview restart, a second
@@ -318,14 +356,14 @@ class CreateLiveStreamScreenController extends BaseController
       // DeepArZegoBridge.kt's own documented call-order requirement.
       // Harmless to call before Zego's camera was ever enabled too (the
       // pre-live filter-setup screen, before Start Live).
-      await zegoEngine.enableCamera(false);
+      await ZegoExpressEngine.instance.enableCamera(false);
       // enableCamera(false) stops Zego's camera capture; its local preview
       // (startPreview in _initializeCameraPreview) is stopped separately.
       // Deliberately the engine call, NOT this controller's stopPreview()
       // wrapper -- that one also destroyCanvasView()s the local canvas and
       // nulls localView, and we need that exact canvas back a few lines
       // down to render DeepAR's frames via Zego's custom video capture.
-      zegoEngine.stopPreview();
+      ZegoExpressEngine.instance.stopPreview();
 
       if (!deepArController.isInitialized) {
         // zegoEngine.enableCamera(false) resolving only means Zego has been
@@ -347,7 +385,7 @@ class CreateLiveStreamScreenController extends BaseController
           resolution: Resolution.high,
         );
         if (!result.success) {
-          showSnackBar('Could not start filters: ${result.message}');
+          BaseController.share.showSnackBar('Could not start filters: ${result.message}');
           await _restoreZegoCameraPreview();
           return;
         }
@@ -369,7 +407,7 @@ class CreateLiveStreamScreenController extends BaseController
 
       final size = deepArController.imageSize;
       if (size == null) {
-        showSnackBar('Could not start filters: unknown camera size.');
+        BaseController.share.showSnackBar('Could not start filters: unknown camera size.');
         await _restoreZegoCameraPreview();
         return;
       }
@@ -386,6 +424,20 @@ class CreateLiveStreamScreenController extends BaseController
         await deepArController.enableRawFrameOutput(
             width: shortSide.toInt(), height: longSide.toInt());
         _deepArOffscreenEnabled = true;
+        // DeepAR pushes offscreen frames as fast as the camera delivers
+        // them (~45-50fps on this device, unthrottled) while Zego's
+        // publish encoder defaults to a scenario-driven ~15fps. Zego's own
+        // docs: the configured fps and the fps of frames passed to
+        // sendCustomVideoCaptureRawData must match or playback distorts.
+        // Set an explicit encode fps here (once, alongside the other
+        // one-time offscreen setup) and pass the same number to the
+        // native bridge below so it throttles pushes to match, instead of
+        // forwarding every camera frame into an encoder tuned for a third
+        // of that rate.
+        await ZegoExpressEngine.instance.setVideoConfig(
+          ZegoVideoConfig.preset(ZegoVideoConfigPreset.Preset360P)
+            ..fps = _deepArLiveFps,
+        );
       }
       // Enables Zego custom video capture (RAW_DATA) and registers the
       // frame listener. Zego only applies enableCustomVideoCapture to a
@@ -393,7 +445,7 @@ class CreateLiveStreamScreenController extends BaseController
       // started in _initializeCameraPreview() predates it, which is why
       // the canvas stayed black here before: Zego kept previewing its own
       // (now disabled) camera and ignored the pushed frames.
-      await _deepArZegoBridgeChannel.invokeMethod('start');
+      await _deepArZegoBridgeChannel.invokeMethod('start', {'fps': _deepArLiveFps});
       // enableCamera(false) above was only to make Zego release the physical
       // camera before DeepAR opened it. It also switches off Zego's video
       // capture module as a whole -- and with it disabled, Zego never starts
@@ -402,22 +454,22 @@ class CreateLiveStreamScreenController extends BaseController
       // frame was accepted. With custom capture enabled Zego no longer
       // touches the hardware camera, so turning capture back on here is
       // safe for DeepAR and is what lets Zego actually consume its frames.
-      await zegoEngine.enableCamera(true);
+      await ZegoExpressEngine.instance.enableCamera(true);
       _startZegoPreviewOnExistingCanvas();
 
       selectedLiveFilter.value = filter;
       isDeepArLiveActive.value = true;
     } catch (e) {
       Loggers.error('Failed to enable DeepAR for LIVE: $e');
-      showSnackBar('Could not start filters. Staying on the normal camera.');
+      BaseController.share.showSnackBar('Could not start filters. Staying on the normal camera.');
       await _disableDeepArLive();
     } finally {
-      stopLoader();
+      BaseController.share.stopLoader();
       _isDeepArLiveBusy = false;
     }
   }
 
-  Future<void> _disableDeepArLive() async {
+  static Future<void> _disableDeepArLive() async {
     selectedLiveFilter.value = deepArNoneEffect;
     if (!isDeepArLiveActive.value) return;
     isDeepArLiveActive.value = false;
@@ -432,9 +484,14 @@ class CreateLiveStreamScreenController extends BaseController
     await _restoreZegoCameraPreview();
   }
 
-  Future<void> _applyDeepArEffect(DeepARFilters filter) async {
+  static Future<void> _applyDeepArEffect(DeepARFilters filter) async {
+    // deepArNoneEffect's own filterFile is the sentinel string 'none', not
+    // actually empty, so the id check has to come first -- the old
+    // isNotEmpty-only check tried to switchEffect('none') as if it were a
+    // real asset path, which fails to load rather than clearing the effect
+    // the way switchEffectWithSlot(path: 'none') is actually meant to.
     final filterPath = filter.filterFile ?? '';
-    if (filterPath.isNotEmpty) {
+    if (filter.id != deepArNoneEffect.id && filterPath.isNotEmpty) {
       await deepArController.switchEffect(filterPath);
     } else {
       await deepArController.switchEffectWithSlot(slot: 'effect', path: 'none');
@@ -445,18 +502,18 @@ class CreateLiveStreamScreenController extends BaseController
   /// created in _initializeCameraPreview(). Zego's custom-video-capture
   /// setting (on or off) is only picked up by a preview started after it
   /// changed, so both the DeepAR enable and disable paths end with this.
-  void _startZegoPreviewOnExistingCanvas() {
+  static void _startZegoPreviewOnExistingCanvas() {
     if (localViewID.value == -1) return;
-    zegoEngine.startPreview(
+    ZegoExpressEngine.instance.startPreview(
       canvas: ZegoCanvas(localViewID.value, viewMode: ZegoViewMode.AspectFill),
     );
   }
 
   /// Puts Zego back on its own camera + preview (used when disabling a
   /// filter, and on every failure path while enabling one).
-  Future<void> _restoreZegoCameraPreview() async {
-    zegoEngine.stopPreview();
-    await zegoEngine.enableCamera(true);
+  static Future<void> _restoreZegoCameraPreview() async {
+    ZegoExpressEngine.instance.stopPreview();
+    await ZegoExpressEngine.instance.enableCamera(true);
     _startZegoPreviewOnExistingCanvas();
   }
 

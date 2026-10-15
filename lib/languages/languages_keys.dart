@@ -263,6 +263,8 @@ class LKey {
   static const String inviteAsCoHost = "Invite as Co-host";
   static const String inviteAsGuest = "Invite as Guest";
   static const String promoteToCoHost = "Promote to Co-host";
+  static const String demoteToGuest = "Move to Guest";
+  static const String removeFromStream = "Remove from stream";
   static const String wantsToJoinYourLive = "wants to join your LIVE.";
   static const String invitedYouAsCoHost =
       "invited you to join the LIVE as a Co-host";
@@ -818,6 +820,7 @@ class LKey {
   static const String joinCancelledDescription =
       "The host has cancelled your invitation. You can no longer join the live stream.";
   static const String joinedAsACoHost = "joined as a co-host";
+  static const String joinedAsAGuest = "joined as a guest";
   static const String minFollowersNeededToGoLive =
       "Min. @count Followers needed to go Live";
   static const String maxUserLinkAddDescription =

@@ -12,6 +12,7 @@ import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/audience/widget/live_stream_user_info_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_participant_quick_actions_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/reconnecting_placeholder.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
@@ -307,7 +308,39 @@ class LiveStreamUserView extends StatelessWidget {
                 streamView: streamingView!,
                 state: state.obs,
                 liveUser: liveUser,
-                isMuteVisible: liveUser?.userId != controller.myUserId)
+                isMuteVisible: liveUser?.userId != controller.myUserId),
+          // Quick moderation menu: host-only, and never on the host's own
+          // tile (nothing there to moderate). Separate from tapping the
+          // name, which still opens the full profile sheet -- this is the
+          // fast path for mute/camera/role/remove without leaving the grid.
+          if (controller.isHost &&
+              liveUser != null &&
+              state != null &&
+              liveUser.userId != controller.myUserId)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  HapticManager.shared.light();
+                  Get.bottomSheet(
+                    LiveParticipantQuickActionsSheet(
+                        user: liveUser, state: state, controller: controller),
+                    isScrollControlled: true,
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: .35),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.more_vert,
+                      color: Colors.white, size: 18),
+                ),
+              ),
+            ),
         ],
       );
     });

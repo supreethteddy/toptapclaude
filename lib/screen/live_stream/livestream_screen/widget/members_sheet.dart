@@ -320,9 +320,22 @@ class _MembersSheetState extends State<MembersSheet> {
   /// loading flag differ.
   Widget _buildCandidatesList({required bool isFriends, required RxBool loading}) {
     return Obx(() {
-      final items = isFriends
-          ? inviteCandidates.friendsVisible
-          : inviteCandidates.recommendedVisible;
+      // Someone already in the room in any capacity (watching, requested,
+      // invited, on stage) must not also appear here as an out-of-room
+      // candidate: inviteOutOfRoom() creates a LiveInvite + push nudge meant
+      // for someone who isn't currently in this live at all, and whose
+      // acceptance path is "navigate into the room fresh" -- for someone
+      // who's already inside, nothing on their end ever consumes that
+      // invite, so it sits permanently "Invited..." and never actually
+      // grants the role, matching the client's own already-correct
+      // exclusion for this exact list in go_live_with_guests_sheet.dart.
+      final inRoomIds =
+          controller.liveUsersStates.map((s) => s.userId).toSet();
+      final items = (isFriends
+              ? inviteCandidates.friendsVisible
+              : inviteCandidates.recommendedVisible)
+          .where((user) => !inRoomIds.contains(user.id))
+          .toList();
       final isBusy = loading.value ||
           (!isFriends && inviteCandidates.isSearching.value);
       if (items.isEmpty) {

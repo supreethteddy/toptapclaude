@@ -60,13 +60,28 @@ object DeepArZegoBridge : DeepArPlugin.RawFrameListener,
     private var pushedFrames = 0L
     private val param = ZGFlutterVideoFrameParam()
 
+    // DeepAR's offscreen renderer fires frameAvailable as fast as the camera
+    // delivers frames (~45-50fps on this device, unthrottled) regardless of
+    // Zego's own publish fps -- Zego's docs require the two to match, and
+    // pushing well above the configured rate is wasted copy/encode work at
+    // best. [onFrame] drops any frame that arrives before this interval has
+    // elapsed since the last one actually pushed; the Dart side sets Zego's
+    // own encode fps to the same number via ZegoVideoConfig (see
+    // create_live_stream_screen_controller.dart's setVideoConfig call).
+    private var minFrameIntervalMs = 1000L / 24L
+    private var lastPushUptimeMs = 0L
+
     /** Starts routing DeepAR's output into Zego. Call once DeepAR's offscreen
      * rendering has been enabled (DeepArControllerPlus.enableRawFrameOutput)
      * and BEFORE Zego's preview/publish is (re)started — Zego only applies
-     * custom capture to a preview/publish started after it was enabled. */
+     * custom capture to a preview/publish started after it was enabled.
+     * [fps] must match whatever the Dart side just set Zego's own publish
+     * video config to. */
     @Synchronized
-    fun start() {
+    fun start(fps: Int = 24) {
         if (started) return
+        minFrameIntervalMs = 1000L / fps.coerceAtLeast(1).toLong()
+        lastPushUptimeMs = 0L
         val engine = ZegoExpressEngine.getEngine()
         if (engine == null) {
             Log.e(TAG, "start() called with no Zego engine created yet")
@@ -130,6 +145,9 @@ object DeepArZegoBridge : DeepArPlugin.RawFrameListener,
         // passing null during state transitions; Kotlin's generated null
         // check would otherwise throw before the try below is reached.
         if (image == null || !started || !capturing) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastPushUptimeMs < minFrameIntervalMs) return
+        lastPushUptimeMs = now
         try {
             // DeepAR's offscreen rendering only supports RGBA_8888: a single
             // plane, no chroma-subsampling/stride juggling.

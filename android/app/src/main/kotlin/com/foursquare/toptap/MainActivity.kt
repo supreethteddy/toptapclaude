@@ -39,7 +39,8 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "start" -> {
-                    DeepArZegoBridge.start()
+                    val fps = (call.argument<Int>("fps")) ?: 24
+                    DeepArZegoBridge.start(fps)
                     result.success(null)
                 }
                 "stop" -> {

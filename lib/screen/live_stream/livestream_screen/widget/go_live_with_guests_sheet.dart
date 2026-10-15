@@ -120,7 +120,12 @@ class _GoLiveWithGuestsSheetState extends State<GoLiveWithGuestsSheet> {
                         MemberProfileCard(
                           user: _userOf(state),
                           widget: _InviteButton(
-                            label: LKey.invite.tr,
+                            // This flow always grants Co-host specifically
+                            // (see the class doc comment on why) -- say so
+                            // on the button itself rather than a plain
+                            // "Invite" that reads as neutral/no-rights-
+                            // implied to the host tapping it.
+                            label: LKey.inviteAsCoHost.tr,
                             filled: true,
                             onTap: () => controller.onInvite(_userOf(state),
                                 isInvited: false,
@@ -201,7 +206,7 @@ class _GoLiveWithGuestsSheetState extends State<GoLiveWithGuestsSheet> {
         );
       }
       return _InviteButton(
-        label: LKey.invite.tr,
+        label: LKey.inviteAsCoHost.tr,
         filled: true,
         onTap: () =>
             controller.inviteOutOfRoom(user, LivestreamUserType.coHost),

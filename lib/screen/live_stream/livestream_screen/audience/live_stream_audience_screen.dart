@@ -83,12 +83,13 @@ class LiveStreamAudienceScreen extends StatelessWidget {
                 }
               }),
 
-              // Tap anywhere to like (TikTok parity): sits above the video
-              // but below the interactive controls below, which still get
-              // first pick of any tap that lands on them.
+              // Double-tap anywhere to like (TikTok parity) -- see the
+              // matching comment in livestream_host_screen.dart for why this
+              // has to be double-tap rather than a single tap claiming the
+              // whole screen.
               GestureDetector(
                 behavior: HitTestBehavior.translucent,
-                onTapUp: (details) => controller.onLikeButtonTap(
+                onDoubleTapDown: (details) => controller.onLikeButtonTap(
                   details.localPosition,
                   details.localPosition.dx <
                       MediaQuery.sizeOf(context).width / 2,

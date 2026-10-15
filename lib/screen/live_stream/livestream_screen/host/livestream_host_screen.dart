@@ -76,12 +76,20 @@ class LivestreamHostScreen extends StatelessWidget {
               },
             ),
 
-            // Tap anywhere to like (TikTok parity): sits above the video but
-            // below the interactive controls below, which still get first
-            // pick of any tap that lands on them.
+            // Double-tap anywhere to like (TikTok parity): sits above the
+            // video. A single-tap version of this used to swallow every
+            // plain tap across the whole screen before it ever reached
+            // anything underneath -- comment field, per-tile buttons, the
+            // grid's own quick-actions menu -- because a lone GestureDetector
+            // claims the tap gesture outright regardless of translucent
+            // behaviour (that only controls hit-test pass-through, not
+            // gesture-arena priority). Double-tap doesn't compete with a
+            // plain single tap the same way, so everything below keeps
+            // first pick of any ordinary tap; only an actual double-tap
+            // still likes.
             GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTapUp: (details) => controller.onLikeButtonTap(
+              onDoubleTapDown: (details) => controller.onLikeButtonTap(
                 details.localPosition,
                 details.localPosition.dx <
                     MediaQuery.sizeOf(context).width / 2,
