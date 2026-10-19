@@ -59,9 +59,34 @@ class FirebaseConst {
   static const String addedAt = 'added_at';
   static const String fanClub = 'fan_club';
   static const String opponentRoomId = 'opponent_room_id';
+  // Co-Host Connection: opponentRoomId now means "connected", not
+  // "connected and battling" -- this is when that connection was made.
+  static const String coHostConnectedAt = 'co_host_connected_at';
   static const String pendingBattleInviteFromId =
       'pending_battle_invite_from_id';
   static const String battleInviteSentAt = 'battle_invite_sent_at';
+
+  // "Play PK Match": same request/accept shape as pendingBattleInviteFromId
+  // above, but for starting a battle on an ALREADY-connected pair, rather
+  // than for the connection itself.
+  static const String pendingPkMatchRequestFromId =
+      'pending_pk_match_request_from_id';
+  static const String pkMatchRequestSentAt = 'pk_match_request_sent_at';
+
+  // Written the moment a battle ends: now + 60s. Every participant/viewer
+  // gates the post-match results UI on this, then it auto-clears -- the
+  // co-host connection itself is untouched.
+  static const String battleResultsVisibleUntil =
+      'battle_results_visible_until';
+
+  // 2v2 team assembly across independently-live rooms (see Livestream
+  // model doc comments for the full shape).
+  static const String coHostTeammateRoomId = 'co_host_teammate_room_id';
+  static const String coHostOpponentTeamRoomIds =
+      'co_host_opponent_team_room_ids';
+  static const String pkMode = 'pk_mode';
+  static const String speedChallengeEligibleGiftIds =
+      'speed_challenge_eligible_gift_ids';
 
   // PK Battle rounds: how many rounds each side has won across the current
   // multi-round match (cleared only when the whole match ends, not between
@@ -104,4 +129,7 @@ class FirebaseConst {
   // reset to 0 at the start of every match/round.
   static const String pkLikePointsA = 'pk_like_points_a';
   static const String pkLikePointsB = 'pk_like_points_b';
+  // Cross-room Co-Host PK only -- this room's own side's like count (see
+  // the doc comment on Livestream.crossRoomLikePoints).
+  static const String crossRoomLikePoints = 'cross_room_like_points';
 }

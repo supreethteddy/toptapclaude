@@ -56,6 +56,7 @@ import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_ranking
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/pk_match_invite_dialog.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/pk_match_setup_sheet.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/timed_invite_dialog.dart';
 import 'package:shortzz/screen/report_sheet/report_sheet.dart';
 import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/asset_res.dart';
@@ -149,6 +150,7 @@ class LivestreamScreenController extends BaseController
   RxList<StreamView> opponentStreamViews = <StreamView>[].obs;
   int? _lastHandledInviteFromId;
   int? _lastHandledRematchFromId;
+  int? _lastHandledPkMatchRequestFromId;
 
   // Same-room PK Match invite: deduped by (fromId, sentAt) rather than just
   // fromId, since the same host re-sending after a decline must re-trigger
@@ -364,8 +366,11 @@ class LivestreamScreenController extends BaseController
   // Seat caps come from the admin panel (Phase 0 settings); the literals are
   // only the fallback for a backend that predates those columns and match
   // the client's spec (Co-host Mode = 4 in frame incl. host; 9 guests).
+  // In-room co-host is retired (see LivestreamUserType's doc comment) --
+  // maxCoHosts is dormant, kept only so legacy/pre-migration docs don't
+  // error if something still reads it.
   int get maxCoHosts => setting?.maxLiveCohosts ?? 3;
-  int get maxGuests => setting?.maxLiveGuests ?? 9;
+  int get maxGuests => setting?.maxLiveGuests ?? 8;
   bool get guestRequestsEnabled =>
       (setting?.liveGuestRequestsEnabled ?? 1) == 1;
 
@@ -481,6 +486,18 @@ class LivestreamScreenController extends BaseController
   StreamView? _lastOwnStreamView;
   RxList<LivestreamComment> comments = <LivestreamComment>[].obs;
   RxList<LivestreamUserState> liveUsersStates = <LivestreamUserState>[].obs;
+
+  // Cross-room Co-Host PK only -- a gift sent to the opponent host posts to
+  // THEIR room's own comments subcollection, not mine, so TopGiftersRow
+  // (ranking who gifted each side) needs this separate watch to know who
+  // gifted the opponent side; see allBattleComments/_startWatchingOpponent.
+  RxList<LivestreamComment> opponentComments = <LivestreamComment>[].obs;
+  StreamSubscription<QuerySnapshot>? opponentCommentsListener;
+
+  List<LivestreamComment> get allBattleComments =>
+      liveData.value.opponentRoomId == null
+          ? comments
+          : [...comments, ...opponentComments];
 
   Rx<AppUser?> selectedGiftUser = Rx(null);
   Rx<VideoPlayerController?> videoPlayerController = Rx(null);
@@ -1654,7 +1671,15 @@ class LivestreamScreenController extends BaseController
           ).inSeconds;
         }
 
-        if (stream.battleType == BattleType.waiting) {
+        // RUNNING included, not just WAITING -- a cross-room PK match now
+        // jumps straight from INITIATE to RUNNING (no countdown stage, see
+        // acceptPkMatch/acceptRematch), so WAITING alone stopped firing for
+        // that flow and totalBattleSecond was left stuck at whatever stale
+        // value LIVE-start init or an earlier battle had set, not the fresh
+        // battleDuration just written. Recomputing on RUNNING too is a
+        // no-op once already correct (same battleDuration every time).
+        if (stream.battleType == BattleType.waiting ||
+            stream.battleType == BattleType.running) {
           totalBattleSecond = Duration(
             minutes: stream.battleDuration,
           ).inSeconds;
@@ -1694,15 +1719,32 @@ class LivestreamScreenController extends BaseController
           _lastAnimatedLikeCount = newLikeCount;
         }
 
-        // Cross-room PK Battle: an incoming invite to accept/decline.
+        // Co-Host Connection: an incoming connect invite to accept/decline.
         if (isHost &&
             stream.pendingBattleInviteFromId != null &&
             stream.pendingBattleInviteFromId != _lastHandledInviteFromId) {
           _lastHandledInviteFromId = stream.pendingBattleInviteFromId;
-          _showIncomingBattleInviteDialog(stream.pendingBattleInviteFromId!);
+          _showIncomingCoHostConnectDialog(stream.pendingBattleInviteFromId!);
         }
         if (stream.pendingBattleInviteFromId == null) {
           _lastHandledInviteFromId = null;
+        }
+
+        // "Play PK Match": the other connected co-host wants to start a
+        // battle on this already-connected pair -- same accept/decline
+        // shape as the connect invite above, separate step (see client's
+        // binding clarification that connecting must never auto-start PK).
+        if (isHost &&
+            stream.pendingPkMatchRequestFromId != null &&
+            stream.pendingPkMatchRequestFromId !=
+                _lastHandledPkMatchRequestFromId) {
+          _lastHandledPkMatchRequestFromId =
+              stream.pendingPkMatchRequestFromId;
+          _showIncomingPkMatchRequestDialog(
+              stream.pendingPkMatchRequestFromId!);
+        }
+        if (stream.pendingPkMatchRequestFromId == null) {
+          _lastHandledPkMatchRequestFromId = null;
         }
 
         // Rematch: same shape as the invite above, just checked after a
@@ -2009,9 +2051,13 @@ class LivestreamScreenController extends BaseController
   }
 
   /// [isLeftHalf] is which half of the screen was tapped, in screen-width
-  /// terms — only meaningful for (and only passed during) a same-room PK
-  /// Match, where the client's confirmed decision is that likes score to
-  /// whichever side you tap (left = team A/host, right = team B).
+  /// terms — meaningful during either kind of active PK Match: same-room
+  /// (left = team A/host, right = team B, both tallied on this one doc via
+  /// pkLikePointsA/B) or cross-room (left = this room's own side, on this
+  /// doc's crossRoomLikePoints; right = the opponent room's side, written
+  /// to THEIR doc's crossRoomLikePoints — same cross-document write pattern
+  /// already used elsewhere for a connected opponent, e.g.
+  /// acceptCoHostConnectInvite).
   void onLikeButtonTap([Offset? tapPosition, bool? isLeftHalf]) async {
     HapticManager.shared.light();
     // Optimistic local heart burst — don't make the tapper wait for the
@@ -2027,12 +2073,22 @@ class LivestreamScreenController extends BaseController
       final updates = <String, dynamic>{
         FirebaseConst.likeCount: FieldValue.increment(1),
       };
+      final isCrossRoomBattling = stream.opponentRoomId != null &&
+          stream.type == LivestreamType.battle;
       if (isLeftHalf != null &&
           stream.battleType == BattleType.waiting &&
           stream.pkTeamAIds != null) {
         updates[isLeftHalf
             ? FirebaseConst.pkLikePointsA
             : FirebaseConst.pkLikePointsB] = FieldValue.increment(1);
+      } else if (isLeftHalf != null && isCrossRoomBattling) {
+        if (isLeftHalf) {
+          updates[FirebaseConst.crossRoomLikePoints] = FieldValue.increment(1);
+        } else {
+          unawaited(_roomDocRef(stream.opponentRoomId!).update({
+            FirebaseConst.crossRoomLikePoints: FieldValue.increment(1),
+          }));
+        }
       }
       liveStreamDocRef.update(updates);
 
@@ -2064,80 +2120,143 @@ class LivestreamScreenController extends BaseController
       return showSnackBar(LKey.battleEndedGiftNotSent.tr);
     }
     GiftManager.openGiftSheet(
-      onCompletion: (giftManager) async {
-        Gift gift = giftManager.gift;
-        AppUser? user = giftManager.streamUser;
-
-        int coinPrice = gift.coinPrice?.toInt() ?? 0;
-        if (type == GiftType.battle) {
-          coinPrice = await _claimFirstGiftBonusIfEligible(coinPrice);
-        }
-        // Battle score and real coin value are deliberately different
-        // numbers: battleGiftTiers lets specific gifts (Rose/Heart/Coffee/
-        // Galaxy) be worth a fixed, configured point value in a PK Battle
-        // (e.g. Galaxy = 1000) independent of what they actually cost in
-        // coins. Everything else (liveCoin, the ranking/league controllers
-        // below) still uses the real coinPrice, including the first-gift
-        // bonus applied above — only the battle scoreboard itself reads
-        // battlePoints. A gift with no tier mapping falls back to coinPrice
-        // 1:1, so this is a no-op for every gift not explicitly configured.
-        final battlePoints =
-            battlePointsForGift(gift.id, fallbackCoins: coinPrice);
-        // A PK Match can restrict scoring to specific gifts
-        // (pkEligibleGiftIds, set from the match setup sheet); null/empty
-        // means every gift counts, same as every battle before this
-        // existed. The gift itself still sends and the coin value above
-        // still transfers either way — only the battle score is skipped.
-        final countsForPk =
-            giftCountsForPk(gift.id, liveData.value.pkEligibleGiftIds);
-
-        _sendCommentToFirestore(
-          type: LivestreamCommentType.gift,
-          giftId: gift.id,
-          receiverId: user?.userId,
-        );
-        updateUserStateToFirestore(
-          user?.userId,
-          battleCoin:
-              type == GiftType.battle && countsForPk ? battlePoints : null,
-          currentBattleCoin:
-              type == GiftType.battle && countsForPk ? battlePoints : null,
-          liveCoin: type == GiftType.livestream ? coinPrice : null,
-        );
-        // Daily + hourly ranking: every coin received in a LIVE counts for
-        // the receiver in both leaderboards.
-        unawaited(LiveRankingController.recordGift(
-          hostId: user?.userId,
-          coins: coinPrice,
-          host: user,
-        ));
-        unawaited(HourlyRankingController.recordGift(
-          hostId: user?.userId,
-          coins: coinPrice,
-          host: user,
-        ));
-        unawaited(LeagueController.recordGift(
-          hostId: user?.userId,
-          coins: coinPrice,
-          host: user,
-        ));
-        if (type == GiftType.livestream &&
-            user?.userId == liveData.value.hostId &&
-            liveData.value.hasLiveGoal == true &&
-            liveData.value.liveGoalType == 'gifts') {
-          incrementLiveGoalProgress(1);
-        }
-        if (type == GiftType.livestream &&
-            user?.userId == liveData.value.hostId &&
-            gift.id != null) {
-          unawaited(_recordGiftTowardGoals(gift.id!, myUserId));
-        }
-      },
+      onCompletion: (giftManager) => _handleGiftSent(type, giftManager),
       giftType: type,
       battleViewType: battleViewType,
       streamUsers: availableUsers,
       roomID: liveData.value.roomID,
     );
+  }
+
+  /// Everything that happens once a gift has actually been paid for and
+  /// sent — Firestore comment (this is what drives TileGiftBubble/
+  /// GiftComboBadge/the shared comment feed), battle score, daily/hourly/
+  /// league ranking, live-goal progress. Pulled out of [onGiftTap]'s
+  /// `onCompletion` so [sendQuickGift] (the one-tap Rose shortcut, no gift
+  /// sheet involved) can trigger the exact same bookkeeping instead of a
+  /// second, drift-prone copy of it.
+  Future<void> _handleGiftSent(GiftType type, GiftManager giftManager) async {
+    Gift gift = giftManager.gift;
+    AppUser? user = giftManager.streamUser;
+
+    int coinPrice = gift.coinPrice?.toInt() ?? 0;
+    if (type == GiftType.battle) {
+      coinPrice = await _claimFirstGiftBonusIfEligible(coinPrice);
+    }
+    // Battle score and real coin value are deliberately different numbers:
+    // battleGiftTiers lets specific gifts (Rose/Heart/Coffee/Galaxy) be
+    // worth a fixed, configured point value in a PK Battle (e.g. Galaxy =
+    // 1000) independent of what they actually cost in coins. Everything
+    // else (liveCoin, the ranking/league controllers below) still uses the
+    // real coinPrice, including the first-gift bonus applied above — only
+    // the battle scoreboard itself reads battlePoints. A gift with no tier
+    // mapping falls back to coinPrice 1:1, so this is a no-op for every
+    // gift not explicitly configured.
+    final battlePoints = battlePointsForGift(gift.id, fallbackCoins: coinPrice);
+    // A PK Match can restrict scoring to specific gifts (pkEligibleGiftIds,
+    // set from the match setup sheet); null/empty means every gift counts,
+    // same as every battle before this existed. The gift itself still sends
+    // and the coin value above still transfers either way — only the
+    // battle score is skipped.
+    final countsForPk =
+        giftCountsForPk(gift.id, liveData.value.pkEligibleGiftIds);
+
+    _sendCommentToFirestore(
+      type: LivestreamCommentType.gift,
+      giftId: gift.id,
+      receiverId: user?.userId,
+    );
+    updateUserStateToFirestore(
+      user?.userId,
+      battleCoin: type == GiftType.battle && countsForPk ? battlePoints : null,
+      currentBattleCoin:
+          type == GiftType.battle && countsForPk ? battlePoints : null,
+      liveCoin: type == GiftType.livestream ? coinPrice : null,
+    );
+    // Daily + hourly ranking: every coin received in a LIVE counts for the
+    // receiver in both leaderboards.
+    unawaited(LiveRankingController.recordGift(
+      hostId: user?.userId,
+      coins: coinPrice,
+      host: user,
+    ));
+    unawaited(HourlyRankingController.recordGift(
+      hostId: user?.userId,
+      coins: coinPrice,
+      host: user,
+    ));
+    unawaited(LeagueController.recordGift(
+      hostId: user?.userId,
+      coins: coinPrice,
+      host: user,
+    ));
+    if (type == GiftType.livestream &&
+        user?.userId == liveData.value.hostId &&
+        liveData.value.hasLiveGoal == true &&
+        liveData.value.liveGoalType == 'gifts') {
+      incrementLiveGoalProgress(1);
+    }
+    if (type == GiftType.livestream &&
+        user?.userId == liveData.value.hostId &&
+        gift.id != null) {
+      unawaited(_recordGiftTowardGoals(gift.id!, myUserId));
+    }
+  }
+
+  /// One-tap "Rose" quick-gift (footer shortcut, matches the reference's
+  /// rose icon) — same send path [onGiftTap] uses (balance check, real
+  /// backend API call via SendGiftSheetController, same post-send
+  /// bookkeeping via [_handleGiftSent]), just without opening the full gift
+  /// picker sheet. Target: the opponent host while cross-room battling
+  /// (sending a rose "at" the other side, same spirit as the reference's
+  /// battle-screen rose button), otherwise this room's own host (a plain
+  /// viewer tipping the host they're watching).
+  bool _isSendingQuickGift = false;
+
+  Future<void> sendQuickGift({int giftId = 18}) async {
+    if (_isSendingQuickGift) return;
+    if (liveData.value.type == LivestreamType.battle &&
+        liveData.value.battleType == BattleType.end) {
+      return showSnackBar(LKey.battleEndedGiftNotSent.tr);
+    }
+    final gift = gifts.firstWhereOrNull((g) => g.id == giftId);
+    if (gift == null) return;
+    final coinPrice = gift.coinPrice ?? 0;
+    if (coinPrice <= 0) return;
+    if (coinPrice > (SessionManager.instance.currentUser.value?.coinWallet ?? 0)) {
+      showSnackBar('Not enough coins to send a Rose.');
+      return;
+    }
+    final isBattling = liveData.value.opponentRoomId != null &&
+        liveData.value.type == LivestreamType.battle;
+    final targetUserId =
+        isBattling ? opponentLiveData.value?.hostId : liveData.value.hostId;
+    final targetUser = firestoreController.users
+        .firstWhereOrNull((u) => u.userId == targetUserId);
+    if (targetUserId == null) return;
+
+    _isSendingQuickGift = true;
+    try {
+      final sendController = SendGiftSheetController(
+        isBattling ? GiftType.battle : GiftType.livestream,
+        targetUserId,
+        const [],
+        liveData.value.roomID,
+      );
+      sendController.livestreamController = this;
+      // selectedGiftUser lives on LivestreamScreenController (= `this`,
+      // just wired above), not on SendGiftSheetController itself --
+      // sendGiftAndGetResult reads it off livestreamController for the
+      // returned GiftManager.streamUser.
+      selectedGiftUser = (targetUser ?? AppUser(userId: targetUserId)).obs;
+      final result = await sendController.sendGiftAndGetResult(gift);
+      if (result != null) {
+        await _handleGiftSent(
+            isBattling ? GiftType.battle : GiftType.livestream, result);
+      }
+    } finally {
+      _isSendingQuickGift = false;
+    }
   }
 
   /// If a battle round is active, still within its first-gift bonus window
@@ -2745,96 +2864,6 @@ class LivestreamScreenController extends BaseController
     }
   }
 
-  /// Explicit host action moving a Guest Call participant into Co-host Mode
-  /// (never automatic — the client forbids guests silently becoming PK
-  /// players). The guest keeps publishing; only the seat array and role move,
-  /// atomically, so the co-host cap can't be exceeded by two promotions.
-  Future<void> promoteGuestToCoHost(LivestreamUserState state) async {
-    if (state.type != LivestreamUserType.guest) return;
-    if (liveData.value.type == LivestreamType.battle) {
-      showSnackBar(LKey.cannotLeaveDuringBattle.tr);
-      return;
-    }
-    final cap = maxCoHosts;
-    bool moved = false;
-    try {
-      moved = await db.runTransaction<bool>((tx) async {
-        final snap = await tx.get(liveStreamDocRef);
-        if (!snap.exists) return false;
-        final data = snap.data() as Map<String, dynamic>? ?? {};
-        final coHosts =
-            (data[FirebaseConst.coHostIds] as List<dynamic>? ?? const [])
-                .whereType<num>()
-                .map((e) => e.toInt())
-                .toList();
-        final pending =
-            (data[FirebaseConst.pendingSeatIds] as List<dynamic>? ?? const [])
-                .whereType<num>()
-                .length;
-        if (coHosts.contains(state.userId)) return true;
-        if (coHosts.length + pending >= cap) return false;
-        tx.update(liveStreamDocRef, {
-          FirebaseConst.coHostIds: FieldValue.arrayUnion([state.userId]),
-          FirebaseConst.guestIds: FieldValue.arrayRemove([state.userId]),
-        });
-        return true;
-      });
-    } catch (e) {
-      Loggers.error('Failed to promote guest ${state.userId}: $e');
-    }
-    if (!moved) {
-      showSnackBar(LKey.coHostSeatsFull.tr);
-      return;
-    }
-    await updateUserStateToFirestore(
-      state.userId,
-      type: LivestreamUserType.coHost,
-    );
-  }
-
-  /// The reverse of [promoteGuestToCoHost] -- moves a co-host back to Guest
-  /// Call (no longer PK-eligible), e.g. for someone the host invited as
-  /// co-host by mistake or no longer wants battling. Same atomic seat-array
-  /// swap, just in the other direction and against the guest cap instead.
-  Future<void> demoteCoHostToGuest(LivestreamUserState state) async {
-    if (state.type != LivestreamUserType.coHost) return;
-    if (liveData.value.type == LivestreamType.battle) {
-      showSnackBar(LKey.cannotLeaveDuringBattle.tr);
-      return;
-    }
-    final cap = maxGuests;
-    bool moved = false;
-    try {
-      moved = await db.runTransaction<bool>((tx) async {
-        final snap = await tx.get(liveStreamDocRef);
-        if (!snap.exists) return false;
-        final data = snap.data() as Map<String, dynamic>? ?? {};
-        final guests =
-            (data[FirebaseConst.guestIds] as List<dynamic>? ?? const [])
-                .whereType<num>()
-                .map((e) => e.toInt())
-                .toList();
-        if (guests.contains(state.userId)) return true;
-        if (guests.length >= cap) return false;
-        tx.update(liveStreamDocRef, {
-          FirebaseConst.guestIds: FieldValue.arrayUnion([state.userId]),
-          FirebaseConst.coHostIds: FieldValue.arrayRemove([state.userId]),
-        });
-        return true;
-      });
-    } catch (e) {
-      Loggers.error('Failed to demote co-host ${state.userId}: $e');
-    }
-    if (!moved) {
-      showSnackBar(LKey.guestSeatsFull.tr);
-      return;
-    }
-    await updateUserStateToFirestore(
-      state.userId,
-      type: LivestreamUserType.guest,
-    );
-  }
-
   void reportUser(int? userId) {
     Get.bottomSheet(
       ReportSheet(reportType: ReportType.user, id: userId),
@@ -2870,7 +2899,7 @@ class LivestreamScreenController extends BaseController
             // is gone.
             unawaited(_recordBattleHistory(endReason: 'manual_stop'));
             if (liveData.value.opponentRoomId != null) {
-              endCrossRoomBattleAndReset();
+              endBattleOnly();
             } else {
               updateLiveStreamData(
                 battleType: BattleType.initiate,
@@ -2993,7 +3022,7 @@ class LivestreamScreenController extends BaseController
   }
 
   /// Starts a fresh timed round without ending the whole match: keeps the
-  /// running round-win tally (only [onStopButtonTap] / [endCrossRoomBattleAndReset]
+  /// running round-win tally (only [onStopButtonTap] / [endBattleOnly]
   /// clear it, since those end the whole match), snapshots each side's
   /// current cumulative battle coins as the new round's baseline, and
   /// restarts the timer. Only meaningful once a round has actually ended.
@@ -3099,11 +3128,18 @@ class LivestreamScreenController extends BaseController
   DocumentReference _roomDocRef(String roomId) =>
       db.collection(FirebaseConst.liveStreams).doc(roomId);
 
+  // ───────────────────────── Co-Host Connection ─────────────────────────
+  // Connecting two independently-live hosts together, per the client's
+  // binding clarification: this is the ONLY path to a PK battle, and
+  // connecting must NEVER auto-start one -- see requestPkMatch/acceptPkMatch
+  // below for the separate, explicit "start a battle" step on an already-
+  // connected pair.
+
   /// Transaction-guarded so two hosts inviting each other at the same
-  /// instant (or someone double-tapping Challenge) can't both land a write —
+  /// instant (or someone double-tapping Invite) can't both land a write —
   /// previously this was a bare `.update()`, so a second invite always
   /// silently clobbered whatever the target's doc already had.
-  Future<void> sendBattleInvite(int opponentHostId) async {
+  Future<void> sendCoHostConnectInvite(int opponentHostId) async {
     if (!isHost) return;
     try {
       final targetRef = _roomDocRef('$opponentHostId');
@@ -3114,9 +3150,12 @@ class LivestreamScreenController extends BaseController
           throw Exception('Target room no longer exists');
         }
         final target = Livestream.fromJson(data);
-        if (target.type == LivestreamType.battle ||
-            target.pendingBattleInviteFromId != null) {
-          throw Exception('Target is already busy');
+        // One connection (plus optionally one 2v2 teammate link) at a
+        // time per host -- already connected or already mid-invite, either
+        // way they're not available.
+        if (target.pendingBattleInviteFromId != null ||
+            target.opponentRoomId != null) {
+          throw Exception('Target is already connected');
         }
         transaction.update(targetRef, {
           FirebaseConst.pendingBattleInviteFromId: myUserId,
@@ -3124,19 +3163,90 @@ class LivestreamScreenController extends BaseController
               DateTime.now().millisecondsSinceEpoch,
         });
       });
-      showSnackBar(LKey.battleInviteSent.tr);
+      showSnackBar(LKey.coHostConnectInviteSent.tr);
+      // Best-effort nudge, same pattern LiveInviteWatcher's guest/co-host
+      // invites already use -- found via diagnosis that this room-doc
+      // listener can take 50+ seconds to deliver on some connections
+      // (no WiFi drop, no Firestore stream error, just a slow realtime
+      // propagation), well past the 30s invite expiry, silently dropping
+      // the invite before it's ever shown. This push lets the recipient's
+      // forceCheckPendingCoHostInvite() fetch the doc directly instead of
+      // waiting on the listener.
+      unawaited(_pushCoHostConnectInvite(opponentHostId));
     } catch (e) {
-      Loggers.error('Failed to send PK invite: $e');
-      showSnackBar(LKey.battleInviteFailed.tr);
+      Loggers.error('Failed to send Co-Host connect invite: $e');
+      showSnackBar(LKey.coHostConnectInviteFailed.tr);
+    }
+  }
+
+  // Shared by sendCoHostConnectInvite and requestPkMatch -- both are a
+  // "come check your co-host screen" nudge, and the foreground handler
+  // never shows this text (it force-refetches and returns silently); it
+  // only surfaces as the system tray text for a backgrounded/killed app,
+  // where a generic line is preferable to guessing which of the two this
+  // particular nudge was for.
+  Future<void> _pushCoHostConnectInvite(int opponentHostId) async {
+    try {
+      final recipient =
+          await UserService.instance.fetchUserDetails(userId: opponentHostId);
+      final token = recipient?.deviceToken;
+      if (token == null || token.isEmpty) return;
+      await NotificationService.instance.pushNotification(
+        type: NotificationType.coHostConnectInvite,
+        title: myUser.value?.fullname ?? myUser.value?.username ?? '',
+        body: LKey.coHostConnectInviteDescription
+            .trParams({'name': myUser.value?.username ?? ''}),
+        data: {
+          'room_id': '$opponentHostId',
+          'from_host_id': '$myUserId',
+        },
+        token: token,
+        deviceType: recipient?.device,
+      );
+    } catch (e) {
+      Loggers.error('Co-Host connect invite push failed: $e');
+    }
+  }
+
+  /// Called from the FCM nudge (see firebase_notification_manager.dart)
+  /// when the realtime listener may be slow -- fetches the room doc
+  /// directly and runs the exact same pending-invite / pending-match-
+  /// request checks listenLiveStreamData's own listener does, so the
+  /// dialog shows immediately regardless of listener latency. Covers both
+  /// signals (never both pending at once in practice -- a match request
+  /// only exists once already connected, after the connect invite field is
+  /// long cleared) so one push type/handler serves both.
+  Future<void> forceCheckPendingCoHostInvite() async {
+    try {
+      final snapshot = await liveStreamDocRef.get();
+      final data = snapshot.data() as Map<String, dynamic>?;
+      if (data == null) return;
+      final stream = Livestream.fromJson(data);
+      if (isHost &&
+          stream.pendingBattleInviteFromId != null &&
+          stream.pendingBattleInviteFromId != _lastHandledInviteFromId) {
+        _lastHandledInviteFromId = stream.pendingBattleInviteFromId;
+        _showIncomingCoHostConnectDialog(stream.pendingBattleInviteFromId!);
+      }
+      if (isHost &&
+          stream.pendingPkMatchRequestFromId != null &&
+          stream.pendingPkMatchRequestFromId !=
+              _lastHandledPkMatchRequestFromId) {
+        _lastHandledPkMatchRequestFromId = stream.pendingPkMatchRequestFromId;
+        _showIncomingPkMatchRequestDialog(
+            stream.pendingPkMatchRequestFromId!);
+      }
+    } catch (e) {
+      Loggers.error('forceCheckPendingCoHostInvite failed: $e');
     }
   }
 
   Timer? _battleInviteExpiryTimer;
 
-  void _showIncomingBattleInviteDialog(int fromHostId) {
-    if (liveData.value.type == LivestreamType.battle) {
-      // Already battling (or mid-invite) — quietly decline further invites.
-      declineBattleInvite();
+  void _showIncomingCoHostConnectDialog(int fromHostId) {
+    if (liveData.value.opponentRoomId != null) {
+      // Already connected to someone (or mid-invite) — quietly decline.
+      declineCoHostConnectInvite();
       return;
     }
     // Enforce the expiry on the invitee's side too, not just by the
@@ -3147,54 +3257,43 @@ class LivestreamScreenController extends BaseController
       final elapsedSeconds =
           (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
       if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
-        declineBattleInvite();
+        declineCoHostConnectInvite();
         return;
       }
     }
     final inviter = firestoreController.users
         .firstWhereOrNull((user) => user.userId == fromHostId);
-    _battleInviteExpiryTimer?.cancel();
-    _battleInviteExpiryTimer =
-        Timer(const Duration(seconds: AppRes.battleInviteExpiryInSecond), () {
-      if (Get.isDialogOpen ?? false) Get.back();
-      declineBattleInvite();
-    });
+    final remaining = sentAt == null
+        ? AppRes.battleInviteExpiryInSecond
+        : (AppRes.battleInviteExpiryInSecond -
+                (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000)
+            .round()
+            .clamp(1, AppRes.battleInviteExpiryInSecond);
     Get.dialog(
-      AlertDialog(
-        title: Text(LKey.battleInviteTitle.tr),
-        content: Text(LKey.battleInviteDescription
-            .trParams({'name': inviter?.username ?? 'A creator'})),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _battleInviteExpiryTimer?.cancel();
-              Get.back();
-              declineBattleInvite();
-            },
-            child: Text(LKey.refuse.tr),
-          ),
-          TextButton(
-            onPressed: () {
-              _battleInviteExpiryTimer?.cancel();
-              Get.back();
-              acceptBattleInvite(fromHostId);
-            },
-            child: Text(LKey.accept.tr),
-          ),
-        ],
+      TimedInviteDialog(
+        title: LKey.coHostConnectInviteTitle.tr,
+        description: LKey.coHostConnectInviteDescription
+            .trParams({'name': inviter?.username ?? 'A creator'}),
+        requester: inviter,
+        expirySeconds: remaining,
+        onDecline: declineCoHostConnectInvite,
+        onAccept: () => acceptCoHostConnectInvite(fromHostId),
       ),
       barrierDismissible: false,
     );
   }
 
-  Future<void> declineBattleInvite() async {
+  Future<void> declineCoHostConnectInvite() async {
     await liveStreamDocRef.update({
       FirebaseConst.pendingBattleInviteFromId: null,
       FirebaseConst.battleInviteSentAt: null,
     });
   }
 
-  Future<void> acceptBattleInvite(int fromHostId) async {
+  /// Establishes the connection ONLY -- never touches `type`/`battleType`.
+  /// Both hosts keep their own independent LIVE sessions running; starting
+  /// an actual battle is a separate, explicit step (see requestPkMatch).
+  Future<void> acceptCoHostConnectInvite(int fromHostId) async {
     if (!isHost) return;
     // Re-check freshness at accept time, not just at dialog-open time — a
     // dialog can sit on screen while the invite expires underneath it.
@@ -3203,22 +3302,21 @@ class LivestreamScreenController extends BaseController
       final elapsedSeconds =
           (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
       if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
-        showSnackBar(LKey.battleInviteExpired.tr);
-        await declineBattleInvite();
+        showSnackBar(LKey.coHostConnectInviteExpired.tr);
+        await declineCoHostConnectInvite();
         return;
       }
     }
     final myRoomId = liveData.value.roomID;
     if (myRoomId == null) return;
     final opponentRoomId = '$fromHostId';
-    roundBaselineRed.value = 0;
-    roundBaselineBlue.value = 0;
     try {
       // A transaction (not a plain batch) so the invite can't be accepted
       // twice, or accepted after the inviter already cancelled/expired it,
-      // or accepted while the opponent raced into a different battle in the
-      // meantime — all reads happen first, then both writes commit atomically
-      // only if every check still holds against the latest server state.
+      // or accepted while the opponent raced into a different connection in
+      // the meantime — all reads happen first, then both writes commit
+      // atomically only if every check still holds against the latest
+      // server state.
       await db.runTransaction((transaction) async {
         final mySnapshot = await transaction.get(liveStreamDocRef);
         final opponentSnapshot =
@@ -3233,36 +3331,256 @@ class LivestreamScreenController extends BaseController
         if (myLatest.pendingBattleInviteFromId != fromHostId) {
           throw Exception('Invite no longer pending');
         }
-        if (opponentLatest.type == LivestreamType.battle) {
-          throw Exception('Opponent already in a battle');
+        if (opponentLatest.opponentRoomId != null) {
+          throw Exception('Opponent already connected to someone else');
         }
         final now = DateTime.now().millisecondsSinceEpoch;
+        // Wipe any battle fields a stale leftover doc might still be
+        // carrying from much earlier testing (pre-dating the connect/battle
+        // split) -- a fresh connection must always start from a clean idle
+        // state, never silently inherit a stray WAITING/RUNNING battleType
+        // or old round-win counts and surface the old battle UI instantly.
+        final cleanBattleState = {
+          FirebaseConst.type: LivestreamType.livestream.value,
+          FirebaseConst.battleType: BattleType.initiate.value,
+          FirebaseConst.battleCreatedAt: null,
+          FirebaseConst.battleResultsVisibleUntil: null,
+          FirebaseConst.battleRoundWins: 0,
+          FirebaseConst.battleCurrentRound: 1,
+          FirebaseConst.battleTotalRounds: 1,
+          FirebaseConst.firstGiftBonusClaimed: null,
+        };
         transaction.update(liveStreamDocRef, {
-          FirebaseConst.type: LivestreamType.battle.value,
-          FirebaseConst.battleType: BattleType.waiting.value,
-          FirebaseConst.battleCreatedAt: now,
           FirebaseConst.opponentRoomId: opponentRoomId,
+          FirebaseConst.coHostConnectedAt: now,
           FirebaseConst.pendingBattleInviteFromId: null,
           FirebaseConst.battleInviteSentAt: null,
-          FirebaseConst.battleRoundWins: 0,
-          FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
-          FirebaseConst.battleCurrentRound: 1,
-          FirebaseConst.firstGiftBonusClaimed: false,
+          ...cleanBattleState,
         });
         transaction.update(_roomDocRef(opponentRoomId), {
-          FirebaseConst.type: LivestreamType.battle.value,
-          FirebaseConst.battleType: BattleType.waiting.value,
-          FirebaseConst.battleCreatedAt: now,
           FirebaseConst.opponentRoomId: myRoomId,
-          FirebaseConst.battleRoundWins: 0,
-          FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
-          FirebaseConst.battleCurrentRound: 1,
-          FirebaseConst.firstGiftBonusClaimed: false,
+          FirebaseConst.coHostConnectedAt: now,
+          ...cleanBattleState,
         });
       });
+      // "X joined as a Co-Host" in each room's own comment feed, same
+      // wording the old in-room promotion used to post -- there's no
+      // single room being "joined" any more (each host stays in their own),
+      // so this announces the OTHER party on each side: fromHostId shows up
+      // in my feed, myUserId shows up in theirs.
+      unawaited(_announceCoHostConnected(fromHostId));
     } catch (e) {
-      Loggers.error('Failed to accept PK invite: $e');
-      showSnackBar(LKey.battleInviteFailed.tr);
+      Loggers.error('Failed to accept Co-Host connect invite: $e');
+      showSnackBar(LKey.coHostConnectInviteFailed.tr);
+    }
+  }
+
+  Future<void> _announceCoHostConnected(int otherHostId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    try {
+      await _addUsersFirebaseFireStore();
+      await liveStreamCommentsRef.doc('$now').set(
+            LivestreamComment(
+              commentType: LivestreamCommentType.joinedCoHost,
+              id: now,
+              senderId: otherHostId,
+            ).toJson(),
+          );
+      await _roomDocRef('$otherHostId')
+          .collection(FirebaseConst.comments)
+          .doc('${now + 1}')
+          .set(
+            LivestreamComment(
+              commentType: LivestreamCommentType.joinedCoHost,
+              id: now + 1,
+              senderId: myUserId,
+            ).toJson(),
+          );
+    } catch (e) {
+      Loggers.error('Failed to announce Co-Host connection: $e');
+    }
+  }
+
+  /// Disconnects THIS host from whoever they're connected to -- the one
+  /// explicit, deliberate action that ever clears `opponentRoomId`. Ending
+  /// a battle (see endBattleOnly) or letting the post-match results window
+  /// expire must never call this on their own; only an explicit Exit tap
+  /// does (requirement: completing/expiring a match must never auto-exit).
+  Future<void> exitCoHostConnection() async {
+    if (!isHost) return;
+    final opponentRoomId = liveData.value.opponentRoomId;
+    if (opponentRoomId == null) return;
+    // If a battle happens to still be running, end it first rather than
+    // leaving an orphaned battle state on either doc.
+    if (liveData.value.battleType == BattleType.waiting ||
+        liveData.value.battleType == BattleType.running) {
+      await endBattleOnly();
+    }
+    final teammateRoomId = liveData.value.coHostTeammateRoomId;
+    try {
+      final batch = db.batch();
+      batch.update(liveStreamDocRef, {
+        FirebaseConst.opponentRoomId: null,
+        FirebaseConst.coHostConnectedAt: null,
+        FirebaseConst.coHostTeammateRoomId: null,
+        FirebaseConst.coHostOpponentTeamRoomIds: null,
+        FirebaseConst.pkMode: null,
+      });
+      batch.update(_roomDocRef(opponentRoomId), {
+        FirebaseConst.opponentRoomId: null,
+        FirebaseConst.coHostConnectedAt: null,
+        FirebaseConst.coHostTeammateRoomId: null,
+        FirebaseConst.coHostOpponentTeamRoomIds: null,
+        FirebaseConst.pkMode: null,
+      });
+      if (teammateRoomId != null) {
+        batch.update(_roomDocRef(teammateRoomId), {
+          FirebaseConst.coHostTeammateRoomId: null,
+          FirebaseConst.coHostOpponentTeamRoomIds: null,
+          FirebaseConst.pkMode: null,
+        });
+      }
+      await batch.commit();
+    } catch (e) {
+      Loggers.error('Failed to exit Co-Host connection: $e');
+    }
+  }
+
+  // ───────────────────────── Play PK Match ─────────────────────────
+  // Starting a battle on an ALREADY-connected pair -- a separate, explicit
+  // step from the connection itself (decision B: the other connected
+  // co-host must accept/confirm before the battle actually starts).
+
+  /// Tapped from the "Play PK Match" button -- sends a request to the
+  /// other connected host rather than starting the battle immediately.
+  Future<void> requestPkMatch() async {
+    if (!isHost) return;
+    final opponentRoomId = liveData.value.opponentRoomId;
+    if (opponentRoomId == null) return;
+    try {
+      await _roomDocRef(opponentRoomId).update({
+        FirebaseConst.pendingPkMatchRequestFromId: myUserId,
+        FirebaseConst.pkMatchRequestSentAt:
+            DateTime.now().millisecondsSinceEpoch,
+      });
+      showSnackBar(LKey.pkMatchRequestSent.tr);
+      // Same realtime-listener-can-be-slow nudge sendCoHostConnectInvite
+      // uses -- see that function's comment for why.
+      unawaited(_pushCoHostConnectInvite(int.tryParse(opponentRoomId) ?? -1));
+    } catch (e) {
+      Loggers.error('Failed to send Play PK Match request: $e');
+      showSnackBar(LKey.pkMatchRequestFailed.tr);
+    }
+  }
+
+  void _showIncomingPkMatchRequestDialog(int fromHostId) {
+    if (liveData.value.opponentRoomId != '$fromHostId') {
+      // Not connected to this host (any more) — nothing to confirm.
+      declinePkMatchRequest();
+      return;
+    }
+    final sentAt = liveData.value.pkMatchRequestSentAt;
+    if (sentAt != null) {
+      final elapsedSeconds =
+          (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
+      if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
+        declinePkMatchRequest();
+        return;
+      }
+    }
+    final requester = firestoreController.users
+        .firstWhereOrNull((user) => user.userId == fromHostId);
+    final remaining = sentAt == null
+        ? AppRes.battleInviteExpiryInSecond
+        : (AppRes.battleInviteExpiryInSecond -
+                (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000)
+            .round()
+            .clamp(1, AppRes.battleInviteExpiryInSecond);
+    Get.dialog(
+      TimedInviteDialog(
+        title: LKey.pkMatchRequestTitle.tr,
+        description: LKey.pkMatchRequestDescription
+            .trParams({'name': requester?.username ?? 'Your co-host'}),
+        requester: requester,
+        expirySeconds: remaining,
+        onDecline: declinePkMatchRequest,
+        onAccept: () => acceptPkMatch(fromHostId),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> declinePkMatchRequest() async {
+    await liveStreamDocRef.update({
+      FirebaseConst.pendingPkMatchRequestFromId: null,
+      FirebaseConst.pkMatchRequestSentAt: null,
+    });
+  }
+
+  /// Actually starts the battle -- always a single flat 5-minute round, no
+  /// rounds concept (battleTotalRounds/battleCurrentRound are written as
+  /// 1/1, which is what keeps the pre-existing "Next Round" button from
+  /// ever being reachable through canStartNextRound, with no change needed
+  /// to startNextRound itself).
+  Future<void> acceptPkMatch(int fromHostId) async {
+    if (!isHost) return;
+    final sentAt = liveData.value.pkMatchRequestSentAt;
+    if (sentAt != null) {
+      final elapsedSeconds =
+          (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
+      if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
+        showSnackBar(LKey.pkMatchRequestExpired.tr);
+        await declinePkMatchRequest();
+        return;
+      }
+    }
+    final myRoomId = liveData.value.roomID;
+    if (myRoomId == null) return;
+    final opponentRoomId = '$fromHostId';
+    roundBaselineRed.value = 0;
+    roundBaselineBlue.value = 0;
+    try {
+      await db.runTransaction((transaction) async {
+        final mySnapshot = await transaction.get(liveStreamDocRef);
+        final opponentSnapshot =
+            await transaction.get(_roomDocRef(opponentRoomId));
+        final myData = mySnapshot.data() as Map<String, dynamic>?;
+        final opponentData = opponentSnapshot.data() as Map<String, dynamic>?;
+        if (myData == null || opponentData == null) {
+          throw Exception('Room no longer exists');
+        }
+        final myLatest = Livestream.fromJson(myData);
+        if (myLatest.opponentRoomId != opponentRoomId ||
+            myLatest.pendingPkMatchRequestFromId != fromHostId) {
+          throw Exception('Match request no longer valid');
+        }
+        final now = DateTime.now().millisecondsSinceEpoch;
+        // RUNNING, not WAITING -- a co-host PK match starts the instant
+        // both sides confirm, no pre-battle countdown stage (the old
+        // full-screen "Battle starting in..." overlay was already removed
+        // for the same-room flow per client spec; it must never apply here
+        // either, see the removed BattleStartCountdownOverlay usage in
+        // livestream_host_screen.dart / live_stream_audience_screen.dart).
+        final battleFields = {
+          FirebaseConst.type: LivestreamType.battle.value,
+          FirebaseConst.battleType: BattleType.running.value,
+          FirebaseConst.battleCreatedAt: now,
+          FirebaseConst.battleDuration: AppRes.coHostBattleDurationInMinutes,
+          FirebaseConst.battleRoundWins: 0,
+          FirebaseConst.battleTotalRounds: 1,
+          FirebaseConst.battleCurrentRound: 1,
+          FirebaseConst.crossRoomLikePoints: 0,
+        };
+        transaction.update(liveStreamDocRef, {
+          ...battleFields,
+          FirebaseConst.pendingPkMatchRequestFromId: null,
+          FirebaseConst.pkMatchRequestSentAt: null,
+        });
+        transaction.update(_roomDocRef(opponentRoomId), battleFields);
+      });
+    } catch (e) {
+      Loggers.error('Failed to accept Play PK Match request: $e');
+      showSnackBar(LKey.pkMatchRequestFailed.tr);
     }
   }
 
@@ -3602,7 +3920,7 @@ class LivestreamScreenController extends BaseController
 
   /// Only meaningful right after a cross-room battle has ended — the two
   /// rooms are still linked via [opponentRoomId] at that point (nothing is
-  /// cleared until [endCrossRoomBattleAndReset] runs), so this reuses that
+  /// cleared until [endBattleOnly] runs), so this reuses that
   /// same link rather than needing the opponent to be re-discovered via
   /// [FindOpponentScreen].
   Future<void> requestRematch() async {
@@ -3670,27 +3988,33 @@ class LivestreamScreenController extends BaseController
     roundBaselineRed.value = 0;
     roundBaselineBlue.value = 0;
     try {
+      // Fresh 5-minute battle, scores at zero -- the co-host connection
+      // itself was never cleared by the previous battle ending (see
+      // endBattleOnly), so opponentRoomId is just reaffirmed here, not
+      // re-established from scratch.
+      final now = DateTime.now().millisecondsSinceEpoch;
+      // RUNNING, not WAITING -- same reasoning as acceptPkMatch: a rematch
+      // starts immediately too, no countdown stage.
+      final battleFields = {
+        FirebaseConst.type: LivestreamType.battle.value,
+        FirebaseConst.battleType: BattleType.running.value,
+        FirebaseConst.battleCreatedAt: now,
+        FirebaseConst.battleDuration: AppRes.coHostBattleDurationInMinutes,
+        FirebaseConst.battleRoundWins: 0,
+        FirebaseConst.battleTotalRounds: 1,
+        FirebaseConst.battleCurrentRound: 1,
+        FirebaseConst.battleResultsVisibleUntil: null,
+        FirebaseConst.crossRoomLikePoints: 0,
+      };
       final batch = db.batch();
       batch.update(liveStreamDocRef, {
-        FirebaseConst.type: LivestreamType.battle.value,
-        FirebaseConst.battleType: BattleType.waiting.value,
-        FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
+        ...battleFields,
         FirebaseConst.opponentRoomId: opponentRoomId,
         FirebaseConst.pendingRematchFromId: null,
-        FirebaseConst.battleRoundWins: 0,
-        FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
-        FirebaseConst.battleCurrentRound: 1,
-        FirebaseConst.firstGiftBonusClaimed: false,
       });
       batch.update(_roomDocRef(opponentRoomId), {
-        FirebaseConst.type: LivestreamType.battle.value,
-        FirebaseConst.battleType: BattleType.waiting.value,
-        FirebaseConst.battleCreatedAt: DateTime.now().millisecondsSinceEpoch,
+        ...battleFields,
         FirebaseConst.opponentRoomId: myRoomId,
-        FirebaseConst.battleRoundWins: 0,
-        FirebaseConst.battleTotalRounds: AppRes.battleTotalRounds,
-        FirebaseConst.battleCurrentRound: 1,
-        FirebaseConst.firstGiftBonusClaimed: false,
       });
       await batch.commit();
     } catch (e) {
@@ -3702,7 +4026,7 @@ class LivestreamScreenController extends BaseController
   /// Freezes the current score and writes one immutable history document
   /// before anything gets reset. Must be called while all the battle fields
   /// (opponentRoomId, battleCreatedAt, round wins, per-side coin totals)
-  /// are still populated — i.e. before `endCrossRoomBattleAndReset` or the
+  /// are still populated — i.e. before `endBattleOnly` or the
   /// same-room equivalent wipes them. Safe to call from either host's
   /// device independently: both sides compute the same battleId
   /// (deterministic from the two room ids + battleCreatedAt, sorted so
@@ -3799,12 +4123,16 @@ class LivestreamScreenController extends BaseController
     final opponentRoomId = liveData.value.opponentRoomId;
     if (myRoomId == null || opponentRoomId == null) return;
     try {
+      final resultsVisibleUntil =
+          DateTime.now().millisecondsSinceEpoch + 60000;
       final batch = db.batch();
       batch.update(liveStreamDocRef, {
         FirebaseConst.battleType: BattleType.end.value,
+        FirebaseConst.battleResultsVisibleUntil: resultsVisibleUntil,
       });
       batch.update(_roomDocRef(opponentRoomId), {
         FirebaseConst.battleType: BattleType.end.value,
+        FirebaseConst.battleResultsVisibleUntil: resultsVisibleUntil,
       });
       await batch.commit();
     } catch (e) {
@@ -3812,9 +4140,15 @@ class LivestreamScreenController extends BaseController
     }
   }
 
-  /// Reverts both rooms to normal once the host dismisses the battle-end
-  /// screen (mirrors the same-room battle's manual "Stop" behavior).
-  Future<void> endCrossRoomBattleAndReset() async {
+  /// Resets BATTLE fields only -- the co-host CONNECTION (opponentRoomId/
+  /// coHostConnectedAt) is deliberately untouched, so the two hosts can
+  /// keep talking/interacting (and start a Rematch) without exiting and
+  /// reconnecting. Called once the 1-minute post-match results window
+  /// elapses, on a manual Stop while a battle is running, or when the
+  /// opponent's stream looks gone past the reconnect grace period -- never
+  /// automatically exits the connection itself (see exitCoHostConnection
+  /// for the one function that does).
+  Future<void> endBattleOnly() async {
     final opponentRoomId = liveData.value.opponentRoomId;
     try {
       await updateLiveStreamData(
@@ -3822,13 +4156,17 @@ class LivestreamScreenController extends BaseController
         type: LivestreamType.livestream,
         battleRoundWins: 0,
       );
-      await liveStreamDocRef.update({FirebaseConst.opponentRoomId: null});
+      await liveStreamDocRef.update({
+        FirebaseConst.battleCreatedAt: null,
+        FirebaseConst.battleResultsVisibleUntil: null,
+      });
       if (opponentRoomId != null) {
         await _roomDocRef(opponentRoomId).update({
           FirebaseConst.battleType: BattleType.initiate.value,
           FirebaseConst.type: LivestreamType.livestream.value,
-          FirebaseConst.opponentRoomId: null,
           FirebaseConst.battleRoundWins: 0,
+          FirebaseConst.battleCreatedAt: null,
+          FirebaseConst.battleResultsVisibleUntil: null,
         });
       }
     } catch (e) {
@@ -3885,6 +4223,15 @@ class LivestreamScreenController extends BaseController
     },
             onError: (e) =>
                 Loggers.error('Opponent user-states listener failed: $e'));
+
+    opponentCommentsListener = _roomDocRef(opponentRoomId)
+        .collection(FirebaseConst.comments)
+        .snapshots()
+        .listen((snapshot) {
+      opponentComments.value = snapshot.docs
+          .map((doc) => LivestreamComment.fromJson(doc.data()))
+          .toList();
+    }, onError: (e) => Loggers.error('Opponent comments listener failed: $e'));
   }
 
   Future<void> _playOpponentStream(int opponentHostId) async {
@@ -3925,7 +4272,7 @@ class LivestreamScreenController extends BaseController
       // forever.
       if (liveData.value.type == LivestreamType.battle) {
         unawaited(_recordBattleHistory(endReason: 'opponent_disconnected'));
-        unawaited(endCrossRoomBattleAndReset());
+        unawaited(endBattleOnly());
       }
     });
   }
@@ -3942,10 +4289,13 @@ class LivestreamScreenController extends BaseController
     _cancelOpponentReconnectGrace();
     opponentLiveDocListener?.cancel();
     opponentUserStatesListener?.cancel();
+    opponentCommentsListener?.cancel();
     opponentLiveDocListener = null;
     opponentUserStatesListener = null;
+    opponentCommentsListener = null;
     opponentLiveData.value = null;
     opponentUserStates.clear();
+    opponentComments.clear();
     if (opponentStreamViews.isNotEmpty) {
       for (final view in opponentStreamViews) {
         zegoEngine.stopPlayingStream(view.streamId);

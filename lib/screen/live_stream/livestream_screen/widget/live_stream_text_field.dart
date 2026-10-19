@@ -1,3 +1,4 @@
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -73,6 +74,10 @@ class LiveStreamTextFieldView extends StatelessWidget {
               opacity: .42,
             ),
             contentPadding: const EdgeInsets.only(left: 10, right: 10),
+            prefixIconConstraints: const BoxConstraints(),
+            prefixIcon: commentsEnabled
+                ? _EmojiPickerButton(controller: controller)
+                : null,
             suffixIconConstraints: const BoxConstraints(),
             suffixIcon: TextFieldSuffixIcon(
               controller: controller,
@@ -183,6 +188,63 @@ class TextFieldSuffixIcon extends StatelessWidget {
           Icons.send_rounded,
           color: Colors.white,
           size: 18,
+        ),
+      ),
+    );
+  }
+}
+
+/// Emoji icon inside the comment field (matches the reference's footer) —
+/// opens emoji_picker_flutter in a bottom sheet, wired directly to
+/// textCommentController so selecting an emoji inserts it the same way
+/// typing would; no new send path, onTextCommentSend already reads from
+/// this same controller.
+class _EmojiPickerButton extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const _EmojiPickerButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+        Get.bottomSheet(
+          SizedBox(
+            height: 300,
+            child: EmojiPicker(
+              textEditingController: controller.textCommentController,
+              // The package inserts into textCommentController itself, but
+              // that's a programmatic TextEditingController write, not a
+              // TextField user-input event -- the TextField's own
+              // onChanged (which drives isTextEmpty, deciding send-button
+              // vs gift-icon in the suffix) never fires for it, so sync it
+              // here explicitly.
+              onEmojiSelected: (category, emoji) {
+                controller.isTextEmpty.value =
+                    controller.textCommentController.text.isEmpty;
+              },
+              onBackspacePressed: () {
+                controller.isTextEmpty.value =
+                    controller.textCommentController.text.isEmpty;
+              },
+              config: Config(
+                height: 300,
+                emojiViewConfig: EmojiViewConfig(
+                  backgroundColor: adaptiveBackground(context),
+                ),
+              ),
+            ),
+          ),
+          backgroundColor: adaptiveBackground(context),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(left: 10),
+        child: Icon(
+          Icons.emoji_emotions_outlined,
+          color: whitePure(context).withValues(alpha: .7),
+          size: 20,
         ),
       ),
     );

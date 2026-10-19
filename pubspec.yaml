@@ -53,6 +53,7 @@ dependencies:
   detectable_text_field: ^3.0.2
   dismissible_page: ^1.0.2
   dotted_border: ^3.0.1
+  emoji_picker_flutter: ^4.4.0
   expandable_page_view: ^1.0.17
   figma_squircle_updated: ^1.0.1
   firebase_auth: ^5.5.4

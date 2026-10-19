@@ -65,14 +65,53 @@ class Livestream {
   // under the same AppID directly.
   String? opponentRoomId;
 
-  // Set on THIS room's doc (the invitee) while a cross-room PK invite from
-  // [pendingBattleInviteFromId] is awaiting accept/decline.
+  // Co-Host Connection: [opponentRoomId] now means "connected to this other
+  // independently-live room" on its own -- it no longer implies a battle is
+  // running (see the client's binding Guest-vs-Co-host clarification: a
+  // Co-Host connection and a PK Match are two separate, explicit steps).
+  // When this was established, so the UI can show "connected Xm ago".
+  // Cleared only by exitCoHostConnection(), never by a battle ending.
+  int? coHostConnectedAt;
+
+  // Set on THIS room's doc (the invitee) while a cross-room Co-Host CONNECT
+  // invite from [pendingBattleInviteFromId] is awaiting accept/decline.
+  // (Field name kept from the original same-concept cross-room invite --
+  // accepting it now only connects, see acceptCoHostConnectInvite(); it no
+  // longer also starts a battle.)
   int? pendingBattleInviteFromId;
 
   // When the invite above was sent (ms epoch) — lets both the inviter's and
   // invitee's device independently compute whether it's past
   // AppRes.battleInviteExpiryInSecond without needing a server timer.
   int? battleInviteSentAt;
+
+  // "Play PK Match" request: set on the OTHER connected co-host's doc once
+  // this room's host taps Play PK Match. The battle itself only starts once
+  // that other host accepts (acceptPkMatch()) -- same accept/decline/expiry
+  // shape as the connect invite above, just for the separate "start a
+  // battle on an already-connected pair" step.
+  int? pendingPkMatchRequestFromId;
+  int? pkMatchRequestSentAt;
+
+  // Written the moment a battle ends (battleType -> END): now + 60s. Every
+  // connected participant/viewer independently gates the post-match results
+  // UI (scores, winner/loser, emojis, gifting stats) on this timestamp
+  // still being in the future, then it auto-clears -- the co-host
+  // CONNECTION is untouched by this, only the battle-result chrome.
+  int? battleResultsVisibleUntil;
+
+  // 2v2 team assembly: a second independently-live room that joined THIS
+  // room's team (null in 1v1). Symmetric -- the teammate's own doc points
+  // back here. Kept separate from [opponentRoomId], which always stays
+  // "my primary opponent", so existing 1v1 code paths don't need to change
+  // shape to support this.
+  String? coHostTeammateRoomId;
+  // The opposing team's room ids beyond the primary [opponentRoomId] --
+  // empty/null in 1v1, one extra entry in 2v2.
+  List<String>? coHostOpponentTeamRoomIds;
+  // Explicit rather than inferred from list lengths, since those lengths
+  // can be transiently asymmetric mid-teammate-invite.
+  String? pkMode; // '1v1' | '2v2'
 
   // Same shape as [pendingBattleInviteFromId], written after a battle has
   // ended rather than before one starts — the other host requested a
@@ -126,6 +165,21 @@ class Livestream {
   int? pkLikePointsA;
   int? pkLikePointsB;
 
+  // Cross-room Co-Host PK only -- unlike pkLikePointsA/B (one doc holds
+  // both sides' counts, since a same-room match's two teams share a single
+  // Livestream doc), a cross-room battle is two separate docs, so this
+  // field holds ONLY this room's own side's like count; the opponent
+  // room's doc carries its own copy the same way. Reset to 0 at the start
+  // of every cross-room match (see acceptPkMatch/acceptRematch).
+  int? crossRoomLikePoints;
+
+  // Speed Challenge: during minute 2-3 of a Co-Host PK battle, eligible
+  // gifts contribute 3x their normal value to the PK score ONLY (never to
+  // actual coin/earnings -- see speedChallengeMultiplierFor()). null/empty
+  // = every gift is eligible, same null-means-all convention as
+  // [pkEligibleGiftIds] above.
+  List<int>? speedChallengeEligibleGiftIds;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -157,8 +211,15 @@ class Livestream {
     this.fanClubPerks,
     this.poll,
     this.opponentRoomId,
+    this.coHostConnectedAt,
     this.pendingBattleInviteFromId,
     this.battleInviteSentAt,
+    this.pendingPkMatchRequestFromId,
+    this.pkMatchRequestSentAt,
+    this.battleResultsVisibleUntil,
+    this.coHostTeammateRoomId,
+    this.coHostOpponentTeamRoomIds,
+    this.pkMode,
     this.pendingRematchFromId,
     this.battleRoundWins,
     this.battleRoundWinsHost,
@@ -178,6 +239,8 @@ class Livestream {
     this.pkEligibleGiftIds,
     this.pkLikePointsA,
     this.pkLikePointsB,
+    this.crossRoomLikePoints,
+    this.speedChallengeEligibleGiftIds,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -218,8 +281,18 @@ class Livestream {
         ? LivePoll.fromJson(Map<String, dynamic>.from(json['poll']))
         : null;
     opponentRoomId = json['opponent_room_id'];
+    coHostConnectedAt = json['co_host_connected_at'];
     pendingBattleInviteFromId = json['pending_battle_invite_from_id'];
     battleInviteSentAt = json['battle_invite_sent_at'];
+    pendingPkMatchRequestFromId = json['pending_pk_match_request_from_id'];
+    pkMatchRequestSentAt = json['pk_match_request_sent_at'];
+    battleResultsVisibleUntil = json['battle_results_visible_until'];
+    coHostTeammateRoomId = json['co_host_teammate_room_id'];
+    coHostOpponentTeamRoomIds =
+        (json['co_host_opponent_team_room_ids'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList();
+    pkMode = json['pk_mode'];
     pendingRematchFromId = json['pending_rematch_from_id'];
     battleRoundWins = json['battle_round_wins'];
     battleRoundWinsHost = json['battle_round_wins_host'];
@@ -254,6 +327,11 @@ class Livestream {
         .toList();
     pkLikePointsA = json['pk_like_points_a'];
     pkLikePointsB = json['pk_like_points_b'];
+    crossRoomLikePoints = json['cross_room_like_points'];
+    speedChallengeEligibleGiftIds =
+        (json['speed_challenge_eligible_gift_ids'] as List<dynamic>?)
+            ?.map((e) => (e as num).toInt())
+            .toList();
   }
 
   Map<String, dynamic> toJson() {
@@ -288,8 +366,15 @@ class Livestream {
     data['fan_club_perks'] = fanClubPerks;
     data['poll'] = poll?.toJson();
     data['opponent_room_id'] = opponentRoomId;
+    data['co_host_connected_at'] = coHostConnectedAt;
     data['pending_battle_invite_from_id'] = pendingBattleInviteFromId;
     data['battle_invite_sent_at'] = battleInviteSentAt;
+    data['pending_pk_match_request_from_id'] = pendingPkMatchRequestFromId;
+    data['pk_match_request_sent_at'] = pkMatchRequestSentAt;
+    data['battle_results_visible_until'] = battleResultsVisibleUntil;
+    data['co_host_teammate_room_id'] = coHostTeammateRoomId;
+    data['co_host_opponent_team_room_ids'] = coHostOpponentTeamRoomIds;
+    data['pk_mode'] = pkMode;
     data['pending_rematch_from_id'] = pendingRematchFromId;
     data['battle_round_wins'] = battleRoundWins;
     data['battle_round_wins_host'] = battleRoundWinsHost;
@@ -309,6 +394,8 @@ class Livestream {
     data['pk_eligible_gift_ids'] = pkEligibleGiftIds;
     data['pk_like_points_a'] = pkLikePointsA;
     data['pk_like_points_b'] = pkLikePointsB;
+    data['cross_room_like_points'] = crossRoomLikePoints;
+    data['speed_challenge_eligible_gift_ids'] = speedChallengeEligibleGiftIds;
     return data;
   }
 

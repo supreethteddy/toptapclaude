@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
 import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/battle_view.dart';
-import 'package:shortzz/utilities/app_res.dart';
-import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -35,8 +29,20 @@ class PartyBattleView extends StatelessWidget {
         child: Column(
           children: [
             _PartyBattleOverlay(controller: controller, margin: margin),
-            Obx(() => BattleTimer(
-                controller: controller, livestream: controller.liveData.value)),
+            // BattleTimer's initState kicks off battleRunning(), which reads
+            // battleCreatedAt to compute a countdown and auto-ends the match
+            // once it hits zero -- mounting it while merely connected (no
+            // battle started yet, battleCreatedAt null) would read that as
+            // "already expired" and immediately fire the end-of-battle path.
+            // Only mount it once a battle is actually underway or just
+            // ended.
+            Obx(() {
+              final stream = controller.liveData.value;
+              if (stream.battleType == BattleType.initiate) {
+                return const SizedBox();
+              }
+              return BattleTimer(controller: controller, livestream: stream);
+            }),
           ],
         ),
       ),
@@ -55,11 +61,21 @@ class _PartyBattleOverlay extends StatelessWidget {
     return Obx(() {
       final myViews = controller.streamViews;
       final opponentViews = controller.opponentStreamViews;
-      final red =
-          controller.mySideBattleCoins - controller.roundBaselineRed.value;
-      final blue = controller.opponentSideBattleCoins -
-          controller.roundBaselineBlue.value;
       final stream = controller.liveData.value;
+      // Likes tapped on each half of the screen (see onLikeButtonTap) count
+      // toward the PK score too, same as the same-room arena already does
+      // via pkLikePointsA/B -- crossRoomLikePoints is this doc's own side's
+      // tally, reset to 0 at the start of every cross-room match.
+      final pointsPerLike = controller.setting?.pkLikePoints ?? 1;
+      final red = controller.mySideBattleCoins -
+          controller.roundBaselineRed.value +
+          (stream.crossRoomLikePoints ?? 0) * pointsPerLike;
+      final blue = controller.opponentSideBattleCoins -
+          controller.roundBaselineBlue.value +
+          (controller.opponentLiveData.value?.crossRoomLikePoints ?? 0) *
+              pointsPerLike;
+
+      final inBattle = stream.battleType != BattleType.initiate;
 
       return SafeArea(
         bottom: false,
@@ -67,22 +83,42 @@ class _PartyBattleOverlay extends StatelessWidget {
           height: Get.height / 2.4,
           width: Get.width,
           margin: margin,
-          child: Stack(
-            alignment: Alignment.topCenter,
+          // Score bar is a Column sibling ABOVE the video, not an overlay
+          // sharing the video's own Stack slot -- matches the same-room
+          // arena's proven, already-approved layout (LiveBattleOverlayWidget
+          // in battle_view.dart): the bar must never end up hidden behind or
+          // under the video. Connecting two hosts without battling (gated by
+          // inBattle, same as BattleTimer) must still show both videos only,
+          // no score bar/stats/combo badge.
+          child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.only(top: 15.0, bottom: 30),
-                child: Row(
+              if (inBattle)
+                BuildProgressBar(red: red, blue: blue, showScoreLabels: true),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.topCenter,
                   children: [
-                    Expanded(child: _SideStack(streamViews: myViews)),
-                    Expanded(child: _SideStack(streamViews: opponentViews)),
+                    Container(
+                      padding: const EdgeInsets.only(bottom: 30),
+                      child: Row(
+                        children: [
+                          Expanded(child: _SideStack(streamViews: myViews)),
+                          Expanded(
+                              child: _SideStack(streamViews: opponentViews)),
+                        ],
+                      ),
+                    ),
+                    if (inBattle) ...[
+                      _PartyBattleStats(
+                          red: red,
+                          blue: blue,
+                          controller: controller,
+                          stream: stream),
+                      GiftComboBadge(controller: controller),
+                    ],
                   ],
                 ),
               ),
-              BuildProgressBar(red: red, blue: blue),
-              _PartyBattleStats(
-                  red: red, blue: blue, controller: controller, stream: stream),
-              GiftComboBadge(controller: controller),
             ],
           ),
         ),
@@ -132,12 +168,6 @@ class _PartyBattleStats extends StatelessWidget {
     final outcome = determineBattleOutcome(red, blue);
     bool isDraw = outcome == BattleOutcome.draw;
     bool isRedWin = outcome == BattleOutcome.sideAWins;
-    AppUser? myHost = controller.firestoreController.users.firstWhereOrNull(
-        (user) => user.userId == controller.liveData.value.hostId);
-    AppUser? opponentHost = controller.opponentLiveData.value == null
-        ? null
-        : controller.firestoreController.users.firstWhereOrNull(
-            (user) => user.userId == controller.opponentLiveData.value?.hostId);
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -146,29 +176,6 @@ class _PartyBattleStats extends StatelessWidget {
           Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Obx(() {
-                final myWins = controller.liveData.value.battleRoundWins ?? 0;
-                final opponentWins =
-                    controller.opponentLiveData.value?.battleRoundWins ?? 0;
-                final currentRound =
-                    controller.liveData.value.battleCurrentRound ?? 1;
-                final totalRounds =
-                    controller.liveData.value.battleTotalRounds ??
-                        AppRes.battleTotalRounds;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      WinPill(count: myWins, color: ColorRes.likeRed),
-                      RoundLabel(current: currentRound, total: totalRounds),
-                      WinPill(
-                          count: opponentWins,
-                          color: ColorRes.battleProgressColor),
-                    ],
-                  ),
-                );
-              }),
               FirstGiftBonusBanner(controller: controller),
               Obx(() => controller.isOpponentReconnecting.value
                   ? Container(
@@ -245,26 +252,20 @@ class _PartyBattleStats extends StatelessWidget {
                     ),
                   ),
               ],
-              if (myHost != null || opponentHost != null)
-                Container(
-                  height: 43,
-                  alignment: Alignment.topCenter,
-                  child: Row(
-                    children: [
-                      _streamerInfo(context,
-                          isLeft: true, user: myHost, color: ColorRes.likeRed),
-                      _streamerInfo(context,
-                          isLeft: false,
-                          user: opponentHost,
-                          color: ColorRes.battleProgressColor),
-                    ],
-                  ),
-                ),
+              // Top-3 gifters seat row for each side, right at the bottom
+              // edge of the video (client reference) -- replaces the plain
+              // red/blue hostname strip this used to be.
+              TopGiftersRow(
+                controller: controller,
+                teamAUserIds: [
+                  if (stream.hostId != null) stream.hostId!,
+                ],
+                teamBUserIds: [
+                  if (controller.opponentLiveData.value?.hostId != null)
+                    controller.opponentLiveData.value!.hostId!,
+                ],
+              ),
             ],
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Image.asset(AssetRes.icBattleVs, height: 80, width: 80),
           ),
         ],
       ),
@@ -309,45 +310,4 @@ class _PartyBattleStats extends StatelessWidget {
     );
   }
 
-  Widget _streamerInfo(BuildContext context,
-      {required bool isLeft, required AppUser? user, required Color color}) {
-    return Expanded(
-      child: Container(
-        height: 43,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        color: color,
-        child: Row(
-          mainAxisAlignment:
-              isLeft ? MainAxisAlignment.start : MainAxisAlignment.end,
-          children: [
-            if (isLeft && user != null)
-              CustomImage(
-                  size: const Size(30, 30),
-                  strokeColor: whitePure(context),
-                  strokeWidth: 1.5,
-                  image: user.profile?.addBaseURL(),
-                  fullName: user.fullname),
-            SizedBox(width: !isLeft ? 30 : 5),
-            if (user != null)
-              Flexible(
-                child: FullNameWithBlueTick(
-                  username: user.username,
-                  isVerify: user.isVerify,
-                  fontColor: whitePure(context),
-                  fontSize: 11,
-                ),
-              ),
-            SizedBox(width: isLeft ? 30 : 5),
-            if (!isLeft && user != null)
-              CustomImage(
-                  size: const Size(30, 30),
-                  strokeColor: whitePure(context),
-                  strokeWidth: 1.5,
-                  image: user.profile?.addBaseURL(),
-                  fullName: user.fullname),
-          ],
-        ),
-      ),
-    );
-  }
 }

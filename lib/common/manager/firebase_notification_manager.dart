@@ -32,6 +32,7 @@ import 'package:shortzz/screen/call_screen/call_screen.dart';
 import 'package:shortzz/screen/dashboard_screen/dashboard_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/audience/live_stream_audience_screen.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/host/livestream_host_screen.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/post_screen/single_post_screen.dart';
 import 'package:shortzz/screen/reels_screen/reels_screen.dart';
 import 'package:shortzz/utilities/const_res.dart';
@@ -336,6 +337,25 @@ class FirebaseNotificationManager {
         Loggers.info('📞 Incoming call notification received in foreground');
         await _handleEnhancedIncomingCall(message);
         return; // Don't show regular notification for calls
+      }
+
+      // Co-Host connect invite: a best-effort nudge alongside the room
+      // doc's own Firestore listener (see sendCoHostConnectInvite) -- on
+      // a slow/stale listener this push forces an immediate re-fetch of
+      // the room doc instead of waiting for the realtime snapshot to
+      // eventually arrive. Same "nudge, don't replace the real mechanism"
+      // pattern LiveInviteWatcher's FCM push already uses for guest/co-
+      // host-in-room invites.
+      if (message.data['type'] == NotificationType.coHostConnectInvite.type) {
+        final roomId = message.data['room_id'];
+        if (roomId != null &&
+            Get.isRegistered<LivestreamScreenController>(tag: roomId)) {
+          Loggers.info(
+              '🔔 Co-Host connect invite push: forcing room doc re-check for room=$roomId');
+          unawaited(Get.find<LivestreamScreenController>(tag: roomId)
+              .forceCheckPendingCoHostInvite());
+        }
+        return; // No visible system notification needed for this nudge.
       }
 
       if (!_shouldShowNotification(message)) {
@@ -895,6 +915,7 @@ enum NotificationType {
   user('user'),
   liveStream('live_stream'),
   liveInvite('live_invite'),
+  coHostConnectInvite('co_host_connect_invite'),
   other('other');
 
   final String type;

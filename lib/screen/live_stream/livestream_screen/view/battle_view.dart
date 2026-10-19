@@ -340,10 +340,13 @@ class BuildProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = Get.width;
-    final total = red + blue == 0 ? 1 : red + blue; // prevent division by zero
-
-    final redWidth = (width * red) / total;
-    final blueWidth = (width * blue) / total;
+    final total = red + blue;
+    // No gifts sent yet (0-0): split evenly so the bar actually reads as a
+    // versus meter from the moment the battle starts, instead of both
+    // colored segments collapsing to zero width and the whole thing looking
+    // broken/invisible until someone scores.
+    final redWidth = total == 0 ? width / 2 : (width * red) / total;
+    final blueWidth = total == 0 ? width / 2 : (width * blue) / total;
     final alignmentX = ((redWidth / width) * 2) - 1;
 
     return Column(
@@ -596,23 +599,35 @@ class BuildBottomInfo extends StatelessWidget {
 /// than a new Firestore field.
 class TopGiftersRow extends StatelessWidget {
   final LivestreamScreenController controller;
+  // Cross-room Co-Host PK only -- same-room battles use the default
+  // (controller.pkTeamAUserIds/BUserIds, same-room-only fields); a
+  // cross-room battle has no such fields (it's two separate rooms, not one
+  // doc with both teams), so the caller passes this room's own host (+
+  // teammate once 2v2 exists) / the opponent's host explicitly.
+  final List<int>? teamAUserIds;
+  final List<int>? teamBUserIds;
 
-  const TopGiftersRow({super.key, required this.controller});
+  const TopGiftersRow({
+    super.key,
+    required this.controller,
+    this.teamAUserIds,
+    this.teamBUserIds,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final stream = controller.liveData.value;
-      final comments = controller.comments;
+      final comments = controller.allBattleComments;
       final teamARanks = topGiftersForTeam(
         comments: comments,
-        teamMemberIds: controller.pkTeamAUserIds,
+        teamMemberIds: teamAUserIds ?? controller.pkTeamAUserIds,
         battleCreatedAt: stream.battleCreatedAt,
         eligibleGiftIds: stream.pkEligibleGiftIds,
       );
       final teamBRanks = topGiftersForTeam(
         comments: comments,
-        teamMemberIds: controller.pkTeamBUserIds,
+        teamMemberIds: teamBUserIds ?? controller.pkTeamBUserIds,
         battleCreatedAt: stream.battleCreatedAt,
         eligibleGiftIds: stream.pkEligibleGiftIds,
       );

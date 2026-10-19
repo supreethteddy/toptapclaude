@@ -23,13 +23,16 @@ import 'package:shortzz/utilities/theme_res.dart';
 /// and friends who aren't — each with a single solid "Invite" button,
 /// instead of the older Requests/Invited/Co-hosts/Guests tabbed
 /// MembersSheet (still reachable from the "..." menu for anyone who needs
-/// the separate Guest-role invite or wants to manage/remove people already
-/// on stage).
+/// the separate Co-host-role invite or wants to manage/remove people
+/// already on stage).
 ///
-/// Invites sent from here default to the Co-host role: the client's own
-/// stage 3 → stage 4 narrative is that whoever joins here is who gets
-/// invited to battle next, and only co-hosts are PK-eligible (the client's
-/// earlier binding Co-host vs Guest Call clarification).
+/// Invites sent from here are Guest Call only -- a guest is never PK-
+/// eligible just by being invited through this screen; promoting one to
+/// Co-host is a separate, deliberate action from the Guests tab of the
+/// Members sheet. (An earlier version of this screen defaulted to Co-host
+/// instead, on the theory that this was meant to feed straight into a PK
+/// battle -- the client corrected that: this is the Guest Call invite
+/// path.)
 class GoLiveWithGuestsSheet extends StatefulWidget {
   final String roomID;
 
@@ -120,16 +123,15 @@ class _GoLiveWithGuestsSheetState extends State<GoLiveWithGuestsSheet> {
                         MemberProfileCard(
                           user: _userOf(state),
                           widget: _InviteButton(
-                            // This flow always grants Co-host specifically
-                            // (see the class doc comment on why) -- say so
-                            // on the button itself rather than a plain
-                            // "Invite" that reads as neutral/no-rights-
-                            // implied to the host tapping it.
-                            label: LKey.inviteAsCoHost.tr,
+                            // Guest Call only -- see the class doc comment.
+                            // Say so on the button itself rather than a
+                            // plain "Invite" that reads as neutral/no-
+                            // role-implied to the host tapping it.
+                            label: LKey.inviteAsGuest.tr,
                             filled: true,
                             onTap: () => controller.onInvite(_userOf(state),
                                 isInvited: false,
-                                role: LivestreamUserType.coHost),
+                                role: LivestreamUserType.guest),
                           ),
                         ),
                     ],
@@ -206,10 +208,10 @@ class _GoLiveWithGuestsSheetState extends State<GoLiveWithGuestsSheet> {
         );
       }
       return _InviteButton(
-        label: LKey.inviteAsCoHost.tr,
+        label: LKey.inviteAsGuest.tr,
         filled: true,
         onTap: () =>
-            controller.inviteOutOfRoom(user, LivestreamUserType.coHost),
+            controller.inviteOutOfRoom(user, LivestreamUserType.guest),
       );
     });
   }

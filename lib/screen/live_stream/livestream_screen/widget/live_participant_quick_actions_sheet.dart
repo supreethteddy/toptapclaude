@@ -70,14 +70,21 @@ class LiveParticipantQuickActionsSheet extends StatelessWidget {
                         Text(user.username ?? '',
                             style: TextStyleCustom.outFitSemiBold600(
                                 fontSize: 15)),
-                        Obx(() => Text(
-                              _liveState().type == LivestreamUserType.coHost
-                                  ? LKey.coHosts.tr
-                                  : LKey.guest.tr,
-                              style: TextStyleCustom.outFitRegular400(
-                                  fontSize: 12,
-                                  color: textLightGrey(context)),
-                            )),
+                        Obx(() {
+                          // In-room co-host is retired -- everyone on stage
+                          // besides the host is a Guest now. The coHost
+                          // branch only exists to label a pre-migration
+                          // legacy doc honestly rather than silently
+                          // mislabeling it.
+                          final live = _liveState();
+                          return Text(
+                            live.type == LivestreamUserType.coHost
+                                ? '${LKey.coHosts.tr} (legacy)'
+                                : LKey.guest.tr,
+                            style: TextStyleCustom.outFitRegular400(
+                                fontSize: 12, color: textLightGrey(context)),
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -102,30 +109,6 @@ class LiveParticipantQuickActionsSheet extends StatelessWidget {
                     live.isVideoOn ? 'Turn camera off' : 'Turn camera on'),
                 onTap: () => controller.coHostVideoToggle(live),
               );
-            }),
-            Obx(() {
-              final live = _liveState();
-              if (live.type == LivestreamUserType.guest) {
-                return ListTile(
-                  leading: const Icon(Icons.upgrade),
-                  title: Text(LKey.promoteToCoHost.tr),
-                  onTap: () {
-                    Get.back();
-                    controller.promoteGuestToCoHost(live);
-                  },
-                );
-              }
-              if (live.type == LivestreamUserType.coHost) {
-                return ListTile(
-                  leading: const Icon(Icons.swap_vert),
-                  title: Text(LKey.demoteToGuest.tr),
-                  onTap: () {
-                    Get.back();
-                    controller.demoteCoHostToGuest(live);
-                  },
-                );
-              }
-              return const SizedBox();
             }),
             ListTile(
               leading: const Icon(Icons.person_outline),

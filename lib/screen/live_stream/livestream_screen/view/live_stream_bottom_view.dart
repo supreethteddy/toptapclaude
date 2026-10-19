@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/widget/black_gradient_shadow.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
 import 'package:shortzz/config/deepar/local_deepar_filters.dart';
@@ -27,6 +28,7 @@ import 'package:shortzz/model/livestream/pk_eligibility.dart';
 import 'package:shortzz/utilities/asset_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/style_res.dart';
+import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
 class LiveStreamBottomView extends StatelessWidget {
@@ -852,6 +854,23 @@ class _BattleViewerActionIcons extends StatelessWidget {
             ),
           ],
           const SizedBox(width: 6),
+          // One-tap Rose shortcut (reference's rose icon) -- same send path
+          // as the full gift sheet, see sendQuickGift.
+          GestureDetector(
+            onTap: controller.sendQuickGift,
+            child: Container(
+              height: 37,
+              width: 37,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF4D8D),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.local_florist,
+                  color: Colors.white, size: 18),
+            ),
+          ),
+          const SizedBox(width: 6),
           GestureDetector(
             onTap: onShareTap,
             child: Container(
@@ -867,7 +886,42 @@ class _BattleViewerActionIcons extends StatelessWidget {
                   color: Colors.white, size: 18),
             ),
           ),
+          const SizedBox(width: 4),
+          // Running gift-total for the whole match (reference's "22.2K"
+          // next to share) -- pure display, summed from data already
+          // streamed for the score bar/top gifters, no new state.
+          _GiftTotalCounter(controller: controller),
         ],
+      );
+    });
+  }
+}
+
+/// Sum of every participant's totalCoin (totalBattleCoin + liveCoin,
+/// LivestreamUserState.totalCoin) on both sides of the match -- a running
+/// total gift value for the whole PK battle, matching the reference's
+/// counter next to the share icon.
+class _GiftTotalCounter extends StatelessWidget {
+  final LivestreamScreenController controller;
+
+  const _GiftTotalCounter({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final mine = controller.liveUsersStates
+          .fold<int>(0, (sum, state) => sum + state.totalCoin);
+      final opponent = controller.opponentUserStates
+          .fold<int>(0, (sum, state) => sum + state.totalCoin);
+      final total = mine + opponent;
+      if (total <= 0) return const SizedBox();
+      return Padding(
+        padding: const EdgeInsets.only(left: 2),
+        child: Text(
+          total.numberFormat,
+          style: TextStyleCustom.outFitSemiBold600(
+              color: Colors.white, fontSize: 12),
+        ),
       );
     });
   }
@@ -904,6 +958,57 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
             onTap: controller.openGoLiveWithGuestsSheet,
             badgeCount: pending,
             child: const Icon(Icons.people, color: Color(0xFF25F4EE), size: 18),
+          );
+        }),
+        // Co-Host connection controls: only appear once connected to
+        // another independently-live host. Connecting never auto-starts a
+        // battle (see acceptCoHostConnectInvite) -- "Play PK Match" is the
+        // separate, explicit step, and it still requires the other
+        // connected host's accept (requestPkMatch/acceptPkMatch), it
+        // doesn't start the battle by itself.
+        Obx(() {
+          final stream = controller.liveData.value;
+          if (stream.opponentRoomId == null) return const SizedBox();
+          final isBattling = stream.battleType == BattleType.waiting ||
+              stream.battleType == BattleType.running;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isBattling) ...[
+                const SizedBox(width: 6),
+                // Icon-only, matching this row's other circular buttons --
+                // the earlier wide text pill ("Play PK Match") plus the
+                // exit button plus the comment field's own prefix/suffix
+                // icons together didn't fit this row's actual width on a
+                // real phone, overflowing into the comment box next to it.
+                // Tooltip carries the label for discoverability instead.
+                Tooltip(
+                  message: LKey.playPkMatch.tr,
+                  child: GestureDetector(
+                    onTap: controller.requestPkMatch,
+                    child: Container(
+                      height: 37,
+                      width: 37,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFFFE2C55), Color(0xFF8B5CF6)],
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.bolt,
+                          color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 6),
+              _circleIconButton(
+                onTap: controller.exitCoHostConnection,
+                child: const Icon(Icons.call_end,
+                    color: ColorRes.likeRed, size: 18),
+              ),
+            ],
           );
         }),
       ],

@@ -9,7 +9,6 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/live_stream_bo
 import 'package:shortzz/screen/live_stream/livestream_screen/view/live_video_player.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/party_battle_view.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/battle_start_countdown_overlay.dart';
 import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_animation_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_background_blur_image.dart';
@@ -53,7 +52,20 @@ class LiveStreamAudienceScreen extends StatelessWidget {
 
               /// Live StreamView
               Obx(() {
-                switch (controller.liveData.value.type) {
+                final stream = controller.liveData.value;
+                // Connected to another independently-live host: show the
+                // dual-video party view as soon as they're linked, not only
+                // once a PK battle actually starts -- see the matching
+                // comment in livestream_host_screen.dart.
+                if (stream.opponentRoomId != null) {
+                  final topMargin =
+                      EdgeInsets.only(top: controller.topHeaderHeight.value);
+                  return PartyBattleView(
+                    controller: controller,
+                    margin: topMargin,
+                  );
+                }
+                switch (stream.type) {
                   case null:
                   case LivestreamType.livestream:
                     return LivestreamView(
@@ -67,16 +79,11 @@ class LiveStreamAudienceScreen extends StatelessWidget {
                     // on top of the badges/title rows above it.
                     final topMargin =
                         EdgeInsets.only(top: controller.topHeaderHeight.value);
-                    return controller.liveData.value.opponentRoomId != null
-                        ? PartyBattleView(
-                            controller: controller,
-                            margin: topMargin,
-                          )
-                        : BattleView(
-                            isAudience: true,
-                            controller: controller,
-                            margin: topMargin,
-                          );
+                    return BattleView(
+                      isAudience: true,
+                      controller: controller,
+                      margin: topMargin,
+                    );
                   case LivestreamType.dummy:
                     return LivestreamVideoPlayer(
                         controller: controller.videoPlayerController);
@@ -121,22 +128,6 @@ class LiveStreamAudienceScreen extends StatelessWidget {
                         isAudience: true, controller: controller),
                   ],
                 ),
-              ),
-
-              Obx(
-                () {
-                  Livestream stream = controller.liveData.value;
-                  // Cross-room battles only — a same-room PK Match
-                  // (opponentRoomId null) starts the moment the invite is
-                  // accepted, no countdown (client spec).
-                  bool isBattle = stream.battleType == BattleType.waiting &&
-                      stream.opponentRoomId != null;
-                  if (isBattle) {
-                    return BattleStartCountdownOverlay(
-                        isHost: isHost, stream: stream);
-                  }
-                  return const SizedBox();
-                },
               ),
 
               Obx(() => GiftAnimationOverlay(

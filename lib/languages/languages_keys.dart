@@ -370,6 +370,24 @@ class LKey {
   static const String battleInviteTitle = "Incoming PK Battle";
   static const String battleInviteDescription =
       "@name wants to battle you. Accept?";
+  static const String coHostConnectInviteSent = "Co-Host invite sent!";
+  static const String coHostConnectInviteFailed =
+      "Couldn't send that invite. Try again.";
+  static const String coHostConnectInviteExpired =
+      "That invite has expired.";
+  static const String coHostConnectInviteTitle = "Co-Host Invitation";
+  static const String coHostConnectInviteDescription =
+      "@name wants to connect as a Co-Host.";
+  static const String pkMatchRequestSent = "Match request sent!";
+  static const String pkMatchRequestFailed =
+      "Couldn't send that request. Try again.";
+  static const String pkMatchRequestExpired = "That request has expired.";
+  static const String pkMatchRequestTitle = "Play PK Match?";
+  static const String pkMatchRequestDescription =
+      "@name wants to start a 5-minute PK Match.";
+  static const String playPkMatch = "Play PK Match";
+  static const String exitCoHostConnection = "Exit";
+  static const String addTeammate = "Add Teammate";
 
   // Same-room co-host PK Match (1v1 for now — 2v2 setup/arena ships later).
   static const String oneVsOneMatch = "1v1 Match";

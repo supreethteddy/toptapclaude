@@ -327,16 +327,15 @@ class LiveRankChip extends StatelessWidget {
           height: 20,
           padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
-            ),
+            color: Colors.black.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(AssetRes.icCrown,
-                  height: 12, width: 12, color: Colors.white),
+                  height: 12, width: 12, color: const Color(0xFFFFB300)),
               const SizedBox(width: 3),
               Text(
                 '$label ${LKey.today.tr}',
@@ -373,16 +372,15 @@ class HourlyRankChip extends StatelessWidget {
           height: 20,
           padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF5C6BC0), Color(0xFF7E57C2)],
-            ),
+            color: Colors.black.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(AssetRes.icFlash,
-                  height: 12, width: 12, color: Colors.white),
+                  height: 12, width: 12, color: const Color(0xFF7E57C2)),
               const SizedBox(width: 3),
               Text(
                 '$label ${LKey.thisHour.tr}',
@@ -419,16 +417,15 @@ class LeagueBadge extends StatelessWidget {
           height: 20,
           padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
-            ),
+            color: Colors.black.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(AssetRes.icStar,
-                  height: 12, width: 12, color: Colors.white),
+                  height: 12, width: 12, color: const Color(0xFF66BB6A)),
               const SizedBox(width: 3),
               Text(
                 label,
@@ -462,16 +459,15 @@ class MyEarningsBadge extends StatelessWidget {
         height: 20,
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFEF6C00), Color(0xFFFFB74D)],
-          ),
+          color: Colors.black.withValues(alpha: 0.45),
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(AssetRes.icWallet,
-                height: 12, width: 12, color: Colors.white),
+                height: 12, width: 12, color: const Color(0xFFFFB74D)),
             const SizedBox(width: 3),
             Text(
               earnings.currencyFormat,

@@ -9,7 +9,6 @@ import 'package:shortzz/screen/live_stream/livestream_screen/view/live_stream_bo
 import 'package:shortzz/screen/live_stream/livestream_screen/view/live_video_player.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/party_battle_view.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/battle_start_countdown_overlay.dart';
 import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_animation_overlay.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_background_blur_image.dart';
@@ -48,9 +47,23 @@ class LivestreamHostScreen extends StatelessWidget {
             /// HOST screen
             Obx(
               () {
-                switch (controller.liveData.value.type) {
-                  case null:
-                    return const Center(child: Text('No One Can live'));
+                final stream = controller.liveData.value;
+                if (stream.type == null) {
+                  return const Center(child: Text('No One Can live'));
+                }
+                // Connected to another independently-live host: show the
+                // dual-video party view as soon as they're linked, not only
+                // once a PK battle actually starts -- connecting must show
+                // both videos without auto-starting a battle (the battle
+                // chrome inside PartyBattleView stays dormant on its own
+                // until battleType leaves INITIATE, see its own gating).
+                if (stream.opponentRoomId != null) {
+                  final topMargin =
+                      EdgeInsets.only(top: controller.topHeaderHeight.value);
+                  return PartyBattleView(
+                      controller: controller, margin: topMargin);
+                }
+                switch (stream.type!) {
                   case LivestreamType.livestream:
                     return LivestreamView(
                         streamViews: controller.streamViews,
@@ -62,13 +75,10 @@ class LivestreamHostScreen extends StatelessWidget {
                     // on top of the badges/title rows above it.
                     final topMargin =
                         EdgeInsets.only(top: controller.topHeaderHeight.value);
-                    return controller.liveData.value.opponentRoomId != null
-                        ? PartyBattleView(
-                            controller: controller, margin: topMargin)
-                        : BattleView(
-                            isAudience: false,
-                            controller: controller,
-                            margin: topMargin);
+                    return BattleView(
+                        isAudience: false,
+                        controller: controller,
+                        margin: topMargin);
                   case LivestreamType.dummy:
                     return LivestreamVideoPlayer(
                         controller: controller.videoPlayerController);
@@ -118,22 +128,6 @@ class LivestreamHostScreen extends StatelessWidget {
                   LiveStreamBottomView(controller: controller),
                 ],
               ),
-            ),
-
-            Obx(
-              () {
-                Livestream stream = controller.liveData.value;
-                // Cross-room battles only — a same-room PK Match
-                // (opponentRoomId null) starts the moment the invite is
-                // accepted, no countdown (client spec).
-                bool isBattleWaiting = stream.battleType == BattleType.waiting &&
-                    stream.opponentRoomId != null;
-                if (isBattleWaiting) {
-                  return BattleStartCountdownOverlay(
-                      isHost: isHost, stream: stream);
-                }
-                return const SizedBox();
-              },
             ),
 
             Obx(() => GiftAnimationOverlay(

@@ -190,6 +190,19 @@ class SendGiftSheetController extends BaseController {
   }
 
   Future<void> sendGift(Gift gift) async {
+    final result = await sendGiftAndGetResult(gift);
+    if (result != null) {
+      Get.back(result: result);
+    }
+  }
+
+  /// Same network call + wallet bookkeeping [sendGift] always did, just
+  /// returning the [GiftManager] result instead of popping a route — pulled
+  /// out so a caller outside the gift-sheet's own bottom-sheet context (see
+  /// LivestreamScreenController.sendQuickGift, a one-tap shortcut with no
+  /// sheet to close) can reuse the exact same send logic instead of a
+  /// separate, drift-prone copy of it.
+  Future<GiftManager?> sendGiftAndGetResult(Gift gift) async {
     final giftId = gift.id?.toInt() ?? -1;
 
     final coinPrice = gift.coinPrice ?? 0;
@@ -202,12 +215,14 @@ class SendGiftSheetController extends BaseController {
 
     if (giftId == -1 || recipientId == null || recipientId < 0) {
       showSnackBar('The gift recipient is no longer available.');
-      return Loggers.error('Invalid Gift: $giftId or User: $recipientId');
+      Loggers.error('Invalid Gift: $giftId or User: $recipientId');
+      return null;
     }
 
     if (coinPrice <= 0) {
-      return Loggers.error(
+      Loggers.error(
           'Invalid coin price: $coinPrice, skipping gift sending.');
+      return null;
     }
     // Direct gift to the room's own host (liveHostId == recipient) is
     // indistinguishable from a non-live gift server-side, so only pass it
@@ -241,18 +256,18 @@ class SendGiftSheetController extends BaseController {
         });
         SessionManager.instance.setUser(myUser.value);
         if (giftType == GiftType.none) {
-          Get.back(result: GiftManager(gift));
-        } else {
-          Get.back(
-              result: GiftManager(gift,
-                  streamUser: livestreamController.selectedGiftUser.value));
+          return GiftManager(gift);
         }
+        return GiftManager(gift,
+            streamUser: livestreamController.selectedGiftUser.value);
       } else {
         showSnackBar(response.message ?? 'Unable to send the gift.');
+        return null;
       }
     } catch (e, stack) {
       Loggers.error('Failed to send gift: $e\n$stack');
       showSnackBar('Unable to send the gift. Please try again.');
+      return null;
     } finally {
       if (loaderVisible) stopLoader();
     }

@@ -65,10 +65,26 @@ class AppRes {
   /// synced through Firestore.
   static const int pkVictoryLapDurationInSecond = 180;
 
-  /// How long a PK Battle invite stays valid before the inviter's own side
-  /// auto-clears it and a late accept is rejected. Previously unenforced —
-  /// the invite dialog had no expiry at all.
-  static const int battleInviteExpiryInSecond = 15;
+  /// How long a Co-Host Connect invite (and a "Play PK Match" request on an
+  /// already-connected pair) stays valid before it auto-clears and a late
+  /// accept is rejected. Client spec: 30 seconds, visible countdown.
+  static const int battleInviteExpiryInSecond = 30;
+
+  /// Co-Host PK Battle: always a single flat round, this many minutes.
+  static const int coHostBattleDurationInMinutes = 5;
+
+  /// Speed Challenge: during this window of a Co-Host PK battle (seconds
+  /// elapsed since it started), eligible gifts contribute
+  /// [speedChallengeMultiplier]x their normal value to the PK score ONLY --
+  /// never to actual coin/earnings. Client spec: minute 2 to minute 3.
+  static const int speedChallengeWindowStartSecond = 120;
+  static const int speedChallengeWindowEndSecond = 180;
+  static const int speedChallengeMultiplier = 3;
+
+  /// How long post-match results (scores, winner/loser, emojis, gifting
+  /// stats) stay visible before auto-clearing. The co-host connection
+  /// itself is untouched by this -- only the battle-result chrome.
+  static const int battleResultsVisibleDurationInSecond = 60;
 
   // Pagination limit
   static const int paginationLimit = 20;
