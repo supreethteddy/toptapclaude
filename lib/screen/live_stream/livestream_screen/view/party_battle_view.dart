@@ -5,6 +5,7 @@ import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/battle_view.dart';
+import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
@@ -65,15 +66,25 @@ class _PartyBattleOverlay extends StatelessWidget {
       // Likes tapped on each half of the screen (see onLikeButtonTap) count
       // toward the PK score too, same as the same-room arena already does
       // via pkLikePointsA/B -- crossRoomLikePoints is this doc's own side's
-      // tally, reset to 0 at the start of every cross-room match.
+      // tally, reset to 0 at the start of every cross-room match. Capped at
+      // tapTapMaxPkPointsPerMatch regardless of how many taps landed
+      // (client spec, Module 8.1) -- crossRoomLikePoints itself keeps
+      // incrementing without limit, only this score contribution caps,
+      // same rule pkTeamScore applies for the same-room arena.
       final pointsPerLike = controller.setting?.pkLikePoints ?? 1;
+      final redLikePoints = ((stream.crossRoomLikePoints ?? 0) * pointsPerLike)
+          .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
+      final blueLikePoints = ((controller.opponentLiveData.value
+                      ?.crossRoomLikePoints ??
+                  0) *
+              pointsPerLike)
+          .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
       final red = controller.mySideBattleCoins -
           controller.roundBaselineRed.value +
-          (stream.crossRoomLikePoints ?? 0) * pointsPerLike;
+          redLikePoints;
       final blue = controller.opponentSideBattleCoins -
           controller.roundBaselineBlue.value +
-          (controller.opponentLiveData.value?.crossRoomLikePoints ?? 0) *
-              pointsPerLike;
+          blueLikePoints;
 
       final inBattle = stream.battleType != BattleType.initiate;
 

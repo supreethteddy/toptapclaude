@@ -25,6 +25,12 @@ List<GifterRank> topGiftersForTeam({
   required List<int> teamMemberIds,
   required int? battleCreatedAt,
   List<int>? eligibleGiftIds,
+  // Speed Challenge (see speedChallengeMultiplierFor): recomputing from
+  // raw comment history has to apply the same 3x window multiplier the
+  // live write side already baked into currentBattleCoin
+  // (LivestreamScreenController._handleGiftSent), or this ranked list
+  // would silently disagree with the team score bar it sits next to.
+  List<int>? speedChallengeEligibleGiftIds,
   int limit = 3,
 }) {
   if (battleCreatedAt == null || teamMemberIds.isEmpty) return const [];
@@ -39,7 +45,13 @@ List<GifterRank> topGiftersForTeam({
     if (!giftCountsForPk(comment.giftId, eligibleGiftIds)) continue;
     final points = battlePointsForGift(comment.giftId,
         fallbackCoins: comment.gift?.coinPrice ?? 0);
-    totals[senderId] = (totals[senderId] ?? 0) + points;
+    final multiplier = speedChallengeMultiplierFor(
+      giftId: comment.giftId,
+      atMillisecondsSinceEpoch: comment.id ?? 0,
+      battleCreatedAt: battleCreatedAt,
+      eligibleGiftIds: speedChallengeEligibleGiftIds,
+    );
+    totals[senderId] = (totals[senderId] ?? 0) + points * multiplier;
   }
   final ranked = totals.entries
       .map((entry) => GifterRank(senderId: entry.key, points: entry.value))

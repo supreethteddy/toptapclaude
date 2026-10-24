@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
@@ -256,94 +257,124 @@ class LiveStreamUserView extends StatelessWidget {
           (element) =>
               element.userId == int.parse(streamingView?.streamId ?? ''));
 
-      return Stack(
-        children: [
-          if (streamingView != null) streamingView!.streamView,
-          if (state?.isVideoOn == false)
-            LayoutBuilder(builder: (context, outerConstraints) {
-              return Stack(
-                children: [
-                  CustomImage(
-                      size: Size(outerConstraints.maxWidth,
-                          outerConstraints.maxHeight),
-                      image: liveUser?.profile?.addBaseURL(),
-                      fullName: liveUser?.fullname,
-                      radius: 0),
-                  LayoutBuilder(
-                    builder: (context, constraints) => ClipRect(
-                      child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                          child: Container(
-                            width: constraints.maxWidth,
-                            height: constraints.maxHeight,
-                            color: Colors.black.withValues(alpha: .5),
-                          )),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: LayoutBuilder(builder: (context, constraints) {
-                      double width = ((constraints.maxWidth * 50) / 100);
-                      return CustomImage(
-                          size: Size(width, width),
-                          image: liveUser?.profile?.addBaseURL(),
-                          fullName: liveUser?.fullname,
-                          strokeWidth: 3);
-                    }),
-                  ),
-                ],
-              );
-            }),
-          if (state?.isMuted == true)
-            Align(
-                alignment: Alignment.center,
-                child: Image.asset(
-                  AssetRes.icMicOff,
-                  height: 25,
-                  width: 25,
-                  color: whitePure(context).withValues(alpha: .6),
-                )),
-          if (isNameAndSpeakerVisible)
-            _buildUserInfoOverlay(context,
-                streamView: streamingView!,
-                state: state.obs,
-                liveUser: liveUser,
-                isMuteVisible: liveUser?.userId != controller.myUserId),
-          // Quick moderation menu: host-only, and never on the host's own
-          // tile (nothing there to moderate). Separate from tapping the
-          // name, which still opens the full profile sheet -- this is the
-          // fast path for mute/camera/role/remove without leaving the grid.
-          if (controller.isHost &&
-              liveUser != null &&
-              state != null &&
-              liveUser.userId != controller.myUserId)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  HapticManager.shared.light();
-                  Get.bottomSheet(
-                    LiveParticipantQuickActionsSheet(
-                        user: liveUser, state: state, controller: controller),
-                    isScrollControlled: true,
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: .35),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.more_vert,
-                      color: Colors.white, size: 18),
-                ),
-              ),
-            ),
-        ],
+      final tile = _buildTileStack(context, state: state, liveUser: liveUser);
+
+      // Guest-specific gift targeting (client spec, Module 10.2): a viewer
+      // (never the host, never on a fellow on-stage participant's own
+      // tile) press-and-holds a GUEST's tile for ~1s to open the gift
+      // sheet pre-targeted at them instead of the default host recipient.
+      final canLongPressForGift = !controller.isHost &&
+          liveUser != null &&
+          liveUser.userId != controller.myUserId &&
+          state?.type == LivestreamUserType.guest;
+      if (!canLongPressForGift) return tile;
+
+      return RawGestureDetector(
+        gestures: {
+          LongPressGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+            () => LongPressGestureRecognizer(
+                duration: const Duration(milliseconds: 1000)),
+            (instance) {
+              instance.onLongPress =
+                  () => controller.onGuestTileLongPress(liveUser);
+            },
+          ),
+        },
+        child: tile,
       );
     });
+  }
+
+  Widget _buildTileStack(BuildContext context,
+      {required LivestreamUserState? state, required AppUser? liveUser}) {
+    return Stack(
+      children: [
+        if (streamingView != null) streamingView!.streamView,
+        if (state?.isVideoOn == false)
+          LayoutBuilder(builder: (context, outerConstraints) {
+            return Stack(
+              children: [
+                CustomImage(
+                    size: Size(
+                        outerConstraints.maxWidth, outerConstraints.maxHeight),
+                    image: liveUser?.profile?.addBaseURL(),
+                    fullName: liveUser?.fullname,
+                    radius: 0),
+                LayoutBuilder(
+                  builder: (context, constraints) => ClipRect(
+                    child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                        child: Container(
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                          color: Colors.black.withValues(alpha: .5),
+                        )),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.center,
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    double width = ((constraints.maxWidth * 50) / 100);
+                    return CustomImage(
+                        size: Size(width, width),
+                        image: liveUser?.profile?.addBaseURL(),
+                        fullName: liveUser?.fullname,
+                        strokeWidth: 3);
+                  }),
+                ),
+              ],
+            );
+          }),
+        if (state?.isMuted == true)
+          Align(
+              alignment: Alignment.center,
+              child: Image.asset(
+                AssetRes.icMicOff,
+                height: 25,
+                width: 25,
+                color: whitePure(context).withValues(alpha: .6),
+              )),
+        if (isNameAndSpeakerVisible)
+          _buildUserInfoOverlay(context,
+              streamView: streamingView!,
+              state: state.obs,
+              liveUser: liveUser,
+              isMuteVisible: liveUser?.userId != controller.myUserId),
+        // Quick moderation menu: host-only, and never on the host's own
+        // tile (nothing there to moderate). Separate from tapping the
+        // name, which still opens the full profile sheet -- this is the
+        // fast path for mute/camera/role/remove without leaving the grid.
+        if (controller.isHost &&
+            liveUser != null &&
+            state != null &&
+            liveUser.userId != controller.myUserId)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                HapticManager.shared.light();
+                Get.bottomSheet(
+                  LiveParticipantQuickActionsSheet(
+                      user: liveUser, state: state, controller: controller),
+                  isScrollControlled: true,
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: .35),
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    const Icon(Icons.more_vert, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildUserInfoOverlay(BuildContext context,

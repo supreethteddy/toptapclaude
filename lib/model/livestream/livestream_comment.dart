@@ -15,6 +15,26 @@ class LivestreamComment {
   // AppUser? receiverUser;
   Gift? gift;
 
+  // Gift accounting (LIVE spec Module 10.3) -- these are specific to this
+  // one GIFT comment event, null for every other comment type. quantity is
+  // always 1 today (no multi-gift-per-tap UI exists); kept explicit rather
+  // than assumed so a future multi-send feature doesn't have to guess old
+  // events meant 1. coinValue is a snapshot of the gift's real coin price
+  // at send time (gift catalogue prices can change later). pkPoints is the
+  // battle-tier score value (see battlePointsForGift) -- null for a
+  // non-battle gift, and deliberately NOT the same number as coinValue
+  // (see _handleGiftSent's own comment on why those differ). isGuestGift
+  // mirrors the backend's own WalletController::sendGift flag: true when
+  // this was sent via the guest-specific recipient path rather than
+  // straight to the room's host. transactionId/transactionNumber link back
+  // to the authoritative CoinTransactions row on the backend.
+  int? quantity;
+  int? coinValue;
+  int? pkPoints;
+  bool? isGuestGift;
+  int? transactionId;
+  String? transactionNumber;
+
   LivestreamComment(
       {this.senderId,
       this.receiverId,
@@ -24,7 +44,13 @@ class LivestreamComment {
       this.id,
       // this.senderUser,
       // this.receiverUser,
-      this.gift});
+      this.gift,
+      this.quantity,
+      this.coinValue,
+      this.pkPoints,
+      this.isGuestGift,
+      this.transactionId,
+      this.transactionNumber});
 
   LivestreamComment.fromJson(Map<String, dynamic> json) {
     senderId = json['sender_id'];
@@ -41,6 +67,12 @@ class LivestreamComment {
     //     ? AppUser.fromJson(json['receiver_user'])
     //     : null;
     gift = json['gift'] != null ? Gift.fromJson(json['gift']) : null;
+    quantity = json['quantity'];
+    coinValue = json['coin_value'];
+    pkPoints = json['pk_points'];
+    isGuestGift = json['is_guest_gift'];
+    transactionId = json['transaction_id'];
+    transactionNumber = json['transaction_number'];
   }
 
   Map<String, dynamic> toJson() {
@@ -59,6 +91,14 @@ class LivestreamComment {
     // }
     if (gift != null) {
       data['gift'] = gift?.toJson();
+    }
+    if (quantity != null) data['quantity'] = quantity;
+    if (coinValue != null) data['coin_value'] = coinValue;
+    if (pkPoints != null) data['pk_points'] = pkPoints;
+    if (isGuestGift != null) data['is_guest_gift'] = isGuestGift;
+    if (transactionId != null) data['transaction_id'] = transactionId;
+    if (transactionNumber != null) {
+      data['transaction_number'] = transactionNumber;
     }
     return data;
   }

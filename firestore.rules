@@ -1,43 +1,84 @@
 rules_version = '2';
 
-// DRAFT — do not paste this into the console as-is. There is no Firebase
-// CLI / service account on this machine, so nothing here is ever deployed
-// from the repo automatically; a human applies whatever is actually correct
-// by hand in Firebase console > Firestore Database > Rules.
+// FIRST REAL PASS — still requires a human to paste this into Firebase
+// console > Firestore Database > Rules by hand (no Firebase CLI/service
+// account configured for deploys on this Mac). Do NOT apply before
+// confirming Stage 1+2 of the Firestore-auth-bridge work are live and a
+// real login has been verified to produce request.auth.uid == the app's
+// own numeric user id (see GlobalFunction::generateFirebaseCustomToken on
+// the Laravel backend, and AuthScreenController._registration() on the
+// Flutter side) — applying this against the OLD email/Google/Apple-uid
+// sessions would just silently fail every uid-scoped check below.
 //
-// Known gap found while drafting this: every Firestore document in this app
-// (users/{id}, livestreams/{id}, live_invites/{id}, ...) is keyed by the
-// app's own numeric MySQL user id (see e.g. SessionManager.getUserID(),
-// `liveStreamUserStatesRef.doc(myUserId.toString())`), but sign-in goes
-// through FirebaseAuth email/Google/Apple (auth_screen_controller.dart),
-// which gives `request.auth.uid` a Firebase-assigned id with no recorded
-// link to that numeric id anywhere in Firestore (no `firebase_uid` field on
-// the user doc, no custom claim). A rule like
-// `request.auth.uid == resource.data.host_id.toString()` would therefore
-// reject every request, not just unauthorized ones — so it is NOT safe to
-// enable for `live_invites` (or anything else keyed the same way) until one
-// of these exists:
-//   (a) the Laravel backend mints a Firebase custom token with
-//       `uid: <numeric user id>` (Admin SDK `createCustomToken`) and the app
-//       signs into Firestore with that, alongside/instead of the
-//       email/OAuth FirebaseAuth session it uses today, or
-//   (b) each `users/{id}` doc stores the viewer's `firebase_uid`, and rules
-//       look it up with `get()` to compare against `request.auth.uid`.
-// Either is real backend + app work, not something a rules file alone can
-// paper over — flagging it rather than shipping a rule that silently locks
-// everyone out, or a rule that only checks `request.auth != null` and
-// therefore isn't actually scoped to the host/invitee as the spec asked.
+// What changed from the old fully-open draft: every read/write now
+// requires request.auth != null (closes the single worst gap — today
+// ANY unauthenticated request can write anything) plus real per-user
+// scoping for the one collection confirmed to be unambiguously self-
+// owned (moderators, below).
 //
-// Until (a) or (b) lands, `live_invites` gets the same trust level every
-// other collection already has in this project (no rules file has ever been
-// checked in here, so the console is presumably in fully-open "test mode" —
-// confirm in the console before relying on that). The catch-all below keeps
-// that unchanged so this file cannot be applied by accident and break a
-// feature nobody has reviewed yet.
+// What's deliberately NOT yet tightened further, and why: almost every
+// other collection in this app has a "sender writes to someone else's
+// doc" pattern by design, not a bug — a co-host invite writes
+// pending_battle_invite_from_id onto the INVITEE's room doc, not the
+// inviter's own, for example. A naive
+// "request.auth.uid == resource.data.owner_id" rule on livestreams/,
+// user_state/, comments/ would reject these legitimate writes outright —
+// exactly the failure mode the original draft of this file warned about.
+// Properly tightening those needs each write path mapped field-by-field
+// (which fields a non-owner is allowed to touch, and bounding the values,
+// e.g. a plausible max per-gift coin delta) rather than one blanket
+// identity check — tracked as a real follow-up, not silently left open
+// without saying so here.
+//
+// live_rankings*/leagues/ are the one exception already fully closed
+// below: as of 2026-10-25 the coin increments for these three collections
+// are written server-side only (GlobalFunction::recordLiveRankingGift on
+// the Laravel backend, via a Firestore Admin-scoped OAuth token that
+// bypasses these rules entirely, called from WalletController::sendGift
+// right after the real gift transaction commits). The client-side
+// LiveRankingController.recordGift / HourlyRankingController.recordGift /
+// LeagueController.recordGift calls that used to write these directly
+// were removed for the same reason -- nothing in the app writes to these
+// paths anymore, so clients get read-only access.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Persistent per-host moderator list (manage_moderators_screen_controller.dart) —
+    // app_users/{hostId}/moderators/{moderatorUserId}. Only the host
+    // themselves ever calls addModerator/removeModerator (confirmed in
+    // that controller's own doc comment); nothing else in the app writes
+    // here, so this is the one collection safe to scope to its owner today.
+    match /app_users/{hostId}/moderators/{moderatorUserId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == hostId;
+    }
+
+    // Daily/hourly/weekly-League LIVE rankings (live_rankings/{day}/hosts/
+    // {hostId}, live_rankings_hourly/{hour}/hosts/{hostId}, leagues/
+    // {season}/hosts/{hostId}) — read-only for clients. Every write comes
+    // from the backend's service-account credentials (see the file-level
+    // comment above), which authenticate outside these rules entirely, so
+    // denying client writes here cannot break the real write path; it only
+    // closes off a client writing a fake coin amount directly to inflate
+    // its own rank or force a League promotion.
+    match /live_rankings/{day}/hosts/{hostId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /live_rankings_hourly/{hour}/hosts/{hostId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /leagues/{season}/hosts/{hostId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Everything else: authentication required, same as above, but not
+    // yet further restricted per-field — see the file-level comment.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }

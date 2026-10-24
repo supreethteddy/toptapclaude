@@ -89,6 +89,7 @@ class Params {
   static const String giftId = 'gift_id';
   static const String idempotencyKey = 'idempotency_key';
   static const String liveHostId = 'live_host_id';
+  static const String isLiveGift = 'is_live_gift';
   static const String musicId = 'music_id';
   static const String appLastUsedAt = 'app_last_used_at';
   static const String region = 'region';

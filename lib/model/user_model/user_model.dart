@@ -269,6 +269,11 @@ class User {
     appLanguage = json['app_language'];
     newRegister = json['new_register'];
     token = json['token'] != null ? Token.fromJson(json['token']) : null;
+    // Lets the app sign into Firebase with a uid matching this own numeric
+    // user id, bridging it to request.auth.uid (see
+    // GlobalFunction::generateFirebaseCustomToken on the backend) -- best-
+    // effort, absent if minting failed server-side, see AuthScreenController.
+    firebaseCustomToken = json['firebase_custom_token'];
     followingIds = json["following_ids"] != null
         ? List<int>.from(json["following_ids"].map((x) => x))
         : null;
@@ -343,6 +348,7 @@ class User {
   bool? isBlock;
   bool? newRegister;
   Token? token;
+  String? firebaseCustomToken;
   List<Link>? links;
   List<int>? followingIds;
   List<Story>? stories;
@@ -403,6 +409,9 @@ class User {
     map["following_ids"] = followingIds;
     if (token != null) {
       map['token'] = token?.toJson();
+    }
+    if (firebaseCustomToken != null) {
+      map['firebase_custom_token'] = firebaseCustomToken;
     }
     if (links != null) {
       map['links'] = links?.map((v) => v.toJson()).toList();

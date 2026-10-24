@@ -195,6 +195,25 @@ class AuthScreenController extends BaseController {
         deviceToken: deviceToken ?? '',
         fullName: fullname);
 
+    // Bridges Firestore's request.auth.uid to this app's own numeric user
+    // id (see GlobalFunction::generateFirebaseCustomToken on the backend)
+    // -- replaces the active Firebase session (previously email/Google/
+    // Apple) with one whose uid matches every Firestore doc's own id
+    // scheme (SessionManager.getUserID()), which real per-user Firestore
+    // security rules depend on. Best-effort, same as the device-token
+    // handling above: a missing/invalid token (minting failed server-side)
+    // must not block login itself.
+    final firebaseCustomToken = userData.firebaseCustomToken;
+    if (firebaseCustomToken != null && firebaseCustomToken.isNotEmpty) {
+      try {
+        await FirebaseAuth.instance.signInWithCustomToken(firebaseCustomToken);
+      } catch (e) {
+        Loggers.warning('Firebase custom-token sign-in failed: $e');
+      }
+    } else {
+      Loggers.warning('No firebase_custom_token in login response.');
+    }
+
     Setting? setting = SessionManager.instance.getSettings();
     if (userData.newRegister == true && setting?.registrationBonusStatus == 1) {
       final translations = Get.find<DynamicTranslations>();

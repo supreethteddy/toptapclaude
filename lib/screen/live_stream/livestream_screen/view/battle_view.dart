@@ -14,6 +14,7 @@ import 'package:shortzz/model/livestream/pk_gifters.dart';
 import 'package:shortzz/model/livestream/pk_scores.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/livestream_view.dart';
+import 'package:shortzz/screen/live_stream/livestream_screen/widget/battle_contributors_sheet.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/widget/reconnecting_placeholder.dart';
 import 'package:shortzz/utilities/app_res.dart';
 import 'package:shortzz/utilities/asset_res.dart';
@@ -624,26 +625,31 @@ class TopGiftersRow extends StatelessWidget {
     return Obx(() {
       final stream = controller.liveData.value;
       final comments = controller.allBattleComments;
+      final teamAIds = teamAUserIds ?? controller.pkTeamAUserIds;
+      final teamBIds = teamBUserIds ?? controller.pkTeamBUserIds;
       final teamARanks = topGiftersForTeam(
         comments: comments,
-        teamMemberIds: teamAUserIds ?? controller.pkTeamAUserIds,
+        teamMemberIds: teamAIds,
         battleCreatedAt: stream.battleCreatedAt,
         eligibleGiftIds: stream.pkEligibleGiftIds,
+        speedChallengeEligibleGiftIds: stream.speedChallengeEligibleGiftIds,
       );
       final teamBRanks = topGiftersForTeam(
         comments: comments,
-        teamMemberIds: teamBUserIds ?? controller.pkTeamBUserIds,
+        teamMemberIds: teamBIds,
         battleCreatedAt: stream.battleCreatedAt,
         eligibleGiftIds: stream.pkEligibleGiftIds,
+        speedChallengeEligibleGiftIds: stream.speedChallengeEligibleGiftIds,
       );
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _teamSlots(teamARanks, ColorRes.likeRed, rankOneNearCenter: true),
+            _teamSlots(teamARanks, teamAIds, ColorRes.likeRed,
+                rankOneNearCenter: true),
             if (center != null) center!,
-            _teamSlots(teamBRanks, ColorRes.battleProgressColor,
+            _teamSlots(teamBRanks, teamBIds, ColorRes.battleProgressColor,
                 rankOneNearCenter: false),
           ],
         ),
@@ -654,7 +660,8 @@ class TopGiftersRow extends StatelessWidget {
   // Rank 1 sits nearest the center on both sides. The left team's slots are
   // built worst-to-best left-to-right so the best (last) lands innermost;
   // the right team is already worst-to-best outward-to-inward as built.
-  Widget _teamSlots(List<GifterRank> ranks, Color color,
+  Widget _teamSlots(
+      List<GifterRank> ranks, List<int> teamMemberIds, Color color,
       {required bool rankOneNearCenter}) {
     final slots = List<GifterRank?>.generate(
         3, (i) => i < ranks.length ? ranks[i] : null);
@@ -665,28 +672,56 @@ class TopGiftersRow extends StatelessWidget {
           .map((rank) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: rank == null
-                    ? _EmptySeat(color: color)
+                    ? _EmptySeat(
+                        color: color,
+                        onTap: () => _openContributors(teamMemberIds, color),
+                      )
                     : _GifterAvatar(
-                        controller: controller, rank: rank, color: color),
+                        controller: controller,
+                        rank: rank,
+                        color: color,
+                        onTap: () => _openContributors(teamMemberIds, color),
+                      ),
               ))
           .toList(),
+    );
+  }
+
+  // Tapping any seat (filled or empty) on a side opens that side's full
+  // ranked contributors list -- an empty seat still has a side to show, it
+  // just has no gifter in that particular rank slot yet.
+  void _openContributors(List<int> teamMemberIds, Color color) {
+    final hostUser = controller.firestoreController.users
+        .firstWhereOrNull((u) => u.userId == teamMemberIds.firstOrNull);
+    Get.bottomSheet(
+      BattleContributorsSheet(
+        controller: controller,
+        title: hostUser?.username ?? 'Host',
+        color: color,
+        teamMemberIds: teamMemberIds,
+      ),
+      isScrollControlled: true,
     );
   }
 }
 
 class _EmptySeat extends StatelessWidget {
   final Color color;
+  final VoidCallback onTap;
 
-  const _EmptySeat({required this.color});
+  const _EmptySeat({required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 34,
-      width: 34,
-      decoration: BoxDecoration(
-          color: color.withValues(alpha: .35), shape: BoxShape.circle),
-      child: const Icon(Icons.event_seat, color: Colors.white70, size: 16),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 34,
+        width: 34,
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: .35), shape: BoxShape.circle),
+        child: const Icon(Icons.event_seat, color: Colors.white70, size: 16),
+      ),
     );
   }
 }
@@ -695,24 +730,31 @@ class _GifterAvatar extends StatelessWidget {
   final LivestreamScreenController controller;
   final GifterRank rank;
   final Color color;
+  final VoidCallback onTap;
 
   const _GifterAvatar(
-      {required this.controller, required this.rank, required this.color});
+      {required this.controller,
+      required this.rank,
+      required this.color,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final user = controller.firestoreController.users
         .firstWhereOrNull((u) => u.userId == rank.senderId);
-    return Container(
-      height: 34,
-      width: 34,
-      decoration: BoxDecoration(
-          shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
-      child: ClipOval(
-        child: CustomImage(
-          size: const Size(30, 30),
-          image: user?.profile?.addBaseURL(),
-          fullName: user?.fullname,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 34,
+        width: 34,
+        decoration: BoxDecoration(
+            shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
+        child: ClipOval(
+          child: CustomImage(
+            size: const Size(30, 30),
+            image: user?.profile?.addBaseURL(),
+            fullName: user?.fullname,
+          ),
         ),
       ),
     );

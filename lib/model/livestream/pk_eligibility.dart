@@ -1,3 +1,5 @@
+import 'package:shortzz/utilities/app_res.dart';
+
 /// Which PK Match the room can currently offer, derived ONLY from roles:
 /// the host plus Co-host Mode participants who are actually publishing.
 /// Guest Call participants are never counted - the client requires that a
@@ -79,6 +81,32 @@ bool giftCountsForPk(int? giftId, List<int>? eligibleGiftIds) {
   if (eligibleGiftIds == null || eligibleGiftIds.isEmpty) return true;
   if (giftId == null) return false;
   return eligibleGiftIds.contains(giftId);
+}
+
+/// Speed Challenge (client LIVE spec, Module 5.4): AppRes.speedChallengeMultiplier
+/// (3x) for an eligible gift sent during minute 2-3 elapsed since the
+/// battle started (AppRes.speedChallengeWindowStartSecond/EndSecond) — PK
+/// score only, never the real coin/earnings value. [atMillisecondsSinceEpoch]
+/// is the gift event's own timestamp, not necessarily "now" -- callers pass
+/// DateTime.now() at send time (LivestreamScreenController._handleGiftSent)
+/// or a historical comment's own id (topGiftersForTeam), so both the live
+/// running score and any later recomputation from history agree. Returns 1
+/// outside the window, when the gift isn't in [eligibleGiftIds] (null/empty
+/// = every gift eligible, same convention as [giftCountsForPk]), or when
+/// there's no active battle ([battleCreatedAt] null).
+int speedChallengeMultiplierFor({
+  required int? giftId,
+  required int atMillisecondsSinceEpoch,
+  required int? battleCreatedAt,
+  List<int>? eligibleGiftIds,
+}) {
+  if (battleCreatedAt == null) return 1;
+  if (!giftCountsForPk(giftId, eligibleGiftIds)) return 1;
+  final elapsedSeconds =
+      (atMillisecondsSinceEpoch - battleCreatedAt) / 1000;
+  final inWindow = elapsedSeconds >= AppRes.speedChallengeWindowStartSecond &&
+      elapsedSeconds <= AppRes.speedChallengeWindowEndSecond;
+  return inWindow ? AppRes.speedChallengeMultiplier : 1;
 }
 
 /// Validates a proposed team split against the eligibility result: every

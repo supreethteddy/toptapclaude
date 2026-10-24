@@ -10,6 +10,7 @@ import 'package:shortzz/common/service/api/gift_wallet_service.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/model/post_story/post_model.dart';
 import 'package:shortzz/model/user_model/user_model.dart';
 import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen.dart';
@@ -33,6 +34,7 @@ class SendGiftSheetController extends BaseController {
   String? roomID;
   late LivestreamScreenController livestreamController;
   bool _isSendingGift = false;
+  Worker? _recipientLeftWatcher;
 
   SendGiftSheetController(this.giftType, this.userId, this.liveUsers,
       [this.roomID]);
@@ -56,7 +58,31 @@ class SendGiftSheetController extends BaseController {
               orElse: () => liveUsers.first);
         });
       }
+      // Client spec (Module 10.2): if the selected recipient leaves the
+      // LIVE while this sheet is still open, cancel the selection and
+      // notify the viewer instead of silently redirecting the gift to
+      // whoever's left. Only meaningful for a guest-targeted send -- the
+      // host's own tile leaving means the LIVE itself ended, which closes
+      // this sheet by other means already.
+      _recipientLeftWatcher = ever(livestreamController.liveUsersStates,
+          (List<LivestreamUserState> states) {
+        final selectedId = livestreamController.selectedGiftUser.value?.userId;
+        if (selectedId == null || selectedId == livestreamController.myUserId) {
+          return;
+        }
+        final stillOnStage = states.any((state) => state.userId == selectedId);
+        if (!stillOnStage && Get.isBottomSheetOpen == true) {
+          Get.back();
+          showSnackBar(LKey.giftRecipientLeftTheLive.tr);
+        }
+      });
     }
+  }
+
+  @override
+  void onClose() {
+    _recipientLeftWatcher?.dispose();
+    super.onClose();
   }
 
   _initData() {
@@ -220,15 +246,15 @@ class SendGiftSheetController extends BaseController {
     }
 
     if (coinPrice <= 0) {
-      Loggers.error(
-          'Invalid coin price: $coinPrice, skipping gift sending.');
+      Loggers.error('Invalid coin price: $coinPrice, skipping gift sending.');
       return null;
     }
     // Direct gift to the room's own host (liveHostId == recipient) is
     // indistinguishable from a non-live gift server-side, so only pass it
     // when the recipient is someone else on the stream (a guest/co-host).
-    final liveHostId =
-        (_liveHostId != null && _liveHostId != recipientId) ? _liveHostId : null;
+    final liveHostId = (_liveHostId != null && _liveHostId != recipientId)
+        ? _liveHostId
+        : null;
     var loaderVisible = false;
     try {
       showLoader();
@@ -238,6 +264,7 @@ class SendGiftSheetController extends BaseController {
         userId: recipientId,
         idempotencyKey: _idempotencyKeyFor(giftId),
         liveHostId: liveHostId,
+        isLiveGift: isLiveGift,
       );
       stopLoader();
       loaderVisible = false;
@@ -256,10 +283,16 @@ class SendGiftSheetController extends BaseController {
         });
         SessionManager.instance.setUser(myUser.value);
         if (giftType == GiftType.none) {
-          return GiftManager(gift);
+          return GiftManager(gift,
+              transactionId: response.transactionId,
+              transactionNumber: response.transactionNumber,
+              isGuestGift: liveHostId != null);
         }
         return GiftManager(gift,
-            streamUser: livestreamController.selectedGiftUser.value);
+            streamUser: livestreamController.selectedGiftUser.value,
+            transactionId: response.transactionId,
+            transactionNumber: response.transactionNumber,
+            isGuestGift: liveHostId != null);
       } else {
         showSnackBar(response.message ?? 'Unable to send the gift.');
         return null;
@@ -277,8 +310,23 @@ class SendGiftSheetController extends BaseController {
 class GiftManager {
   Gift gift;
   AppUser? streamUser;
+  // The backend's own transaction record for this send (see
+  // SendGiftResult) -- carried through so _handleGiftSent can attach it to
+  // the Firestore gift comment event.
+  int? transactionId;
+  String? transactionNumber;
+  // Mirrors the liveHostId-not-null check sendGiftAndGetResult already
+  // used to decide whether to send live_host_id to the backend at all --
+  // true exactly when this went through the guest-specific recipient path
+  // rather than straight to the room's host, same flag
+  // WalletController::sendGift derives server-side.
+  bool? isGuestGift;
 
-  GiftManager(this.gift, {this.streamUser});
+  GiftManager(this.gift,
+      {this.streamUser,
+      this.transactionId,
+      this.transactionNumber,
+      this.isGuestGift});
 
   static Future<void> openGiftSheet(
       {int? userId,

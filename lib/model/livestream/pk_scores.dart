@@ -1,4 +1,5 @@
 import 'package:shortzz/model/livestream/battle_result.dart';
+import 'package:shortzz/utilities/app_res.dart';
 
 /// One side's PK score. Team score = sum of its members' eligible-gift
 /// points (minus any per-round baseline) + likes credited to that side.
@@ -34,7 +35,14 @@ PkTeamScore pkTeamScore({
     final base = baselineByUser[id] ?? 0;
     gift += (raw - base).clamp(0, 1 << 31);
   }
-  final likes = (likeEvents.clamp(0, 1 << 31)) * pointsPerLike.clamp(0, 1 << 20);
+  // Client spec (Module 8.1): no matter how many taps land, tap-tap can
+  // only ever contribute up to tapTapMaxPkPointsPerMatch to this side's PK
+  // score for the whole match -- likeEvents itself (pkLikePointsA/B,
+  // crossRoomLikePoints) is still incremented without limit on every tap
+  // (see onLikeButtonTap), only the score contribution computed here caps.
+  final rawLikes =
+      (likeEvents.clamp(0, 1 << 31)) * pointsPerLike.clamp(0, 1 << 20);
+  final likes = rawLikes.clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
   return PkTeamScore(memberIds: memberIds, giftPoints: gift, likePoints: likes);
 }
 

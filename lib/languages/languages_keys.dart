@@ -373,8 +373,7 @@ class LKey {
   static const String coHostConnectInviteSent = "Co-Host invite sent!";
   static const String coHostConnectInviteFailed =
       "Couldn't send that invite. Try again.";
-  static const String coHostConnectInviteExpired =
-      "That invite has expired.";
+  static const String coHostConnectInviteExpired = "That invite has expired.";
   static const String coHostConnectInviteTitle = "Co-Host Invitation";
   static const String coHostConnectInviteDescription =
       "@name wants to connect as a Co-Host.";
@@ -711,6 +710,9 @@ class LKey {
       "Add trusted followers as moderators to help manage your LIVEs.";
   static const String sendingCoinsMessage =
       "You are sending coins to the above user.";
+  static const String thisGiftGoesTo = "This gift goes to {name}";
+  static const String giftRecipientLeftTheLive =
+      "That guest left the LIVE, so the gift was cancelled.";
   static const String noLivestreamsTitle = "No Live Streams Yet";
   static const String noLivestreamsDescription =
       "Live streams will appear here when someone goes live.";
@@ -753,7 +755,8 @@ class LKey {
   static const String leaveStageTitle = "Leave the stage?";
   static const String leaveStageDescription =
       "Are you sure you want to leave? You'll go back to watching as a viewer.";
-  static const String nowFollowingProfile = "You are now following this profile";
+  static const String nowFollowingProfile =
+      "You are now following this profile";
   static const String scanQrCode = "Scan QR Code";
   static const String scanQrProfileSearch =
       "Scan the QR of the profile you want to search.";

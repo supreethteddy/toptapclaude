@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
+import 'package:shortzz/common/controller/live_status_controller.dart';
 import 'package:shortzz/common/extensions/user_extension.dart';
 import 'package:shortzz/common/functions/debounce_action.dart';
 import 'package:shortzz/common/manager/firebase_notification_manager.dart';
@@ -112,7 +113,8 @@ class LivestreamScreenController extends BaseController
   /// rest of the LIVE. That, not a timing gap in publish-state handling,
   /// is the actual cause of the tile getting stuck on "Reconnecting"
   /// forever after switching filters.
-  String get _myOwnStreamId => isHost ? (liveData.value.roomID ?? '') : '$myUserId';
+  String get _myOwnStreamId =>
+      isHost ? (liveData.value.roomID ?? '') : '$myUserId';
 
   RxBool isPlayerMute = false.obs;
   RxBool isMinViewerTimeout = false.obs;
@@ -535,7 +537,8 @@ class LivestreamScreenController extends BaseController
     // entry point uniformly, current and future, matching the unconditional
     // resumeHomeFeed() this class already calls in onClose(). A harmless
     // no-op if the reels feed was already paused or was never playing.
-    ReelsScreenController.pauseHomeFeed('livestreamCtrl-isPreview=$isPreviewOnly-room=${liveData.value.roomID}-hash=${identityHashCode(this)}');
+    ReelsScreenController.pauseHomeFeed(
+        'livestreamCtrl-isPreview=$isPreviewOnly-room=${liveData.value.roomID}-hash=${identityHashCode(this)}');
     // A preview-only controller isn't "a LIVE screen the viewer has open"
     // for the purposes of these two guards — LiveStatusController.openLive
     // checks activeRoomIds.isNotEmpty (any room, not just this one) before
@@ -664,7 +667,8 @@ class LivestreamScreenController extends BaseController
     leagueController = null;
     // Resume the background home-feed reels that were paused when the LIVE flow
     // opened, now that we are leaving the LIVE screen.
-    ReelsScreenController.resumeHomeFeed('livestreamCtrl-room=${liveData.value.roomID}-hash=${identityHashCode(this)}');
+    ReelsScreenController.resumeHomeFeed(
+        'livestreamCtrl-room=${liveData.value.roomID}-hash=${identityHashCode(this)}');
     super.onClose();
   }
 
@@ -1517,6 +1521,29 @@ class LivestreamScreenController extends BaseController
     Get.off(() => const LiveStreamSearchScreen());
   }
 
+  /// Tapped from a gifter's profile card's "Watch LIVE" button. This app's
+  /// LIVE screen leans on static/shared state (activeRoomIds, timers, a
+  /// single Zego engine instance) that assumes only one LIVE screen is ever
+  /// active, and LiveStatusController.openLive already refuses to open a
+  /// second one while activeRoomIds is non-empty -- so rather than pushing
+  /// the target LIVE on top of this still-running one, this leaves the
+  /// current battle first (same teardown the exit button already does,
+  /// _popAudienceRoute's own canPopStreamRoute/endOfFrame dance included)
+  /// and only then opens the target. onClose() removes this room from
+  /// activeRoomIds synchronously once the route is actually popped, so by
+  /// the time openLive's guard runs it correctly sees the set as empty.
+  Future<void> leaveLiveAndWatch(int targetUserId) async {
+    if (Get.isBottomSheetOpen == true || Get.isDialogOpen == true) {
+      Get.back();
+      await Future<void>.delayed(Duration.zero);
+    }
+    await logoutRoom();
+    canPopStreamRoute.value = true;
+    await WidgetsBinding.instance.endOfFrame;
+    Get.back();
+    await LiveStatusController.to.openLive(targetUserId);
+  }
+
   Future<void> onRequestRefuse(
     AppUser? user, {
     LivestreamComment? comment,
@@ -1748,8 +1775,7 @@ class LivestreamScreenController extends BaseController
             stream.pendingPkMatchRequestFromId != null &&
             stream.pendingPkMatchRequestFromId !=
                 _lastHandledPkMatchRequestFromId) {
-          _lastHandledPkMatchRequestFromId =
-              stream.pendingPkMatchRequestFromId;
+          _lastHandledPkMatchRequestFromId = stream.pendingPkMatchRequestFromId;
           _showIncomingPkMatchRequestDialog(
               stream.pendingPkMatchRequestFromId!);
         }
@@ -1956,8 +1982,8 @@ class LivestreamScreenController extends BaseController
               // these, including getting the premium overlay stuck again
               // if its video stalls. The comment itself still belongs in
               // the feed either way, so comments.add above is unguarded.
-              final isFreshComment = (comment.id ?? 0) >=
-                  (_commentListenerStartedAt ?? 0);
+              final isFreshComment =
+                  (comment.id ?? 0) >= (_commentListenerStartedAt ?? 0);
               if (isFreshComment) {
                 _registerGiftForCombo(comment);
                 if (comment.giftId == eagleGiftId) {
@@ -2095,8 +2121,8 @@ class LivestreamScreenController extends BaseController
       final updates = <String, dynamic>{
         FirebaseConst.likeCount: FieldValue.increment(1),
       };
-      final isCrossRoomBattling = stream.opponentRoomId != null &&
-          stream.type == LivestreamType.battle;
+      final isCrossRoomBattling =
+          stream.opponentRoomId != null && stream.type == LivestreamType.battle;
       if (isLeftHalf != null &&
           stream.battleType == BattleType.waiting &&
           stream.pkTeamAIds != null) {
@@ -2150,6 +2176,31 @@ class LivestreamScreenController extends BaseController
     );
   }
 
+  /// Guest-specific gift targeting (client spec, Module 10.2): a viewer
+  /// press-and-holding a guest's tile (LiveStreamUserView.build) lands
+  /// here, pre-selecting that guest as the recipient before the normal
+  /// gift sheet opens -- same mechanism [sendQuickGift] already uses to
+  /// pre-target its one-tap Rose shortcut, just opening the full picker
+  /// sheet here instead of sending immediately. The sheet's own dropdown
+  /// still lets the viewer change recipients afterward (spec explicitly
+  /// allows that); SendGiftSheetController's own watcher cancels the
+  /// selection and notifies the viewer if this guest leaves before the
+  /// gift is actually sent.
+  void onGuestTileLongPress(AppUser guest) {
+    if (isHost || guest.userId == myUserId) return;
+    HapticManager.shared.light();
+    selectedGiftUser = guest.obs;
+    final users = liveData.value.getAllUsers(firestoreController.users)
+      ..removeWhere((element) => element.userId == myUserId);
+    GiftManager.openGiftSheet(
+      onCompletion: (giftManager) =>
+          _handleGiftSent(GiftType.livestream, giftManager),
+      giftType: GiftType.livestream,
+      streamUsers: users,
+      roomID: liveData.value.roomID,
+    );
+  }
+
   /// Everything that happens once a gift has actually been paid for and
   /// sent — Firestore comment (this is what drives TileGiftBubble/
   /// GiftComboBadge/the shared comment feed), battle score, daily/hourly/
@@ -2171,9 +2222,9 @@ class LivestreamScreenController extends BaseController
     // 1000) independent of what they actually cost in coins. Everything
     // else (liveCoin, the ranking/league controllers below) still uses the
     // real coinPrice, including the first-gift bonus applied above — only
-    // the battle scoreboard itself reads battlePoints. A gift with no tier
-    // mapping falls back to coinPrice 1:1, so this is a no-op for every
-    // gift not explicitly configured.
+    // the live match SCORE (currentBattleCoin) reads battlePoints. A gift
+    // with no tier mapping falls back to coinPrice 1:1, so this is a no-op
+    // for every gift not explicitly configured.
     final battlePoints = battlePointsForGift(gift.id, fallbackCoins: coinPrice);
     // A PK Match can restrict scoring to specific gifts (pkEligibleGiftIds,
     // set from the match setup sheet); null/empty means every gift counts,
@@ -2182,36 +2233,56 @@ class LivestreamScreenController extends BaseController
     // battle score is skipped.
     final countsForPk =
         giftCountsForPk(gift.id, liveData.value.pkEligibleGiftIds);
+    // Speed Challenge (client spec, Module 5.4): 3x PK points only, for an
+    // eligible gift landing in minute 2-3 of the match -- never the real
+    // coinPrice above. topGiftersForTeam applies this same multiplier when
+    // recomputing from comment history, so the live score and the gifter-
+    // rank list stay consistent with each other.
+    final speedMultiplier = type == GiftType.battle && countsForPk
+        ? speedChallengeMultiplierFor(
+            giftId: gift.id,
+            atMillisecondsSinceEpoch: DateTime.now().millisecondsSinceEpoch,
+            battleCreatedAt: liveData.value.battleCreatedAt,
+            eligibleGiftIds: liveData.value.speedChallengeEligibleGiftIds,
+          )
+        : 1;
+    final finalBattlePoints = battlePoints * speedMultiplier;
 
     _sendCommentToFirestore(
       type: LivestreamCommentType.gift,
       giftId: gift.id,
       receiverId: user?.userId,
+      quantity: 1,
+      coinValue: coinPrice,
+      pkPoints: type == GiftType.battle ? finalBattlePoints : null,
+      isGuestGift: giftManager.isGuestGift,
+      transactionId: giftManager.transactionId,
+      transactionNumber: giftManager.transactionNumber,
     );
     updateUserStateToFirestore(
       user?.userId,
-      battleCoin: type == GiftType.battle && countsForPk ? battlePoints : null,
+      // Real coin value, NOT battlePoints -- totalBattleCoin feeds
+      // totalCoin, which the end-of-LIVE summary ("Total Coins Collected")
+      // and the in-battle running gift-total counter both read as if it
+      // were real coins. It previously stored battlePoints instead (a
+      // config-tiered score value, e.g. a 300-coin gift configured to
+      // score 1000 PK points), so a host's summary could show earnings
+      // that were never actually received. Unlike currentBattleCoin below,
+      // this isn't gated on countsForPk -- the coins were genuinely
+      // received regardless of whether this particular gift was eligible
+      // to count toward the match's PK score.
+      battleCoin: type == GiftType.battle ? coinPrice : null,
       currentBattleCoin:
-          type == GiftType.battle && countsForPk ? battlePoints : null,
+          type == GiftType.battle && countsForPk ? finalBattlePoints : null,
       liveCoin: type == GiftType.livestream ? coinPrice : null,
     );
-    // Daily + hourly ranking: every coin received in a LIVE counts for the
-    // receiver in both leaderboards.
-    unawaited(LiveRankingController.recordGift(
-      hostId: user?.userId,
-      coins: coinPrice,
-      host: user,
-    ));
-    unawaited(HourlyRankingController.recordGift(
-      hostId: user?.userId,
-      coins: coinPrice,
-      host: user,
-    ));
-    unawaited(LeagueController.recordGift(
-      hostId: user?.userId,
-      coins: coinPrice,
-      host: user,
-    ));
+    // Daily/hourly/League ranking: moved server-side (2026-10-25, see
+    // WalletController::sendGift -> GlobalFunction::recordLiveRankingGift
+    // on the Laravel backend) so the coin amount credited is always the
+    // real, authoritative gift.coin_price, never something a client could
+    // fabricate by writing straight to Firestore. This file's `isLiveGift`
+    // flag passed with the send request (see sendGiftAndGetResult) is what
+    // tells the backend to do it -- nothing left to write here.
     if (type == GiftType.livestream &&
         user?.userId == liveData.value.hostId &&
         liveData.value.hasLiveGoal == true &&
@@ -2245,7 +2316,8 @@ class LivestreamScreenController extends BaseController
     if (gift == null) return;
     final coinPrice = gift.coinPrice ?? 0;
     if (coinPrice <= 0) return;
-    if (coinPrice > (SessionManager.instance.currentUser.value?.coinWallet ?? 0)) {
+    if (coinPrice >
+        (SessionManager.instance.currentUser.value?.coinWallet ?? 0)) {
       showSnackBar('Not enough coins to send a Rose.');
       return;
     }
@@ -2320,6 +2392,12 @@ class LivestreamScreenController extends BaseController
     String? comment,
     int? giftId,
     int? receiverId,
+    int? quantity,
+    int? coinValue,
+    int? pkPoints,
+    bool? isGuestGift,
+    int? transactionId,
+    String? transactionNumber,
   }) async {
     int time = DateTime.now().millisecondsSinceEpoch;
     try {
@@ -2332,6 +2410,12 @@ class LivestreamScreenController extends BaseController
               senderId: myUserId,
               receiverId: receiverId,
               giftId: giftId,
+              quantity: quantity,
+              coinValue: coinValue,
+              pkPoints: pkPoints,
+              isGuestGift: isGuestGift,
+              transactionId: transactionId,
+              transactionNumber: transactionNumber,
             ).toJson(),
           );
     } catch (e) {
@@ -2919,7 +3003,11 @@ class LivestreamScreenController extends BaseController
             // the way a natural timer-expiry does — it jumps straight to
             // reset, so history has to be captured right here or the data
             // is gone.
-            unawaited(_recordBattleHistory(endReason: 'manual_stop'));
+            // Asymmetric cancel rule (client spec, Module 9.1): whoever
+            // tapped Stop on an active match forfeits it, regardless of
+            // the in-progress score.
+            unawaited(_recordBattleHistory(
+                endReason: 'manual_stop', forfeitedByMe: true));
             if (liveData.value.opponentRoomId != null) {
               endBattleOnly();
             } else {
@@ -3257,8 +3345,7 @@ class LivestreamScreenController extends BaseController
           stream.pendingPkMatchRequestFromId !=
               _lastHandledPkMatchRequestFromId) {
         _lastHandledPkMatchRequestFromId = stream.pendingPkMatchRequestFromId;
-        _showIncomingPkMatchRequestDialog(
-            stream.pendingPkMatchRequestFromId!);
+        _showIncomingPkMatchRequestDialog(stream.pendingPkMatchRequestFromId!);
       }
       if (isHost &&
           stream.pendingRematchFromId != null &&
@@ -3444,6 +3531,13 @@ class LivestreamScreenController extends BaseController
     // leaving an orphaned battle state on either doc.
     if (liveData.value.battleType == BattleType.waiting ||
         liveData.value.battleType == BattleType.running) {
+      // Asymmetric cancel rule (client spec, Module 9.1): disconnecting out
+      // of an active cross-room battle forfeits it, same as tapping Stop
+      // mid-battle (see onStopButtonTap). Must run before endBattleOnly,
+      // which wipes the battle fields this reads, and before the batch
+      // below clears opponentRoomId.
+      await _recordBattleHistory(
+          endReason: 'cross_room_disconnect', forfeitedByMe: true);
       await endBattleOnly();
     }
     final teammateRoomId = liveData.value.coHostTeammateRoomId;
@@ -4071,7 +4165,17 @@ class LivestreamScreenController extends BaseController
   /// document id, so a double-write from both hosts racing to end the
   /// battle just overwrites with the same data rather than creating a
   /// duplicate record.
-  Future<void> _recordBattleHistory({required String endReason}) async {
+  /// [forfeitedByMe]: client spec's asymmetric cancel rule (Module 9.1) --
+  /// whoever's device actually cancelled an active match loses regardless
+  /// of the in-progress score, the other side wins. Set by
+  /// [onStopButtonTap]'s manual-stop path and by [exitCoHostConnection]
+  /// leaving a cross-room battle early; a natural timer expiry or an
+  /// opponent disconnect (the other side going silent, not a local
+  /// decision to leave) still goes by score as before.
+  Future<void> _recordBattleHistory({
+    required String endReason,
+    bool forfeitedByMe = false,
+  }) async {
     try {
       final stream = liveData.value;
       final myHostId = stream.hostId ?? myUserId;
@@ -4088,9 +4192,23 @@ class LivestreamScreenController extends BaseController
         opponentHostId = int.tryParse(stream.opponentRoomId!) ?? -1;
         if (opponentHostId == -1) return;
         roomIds = [myRoomId, stream.opponentRoomId!]..sort();
+        // Match what the live arena actually showed both hosts
+        // (party_battle_view.dart's red/blue) -- mySideBattleCoins/
+        // opponentSideBattleCoins alone omit tap-tap/like points entirely,
+        // which could let the permanently-recorded winner disagree with
+        // what was on screen during the match. Capped the same way
+        // pkTeamScore/party_battle_view already cap it (client spec,
+        // Module 8.1) -- crossRoomLikePoints itself is uncapped, only this
+        // score contribution is.
+        final pointsPerLike = setting?.pkLikePoints ?? 1;
+        final myLikePoints = ((stream.crossRoomLikePoints ?? 0) * pointsPerLike)
+            .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
+        final opponentLikePoints =
+            ((opponentLiveData.value?.crossRoomLikePoints ?? 0) * pointsPerLike)
+                .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
         finalScores = {
-          '$myHostId': mySideBattleCoins,
-          '$opponentHostId': opponentSideBattleCoins,
+          '$myHostId': mySideBattleCoins + myLikePoints,
+          '$opponentHostId': opponentSideBattleCoins + opponentLikePoints,
         };
         roundsWon = {
           '$myHostId': stream.battleRoundWins ?? 0,
@@ -4118,7 +4236,11 @@ class LivestreamScreenController extends BaseController
 
       final myScore = finalScores['$myHostId'] ?? 0;
       final opponentScore = finalScores['$opponentHostId'] ?? 0;
-      final outcome = determineBattleOutcome(myScore, opponentScore);
+      // forfeitedByMe skips the score comparison entirely -- cancelling an
+      // active match is a loss no matter how far ahead the canceller was.
+      final outcome = forfeitedByMe
+          ? BattleOutcome.sideBWins
+          : determineBattleOutcome(myScore, opponentScore);
       final isDraw = outcome == BattleOutcome.draw;
       final winnerHostId = isDraw
           ? null
@@ -4160,8 +4282,7 @@ class LivestreamScreenController extends BaseController
     final opponentRoomId = liveData.value.opponentRoomId;
     if (myRoomId == null || opponentRoomId == null) return;
     try {
-      final resultsVisibleUntil =
-          DateTime.now().millisecondsSinceEpoch + 60000;
+      final resultsVisibleUntil = DateTime.now().millisecondsSinceEpoch + 60000;
       final batch = db.batch();
       batch.update(liveStreamDocRef, {
         FirebaseConst.battleType: BattleType.end.value,

@@ -34,8 +34,8 @@ class SendGiftSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(
-        SendGiftSheetController(giftType, userId, streamUsers, roomID));
+    final controller =
+        Get.put(SendGiftSheetController(giftType, userId, streamUsers, roomID));
 
     return Container(
       height: Get.height / 1.5,
@@ -118,12 +118,13 @@ class SendGiftSheet extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final label = chips[index];
                     final value = label == 'All' ? '' : label;
-                    final isSelected = controller.selectedCategory.value == value;
+                    final isSelected =
+                        controller.selectedCategory.value == value;
                     return GestureDetector(
                       onTap: () => controller.selectCategory(value),
                       child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 7),
                         decoration: ShapeDecoration(
                           shape: SmoothRectangleBorder(
                             borderRadius: SmoothBorderRadius(
@@ -249,11 +250,23 @@ class GiftForLiveStream extends StatelessWidget {
           );
         }),
         const SizedBox(height: 3),
-        Text(
-          LKey.sendingCoinsMessage.tr,
-          style: TextStyleCustom.outFitLight300(
-              color: textLightGrey(context), fontSize: 13),
-        )
+        Obx(() {
+          final selected =
+              controller.livestreamController.selectedGiftUser.value;
+          // Client spec (Module 10.2): shows who the gift actually goes to
+          // -- matters most when a guest tile's long-press pre-selects a
+          // specific recipient before this sheet even opens (see
+          // LiveStreamUserView's onLongPress), but correct for the default
+          // host-recipient case too, not just a generic "the above user".
+          final name = selected?.username ?? '';
+          return Text(
+            name.isEmpty
+                ? LKey.sendingCoinsMessage.tr
+                : LKey.thisGiftGoesTo.trParams({'name': name}),
+            style: TextStyleCustom.outFitLight300(
+                color: textLightGrey(context), fontSize: 13),
+          );
+        }),
       ],
     );
   }

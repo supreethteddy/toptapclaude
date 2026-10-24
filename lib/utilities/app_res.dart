@@ -81,6 +81,14 @@ class AppRes {
   static const int speedChallengeWindowEndSecond = 180;
   static const int speedChallengeMultiplier = 3;
 
+  /// Co-Host PK Battle: however many times viewers double-tap to like a
+  /// side during one match, that side's tap-tap contribution to the PK
+  /// score caps here for the whole match (client spec, Module 8.1) --
+  /// the raw tap count itself (pkLikePointsA/B, crossRoomLikePoints) is
+  /// still incremented without limit, only the SCORE this feeds is capped
+  /// (see pkTeamScore).
+  static const int tapTapMaxPkPointsPerMatch = 3;
+
   /// How long post-match results (scores, winner/loser, emojis, gifting
   /// stats) stay visible before auto-clearing. The co-host connection
   /// itself is untouched by this -- only the battle-result chrome.
