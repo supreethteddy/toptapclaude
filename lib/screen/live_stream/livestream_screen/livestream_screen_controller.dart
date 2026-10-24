@@ -138,6 +138,16 @@ class LivestreamScreenController extends BaseController
       liveStreamUserStatesListener;
   StreamSubscription<QuerySnapshot<LivestreamComment?>>?
       liveStreamCommentsListener;
+  // Set the instant fetchLiveStreamComments (re)subscribes -- the listener
+  // itself replays this whole session's comment history as fresh "added"
+  // events on every subscribe (see that function's own comment), so a
+  // viewer leaving and re-entering an still-ongoing LIVE would otherwise
+  // re-fire one-shot effects (the premium gift video overlay, the eagle
+  // animation) for a gift someone sent long before they came back,
+  // including getting the overlay stuck again if the network stalls the
+  // replayed video. Side effects below only fire for a comment id (a
+  // creation-time epoch millis) at or after this value.
+  int? _commentListenerStartedAt;
 
   // Cross-room PK Battle: the opponent room's own state, watched read-only
   // while opponentRoomId is set. No multi-room Zego login needed — see
@@ -1894,6 +1904,7 @@ class LivestreamScreenController extends BaseController
   void fetchLiveStreamComments() {
     Loggers.info('Fetching live stream comments...');
     liveStreamCommentsListener?.cancel();
+    _commentListenerStartedAt = DateTime.now().millisecondsSinceEpoch;
     // A room's comments subcollection lives at liveStreams/{roomID} —
     // roomID is the host's own user id, so it's the exact same Firestore
     // path every time this host ever goes live. An unfiltered listener on
@@ -1938,13 +1949,24 @@ class LivestreamScreenController extends BaseController
             }
             comments.add(comment);
             if (comment.commentType == LivestreamCommentType.gift) {
-              _registerGiftForCombo(comment);
-              if (comment.giftId == eagleGiftId) {
-                eagleGiftAnimationTrigger.value++;
-              }
-              if (premiumAnimationForGift(comment.giftId) != null) {
-                premiumGiftAnimationComment.value = comment;
-                premiumGiftAnimationTrigger.value++;
+              // One-shot visual effects only for a comment actually posted
+              // since THIS subscribe -- otherwise re-entering an still-
+              // ongoing LIVE replays every gift from earlier in the session
+              // (see fetchLiveStreamComments' own comment) and re-fires
+              // these, including getting the premium overlay stuck again
+              // if its video stalls. The comment itself still belongs in
+              // the feed either way, so comments.add above is unguarded.
+              final isFreshComment = (comment.id ?? 0) >=
+                  (_commentListenerStartedAt ?? 0);
+              if (isFreshComment) {
+                _registerGiftForCombo(comment);
+                if (comment.giftId == eagleGiftId) {
+                  eagleGiftAnimationTrigger.value++;
+                }
+                if (premiumAnimationForGift(comment.giftId) != null) {
+                  premiumGiftAnimationComment.value = comment;
+                  premiumGiftAnimationTrigger.value++;
+                }
               }
               if (comment.receiverId == SessionManager.instance.getUserID()) {
                 _refreshMyBalanceAfterGift();
@@ -3211,11 +3233,13 @@ class LivestreamScreenController extends BaseController
   /// Called from the FCM nudge (see firebase_notification_manager.dart)
   /// when the realtime listener may be slow -- fetches the room doc
   /// directly and runs the exact same pending-invite / pending-match-
-  /// request checks listenLiveStreamData's own listener does, so the
-  /// dialog shows immediately regardless of listener latency. Covers both
-  /// signals (never both pending at once in practice -- a match request
-  /// only exists once already connected, after the connect invite field is
-  /// long cleared) so one push type/handler serves both.
+  /// request / pending-rematch checks listenLiveStreamData's own listener
+  /// does, so the dialog shows immediately regardless of listener latency.
+  /// Covers all three signals (never more than one pending at once in
+  /// practice -- a match request only exists once already connected,
+  /// after the connect invite field is long cleared, and a rematch only
+  /// exists after a battle has already ended) so one push type/handler
+  /// serves all three.
   Future<void> forceCheckPendingCoHostInvite() async {
     try {
       final snapshot = await liveStreamDocRef.get();
@@ -3235,6 +3259,12 @@ class LivestreamScreenController extends BaseController
         _lastHandledPkMatchRequestFromId = stream.pendingPkMatchRequestFromId;
         _showIncomingPkMatchRequestDialog(
             stream.pendingPkMatchRequestFromId!);
+      }
+      if (isHost &&
+          stream.pendingRematchFromId != null &&
+          stream.pendingRematchFromId != _lastHandledRematchFromId) {
+        _lastHandledRematchFromId = stream.pendingRematchFromId;
+        _showIncomingRematchDialog(stream.pendingRematchFromId!);
       }
     } catch (e) {
       Loggers.error('forceCheckPendingCoHostInvite failed: $e');
@@ -3934,6 +3964,13 @@ class LivestreamScreenController extends BaseController
         FirebaseConst.pendingRematchFromId: myUserId,
       });
       showSnackBar(LKey.rematchRequestSent.tr);
+      // Same best-effort nudge sendCoHostConnectInvite/requestPkMatch
+      // already use -- this room-doc listener can take 50+ seconds to
+      // deliver on some connections, so without it the other host's
+      // dialog may never show up within any reasonable testing window.
+      // forceCheckPendingCoHostInvite() (triggered by this same push type)
+      // now also checks pendingRematchFromId, so this reuses that path.
+      unawaited(_pushCoHostConnectInvite(int.tryParse(opponentRoomId) ?? -1));
     } catch (e) {
       Loggers.error('Failed to request rematch: $e');
       showSnackBar(LKey.battleInviteFailed.tr);

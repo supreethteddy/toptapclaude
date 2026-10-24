@@ -6,12 +6,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/common_extension.dart';
+import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/widget/black_gradient_shadow.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
+import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/config/deepar/local_deepar_filters.dart';
 import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/screen/live_stream/create_live_stream_screen/create_live_stream_screen_controller.dart';
 import 'package:shortzz/languages/languages_keys.dart';
+import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/gift_sheet/send_gift_sheet.dart';
@@ -182,6 +185,27 @@ class LiveStreamBottomView extends StatelessWidget {
                 controller: controller,
                 onShareTap: () => _shareStream(context),
               ),
+          ],
+        );
+      }
+      // Client reference: once another host/co-host is actually sharing the
+      // screen (same-room co-host/guest on stage, or cross-room connected),
+      // the message box disappears entirely and only the stage-connection
+      // icons stay directly visible -- share/beautify move into the "..."
+      // sheet instead of fighting the connection icons for space. The
+      // solo-host row below is untouched; this only replaces it once
+      // someone else is actually sharing the screen.
+      final hasOtherHostOnScreen = !isAudience &&
+          (controller.streamViews.length > 1 || stream.opponentRoomId != null);
+      if (hasOtherHostOnScreen) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (isVisible) _HostLinkAndGuestIcons(controller: controller),
+            if (isVisible)
+              _buildControlButton(context,
+                  icon: Icons.more_vert,
+                  onTap: () => _showMoreOptions(context)),
           ],
         );
       }
@@ -439,6 +463,26 @@ class LiveStreamBottomView extends StatelessWidget {
                       ],
                     );
                   }),
+                  // Share/Beautify: always shown here too, not just when the
+                  // compact "other host on screen" row hides them inline
+                  // (see _buildBottomControlsRow) -- one consistent place to
+                  // find them in either layout, not a mode-specific item.
+                  ListTile(
+                    leading: const Icon(Icons.share_outlined),
+                    title: Text(LKey.share.tr),
+                    onTap: () {
+                      Get.back();
+                      _shareStream(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.face_retouching_natural),
+                    title: const Text('Beautify'),
+                    onTap: () {
+                      Get.back();
+                      controller.onBeautifyTap();
+                    },
+                  ),
                   if (controller.isHost && Platform.isAndroid)
                     ListTile(
                       leading: const Icon(Icons.auto_awesome_outlined),
@@ -792,13 +836,16 @@ class LiveStreamBottomView extends StatelessWidget {
 }
 
 /// Viewer-facing PK battle bottom bar (client's TikTok reference): people /
-/// team-A gift / team-B gift / share, beside the comment box. The two gift
-/// icons reuse the exact same red/blue team-targeted send already built for
-/// the text field's suffix icon (TextFieldSuffixIcon.showGiftIconsForBattle)
-/// — surfaced here persistently instead of only while the field is empty —
-/// so this is a relocation + TopTap-palette restyle, not a new gift
-/// mechanism. Only shown for a 1v1 (exactly 2 on-stage users); 2v2 team
-/// gifting isn't built yet, same limitation the suffix icons already had.
+/// rose / gift / share, beside the comment box. Team membership is read
+/// from the real roster (pkTeamA/BUserIds for a same-room PK Match,
+/// both rooms' own getAllUsers for a cross-room battle) instead of
+/// assuming exactly one person per side, so this works the same for a 1v1
+/// or a 2v2 (or an uneven) match — tapping the gift icon opens a small
+/// picker across whichever hosts are actually on either side rather than a
+/// single hardcoded recipient. Previously this was two separate red/blue
+/// buttons, each hardcoded to users.first/users.last, which only worked
+/// for exactly 2 on-stage users and vanished the moment a co-host joined
+/// either side.
 class _BattleViewerActionIcons extends StatelessWidget {
   final LivestreamScreenController controller;
   final VoidCallback onShareTap;
@@ -812,12 +859,33 @@ class _BattleViewerActionIcons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final stream = controller.liveData.value;
-      final users = stream.getAllUsers(controller.firestoreController.users);
       final isNotOnStage = controller.streamViews.firstWhereOrNull(
             (view) => view.streamId == controller.myUserId.toString(),
           ) ==
           null;
-      final showTeamGifts = isNotOnStage && users.length == 2;
+      final allUsers = controller.firestoreController.users;
+      List<AppUser> teamA;
+      List<AppUser> teamB;
+      if (stream.opponentRoomId != null) {
+        // Cross-room party battle: each side's "team" is just that room's
+        // own on-stage roster (host + any co-hosts/guests), already
+        // naturally 2v2-ready once a room has a co-host.
+        teamA = stream.getAllUsers(allUsers);
+        teamB =
+            controller.opponentLiveData.value?.getAllUsers(allUsers) ?? [];
+      } else {
+        // Same-room PK Match: real team arrays set by _startPkMatch (falls
+        // back to [host]/[first co-host] for pre-team-array battle data).
+        teamA = controller.pkTeamAUserIds
+            .map((id) => allUsers.firstWhereOrNull((u) => u.userId == id))
+            .whereType<AppUser>()
+            .toList();
+        teamB = controller.pkTeamBUserIds
+            .map((id) => allUsers.firstWhereOrNull((u) => u.userId == id))
+            .whereType<AppUser>()
+            .toList();
+      }
+      final showBattleGift = isNotOnStage && (teamA.isNotEmpty || teamB.isNotEmpty);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -834,25 +902,6 @@ class _BattleViewerActionIcons extends StatelessWidget {
               child: const Icon(Icons.people, color: Colors.white, size: 18),
             ),
           ),
-          if (showTeamGifts) ...[
-            const SizedBox(width: 6),
-            GiftIcon(
-              bgColor: ColorRes.likeRed,
-              onTap: () => controller.onGiftTap(
-                GiftType.battle,
-                battleViewType: BattleView.red,
-                users: [users.first],
-              ),
-            ),
-            GiftIcon(
-              bgColor: ColorRes.battleProgressColor,
-              onTap: () => controller.onGiftTap(
-                GiftType.battle,
-                battleViewType: BattleView.blue,
-                users: [users.last],
-              ),
-            ),
-          ],
           const SizedBox(width: 6),
           // One-tap Rose shortcut (reference's rose icon) -- same send path
           // as the full gift sheet, see sendQuickGift.
@@ -870,6 +919,24 @@ class _BattleViewerActionIcons extends StatelessWidget {
                   color: Colors.white, size: 18),
             ),
           ),
+          if (showBattleGift) ...[
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: () =>
+                  _openBattleGiftPicker(context, teamA: teamA, teamB: teamB),
+              child: Container(
+                height: 37,
+                width: 37,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF2F56),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.card_giftcard,
+                    color: Colors.white, size: 18),
+              ),
+            ),
+          ],
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onShareTap,
@@ -894,6 +961,107 @@ class _BattleViewerActionIcons extends StatelessWidget {
         ],
       );
     });
+  }
+
+  /// Exactly one possible recipient across both sides (e.g. the opponent
+  /// room hasn't finished loading yet) -- send straight to them, no picker
+  /// needed. Otherwise show both sides' rosters so the viewer picks who on
+  /// whichever team gets the gift; this is what makes a 2+-member team
+  /// (2v2) work at all, since the old code could only ever address a
+  /// single hardcoded user per side.
+  void _openBattleGiftPicker(
+    BuildContext context, {
+    required List<AppUser> teamA,
+    required List<AppUser> teamB,
+  }) {
+    if (teamA.length + teamB.length == 1) {
+      final onlyTeamA = teamA.isNotEmpty;
+      controller.onGiftTap(
+        GiftType.battle,
+        battleViewType: onlyTeamA ? BattleView.red : BattleView.blue,
+        users: [onlyTeamA ? teamA.first : teamB.first],
+      );
+      return;
+    }
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Send gift to',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              if (teamA.isNotEmpty)
+                _teamRecipientRow(context, teamA, BattleView.red),
+              if (teamA.isNotEmpty && teamB.isNotEmpty)
+                const SizedBox(height: 18),
+              if (teamB.isNotEmpty)
+                _teamRecipientRow(context, teamB, BattleView.blue),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _teamRecipientRow(
+      BuildContext context, List<AppUser> team, BattleView side) {
+    final tint =
+        side == BattleView.red ? ColorRes.likeRed : ColorRes.battleProgressColor;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final user in team)
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: GestureDetector(
+              onTap: () {
+                Get.back();
+                controller.onGiftTap(GiftType.battle,
+                    battleViewType: side, users: [user]);
+              },
+              child: Column(
+                children: [
+                  CustomImage(
+                    size: const Size(48, 48),
+                    image: user.profile?.addBaseURL(),
+                    fullName: user.fullname,
+                    strokeColor: tint,
+                    strokeWidth: 2,
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: 56,
+                    child: Text(
+                      user.username ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -1002,12 +1170,6 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(width: 6),
-              _circleIconButton(
-                onTap: controller.exitCoHostConnection,
-                child: const Icon(Icons.call_end,
-                    color: ColorRes.likeRed, size: 18),
-              ),
             ],
           );
         }),

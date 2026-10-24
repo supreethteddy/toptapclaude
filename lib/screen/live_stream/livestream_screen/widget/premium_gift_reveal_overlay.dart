@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -43,6 +44,13 @@ class PremiumGiftRevealOverlay extends StatefulWidget {
 class _PremiumGiftRevealOverlayState extends State<PremiumGiftRevealOverlay> {
   VideoPlayerController? _controller;
   bool _visible = false;
+  // Safety net: _onTick relies on the network video actually reaching
+  // isPlaying=false && position>=duration. A stalled/buffering connection
+  // can leave it sitting at isPlaying=true with no progress forever, which
+  // would otherwise block the live video behind it indefinitely. These
+  // premium clips are short promotional videos, so 15s is generous for
+  // real playback but still a hard ceiling against a stuck one.
+  Timer? _stuckGuard;
 
   @override
   void didUpdateWidget(covariant PremiumGiftRevealOverlay oldWidget) {
@@ -55,6 +63,7 @@ class _PremiumGiftRevealOverlayState extends State<PremiumGiftRevealOverlay> {
   }
 
   Future<void> _play() async {
+    _stuckGuard?.cancel();
     final previous = _controller;
     _controller = null;
     previous?.removeListener(_onTick);
@@ -73,6 +82,7 @@ class _PremiumGiftRevealOverlayState extends State<PremiumGiftRevealOverlay> {
     setState(() => _visible = true);
     await controller.play();
     controller.addListener(_onTick);
+    _stuckGuard = Timer(const Duration(seconds: 15), _finish);
   }
 
   void _onTick() {
@@ -90,6 +100,8 @@ class _PremiumGiftRevealOverlayState extends State<PremiumGiftRevealOverlay> {
   // otherwise it sits alive (holding a native player/texture) until the next
   // gift replaces it or this widget itself is torn down.
   void _finish() {
+    _stuckGuard?.cancel();
+    _stuckGuard = null;
     final controller = _controller;
     _controller = null;
     controller?.removeListener(_onTick);
@@ -99,6 +111,7 @@ class _PremiumGiftRevealOverlayState extends State<PremiumGiftRevealOverlay> {
 
   @override
   void dispose() {
+    _stuckGuard?.cancel();
     _controller?.removeListener(_onTick);
     _controller?.dispose();
     super.dispose();

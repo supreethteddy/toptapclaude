@@ -606,12 +606,17 @@ class TopGiftersRow extends StatelessWidget {
   // teammate once 2v2 exists) / the opponent's host explicitly.
   final List<int>? teamAUserIds;
   final List<int>? teamBUserIds;
+  // Optional content for the gap between the two team seat clusters (e.g.
+  // the Rematch button) -- null preserves the exact 2-child row this
+  // widget always rendered, so the same-room caller is unaffected.
+  final Widget? center;
 
   const TopGiftersRow({
     super.key,
     required this.controller,
     this.teamAUserIds,
     this.teamBUserIds,
+    this.center,
   });
 
   @override
@@ -637,6 +642,7 @@ class TopGiftersRow extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _teamSlots(teamARanks, ColorRes.likeRed, rankOneNearCenter: true),
+            if (center != null) center!,
             _teamSlots(teamBRanks, ColorRes.battleProgressColor,
                 rankOneNearCenter: false),
           ],

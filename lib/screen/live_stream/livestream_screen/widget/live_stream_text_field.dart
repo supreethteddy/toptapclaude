@@ -121,13 +121,6 @@ class TextFieldSuffixIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool showGiftIconsForBattle =
-        isTextEmpty &&
-        isAudience &&
-        isBattleOn &&
-        isGiftIconVisible &&
-        users.length == 2;
-
     final bool showSendButton = !isBattleOn || !isGiftIconVisible;
 
     return AnimatedContainer(
@@ -136,28 +129,6 @@ class TextFieldSuffixIcon extends StatelessWidget {
       duration: const Duration(milliseconds: 100),
       child: !isTextEmpty
           ? _sendButton(context)
-          : showGiftIconsForBattle
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GiftIcon(
-                  bgColor: ColorRes.likeRed,
-                  onTap: () => controller.onGiftTap(
-                    GiftType.battle,
-                    battleViewType: BattleView.red,
-                    users: [users.first],
-                  ),
-                ),
-                GiftIcon(
-                  bgColor: ColorRes.battleProgressColor,
-                  onTap: () => controller.onGiftTap(
-                    GiftType.battle,
-                    battleViewType: BattleView.blue,
-                    users: [users.last],
-                  ),
-                ),
-              ],
-            )
           : showSendButton && isTextEmpty && !isAudience
           ? _sendButton(context)
           : isBattleOn && isAudience

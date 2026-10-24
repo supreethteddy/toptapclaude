@@ -194,7 +194,7 @@ class _PartyBattleStats extends StatelessWidget {
                       ),
                     )
                   : const SizedBox()),
-              if (stream.battleType == BattleType.end) ...[
+              if (stream.battleType == BattleType.end)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -204,57 +204,12 @@ class _PartyBattleStats extends StatelessWidget {
                         rightSide: true, isWinner: !isRedWin, isDraw: isDraw),
                   ],
                 ),
-                if (controller.isHost && controller.canStartNextRound)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: InkWell(
-                      onTap: controller.startNextRound,
-                      child: Container(
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30),
-                            color: whitePure(context).withValues(alpha: .15),
-                            border: Border.all(
-                                color:
-                                    whitePure(context).withValues(alpha: .3))),
-                        child: Text(
-                          LKey.nextRound.tr,
-                          style: TextStyleCustom.outFitSemiBold600(
-                              color: whitePure(context), fontSize: 14),
-                        ),
-                      ),
-                    ),
-                  )
-                // Whole match concluded (no rounds left), not just one
-                // round — this is where a rematch (a brand-new battle) makes
-                // sense, as opposed to "Next Round" which continues the
-                // current match.
-                else if (controller.isHost && !controller.canStartNextRound)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: InkWell(
-                      onTap: controller.requestRematch,
-                      child: Container(
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30),
-                            color: ColorRes.likeRed),
-                        child: Text(
-                          LKey.rematch.tr,
-                          style: TextStyleCustom.outFitSemiBold600(
-                              color: whitePure(context), fontSize: 14),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
               // Top-3 gifters seat row for each side, right at the bottom
               // edge of the video (client reference) -- replaces the plain
-              // red/blue hostname strip this used to be.
+              // red/blue hostname strip this used to be. Next Round/Rematch
+              // sits in the gap between the two seat clusters, not as its
+              // own full-width bar over the video (client correction: was
+              // overlapping the video card).
               TopGiftersRow(
                 controller: controller,
                 teamAUserIds: [
@@ -264,10 +219,50 @@ class _PartyBattleStats extends StatelessWidget {
                   if (controller.opponentLiveData.value?.hostId != null)
                     controller.opponentLiveData.value!.hostId!,
                 ],
+                center: stream.battleType == BattleType.end && controller.isHost
+                    ? _rematchOrNextRoundButton(context)
+                    : null,
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // Compact -- sits in the narrow gap between the two 3-seat gifter
+  // clusters (TopGiftersRow's center slot), not the wide full-padding pill
+  // the old bottom-of-overlay position could afford.
+  Widget _rematchOrNextRoundButton(BuildContext context) {
+    final isNextRound = controller.canStartNextRound;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        onTap: isNextRound ? controller.startNextRound : controller.requestRematch,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isNextRound
+                ? whitePure(context).withValues(alpha: .15)
+                : ColorRes.likeRed,
+            border: isNextRound
+                ? Border.all(color: whitePure(context).withValues(alpha: .3))
+                : null,
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              isNextRound ? LKey.nextRound.tr : LKey.rematch.tr,
+              maxLines: 1,
+              style: TextStyleCustom.outFitSemiBold600(
+                  color: whitePure(context), fontSize: 12),
+            ),
+          ),
+        ),
       ),
     );
   }

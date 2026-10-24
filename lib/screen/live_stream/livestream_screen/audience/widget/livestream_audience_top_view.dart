@@ -80,14 +80,14 @@ class _LiveStreamAudienceTopViewState extends State<LiveStreamAudienceTopView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 5,
                 children: [
-                  // Live Goal Progress Widget for audience
-                  LiveGoalProgressWidget(controller: controller),
-                  PinnedGiftGoalChip(controller: controller),
-                  LivePollBanner(controller: controller),
-                  FanClubBanner(controller: controller),
-                  _BuildTopView(controller: controller),
+                  // Reference format: one compact row for avatar/name/
+                  // follow/contributor-badges/viewer-count/close (was two
+                  // separate rows, _BuildTopView stacked above
+                  // _BuildCenterView), then one scrollable row of dark
+                  // pill chips underneath -- matches the host's own
+                  // top view's two-row shape instead of five stacked rows.
                   _BuildCenterView(controller: controller),
-                  _BuildRankingRow(controller: controller),
+                  _BuildChipsRow(controller: controller),
                   _BuildBottomView(controller: controller),
                 ],
               ),
@@ -95,76 +95,6 @@ class _LiveStreamAudienceTopViewState extends State<LiveStreamAudienceTopView> {
           ),
         );
       }),
-    );
-  }
-}
-
-class _BuildTopView extends StatelessWidget {
-  final LivestreamScreenController controller;
-
-  const _BuildTopView({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Report (Figma "Live1": moved to top-left).
-        InkWell(
-          onTap: () {
-            HapticManager.shared.light();
-            controller.reportUser(controller.liveData.value.hostId);
-          },
-          child: Image.asset(
-            AssetRes.icReport,
-            color: whitePure(context).withValues(alpha: 0.5),
-            width: 28,
-            height: 28,
-          ),
-        ),
-        // Top-3 contributor badges for THIS LIVE session (Figma "Live1"),
-        // next to the viewer-count / close controls. Tap opens the full
-        // Contributor Ranking sheet.
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ContributorTopBadges(controller: controller),
-            ),
-          ),
-        ),
-        // Close (Figma "Live1": moved to top-right, red-tinted).
-        Obx(() {
-          Livestream stream = controller.liveData.value;
-          bool isBattleRunning = stream.battleType != BattleType.initiate;
-          bool isAudience = !stream.isOnStage(controller.myUserId);
-
-          if (isBattleRunning && !isAudience) return const SizedBox();
-          return InkWell(
-            onTap: controller.onCloseAudienceBtn,
-            child: Container(
-              height: 25,
-              width: 25,
-              margin: const EdgeInsets.symmetric(horizontal: 5),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: ColorRes.likeRed,
-                  width: 1.5,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Image.asset(
-                AssetRes.icClose1,
-                color: ColorRes.likeRed,
-                width: 18,
-                height: 18,
-              ),
-            ),
-          );
-        }),
-      ],
     );
   }
 }
@@ -184,6 +114,23 @@ class _BuildCenterView extends StatelessWidget {
       return Row(
         spacing: 10,
         children: <Widget>[
+          // Report -- kept small and leading (Figma "Live1": top-left),
+          // folded into this one header row instead of its own separate
+          // row above so the whole header matches the reference's compact
+          // two-row shape (was: a dedicated report/contributor/close row
+          // stacked on top of this avatar/name row).
+          InkWell(
+            onTap: () {
+              HapticManager.shared.light();
+              controller.reportUser(controller.liveData.value.hostId);
+            },
+            child: Image.asset(
+              AssetRes.icReport,
+              color: whitePure(context).withValues(alpha: 0.5),
+              width: 20,
+              height: 20,
+            ),
+          ),
           InkWell(
             onTap: () {
               Get.bottomSheet(
@@ -278,9 +225,17 @@ class _BuildCenterView extends StatelessWidget {
             bool isCoHost = stream.isOnStage(controller.myUserId);
             int count = liveData.watchingCount ?? 0;
             int watchingCount = count >= 0 ? count : 0;
+            // Top-3 contributor badges + Close, folded in here from the old
+            // separate top row (Figma "Live1": contributor badges next to
+            // viewer-count, close red-tinted top-right) so they sit in the
+            // same row as the viewer-count pill instead of a row of their
+            // own above it.
+            bool isBattleRunning = liveData.battleType != BattleType.initiate;
+            bool isAudienceNotOnStage = !stream.isOnStage(controller.myUserId);
             return Row(
               spacing: 5,
               children: [
+                ContributorTopBadges(controller: controller),
                 Container(
                   height: 30,
                   padding: const EdgeInsets.symmetric(horizontal: 13),
@@ -323,6 +278,28 @@ class _BuildCenterView extends StatelessWidget {
                     iconColor: whitePure(context),
                     onTap: controller.openAudienceSheet,
                   ),
+                if (!(isBattleRunning && !isAudienceNotOnStage))
+                  InkWell(
+                    onTap: controller.onCloseAudienceBtn,
+                    child: Container(
+                      height: 25,
+                      width: 25,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ColorRes.likeRed,
+                          width: 1.5,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Image.asset(
+                        AssetRes.icClose1,
+                        color: ColorRes.likeRed,
+                        width: 18,
+                        height: 18,
+                      ),
+                    ),
+                  ),
               ],
             );
           }),
@@ -332,18 +309,25 @@ class _BuildCenterView extends StatelessWidget {
   }
 }
 
-/// Daily + hourly ranking chips, below the host info row (Figma "Live1").
-/// Reuses the same [LiveRankChip]/[HourlyRankChip] widgets the host toolbar
-/// already uses, so tapping either opens the matching ranking sheet.
-class _BuildRankingRow extends StatelessWidget {
+/// Every dark-pill chip below the host info row (Figma "Live1"), all on one
+/// horizontally-scrollable row -- same shape as [LiveStreamHostTopView]'s
+/// own row 2. Reuses the same [LiveRankChip]/[HourlyRankChip]/[LeagueBadge]/
+/// [MyEarningsBadge] widgets the host toolbar already uses, so tapping any
+/// of them opens the matching sheet. The goal/gift-goal/poll/fan-club pills
+/// used to be their own separate rows stacked above everything else (and
+/// the live-goal one used its own large non-compact banner style instead of
+/// this row's pill shape) -- folded in here now so the whole header reads
+/// as the reference's compact two-row shape instead of up to seven stacked
+/// rows.
+class _BuildChipsRow extends StatelessWidget {
   final LivestreamScreenController controller;
 
-  const _BuildRankingRow({required this.controller});
+  const _BuildChipsRow({required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -354,6 +338,14 @@ class _BuildRankingRow extends StatelessWidget {
           LeagueBadge(controller: controller),
           const SizedBox(width: 6),
           const MyEarningsBadge(),
+          const SizedBox(width: 6),
+          LiveGoalProgressWidget(controller: controller, compact: true),
+          const SizedBox(width: 6),
+          PinnedGiftGoalChip(controller: controller),
+          const SizedBox(width: 6),
+          LivePollBanner(controller: controller),
+          const SizedBox(width: 6),
+          FanClubBanner(controller: controller),
         ],
       ),
     );
