@@ -180,6 +180,16 @@ class Livestream {
   // [pkEligibleGiftIds] above.
   List<int>? speedChallengeEligibleGiftIds;
 
+  // Single pinned comment slot (client spec 14.2) — only ever one at a time;
+  // pinning another comment replaces this field rather than appending to a
+  // list, same "one slot, newest wins" semantics as the ordinary feed-post
+  // pin feature (AppRes.maxPinComment == 1) this mirrors. null = nothing
+  // pinned. Lives directly on the room doc rather than as a flag on the
+  // comment itself, since a comment doc's own lifecycle (deleted once the
+  // join-request flow clears it, for example) shouldn't be able to silently
+  // unpin something still worth showing.
+  PinnedComment? pinnedComment;
+
   Livestream({
     this.watchingCount,
     this.description,
@@ -241,6 +251,7 @@ class Livestream {
     this.pkLikePointsB,
     this.crossRoomLikePoints,
     this.speedChallengeEligibleGiftIds,
+    this.pinnedComment,
   });
 
   Livestream.fromJson(Map<String, dynamic> json) {
@@ -332,6 +343,10 @@ class Livestream {
         (json['speed_challenge_eligible_gift_ids'] as List<dynamic>?)
             ?.map((e) => (e as num).toInt())
             .toList();
+    pinnedComment = json['pinned_comment'] != null
+        ? PinnedComment.fromJson(
+            Map<String, dynamic>.from(json['pinned_comment']))
+        : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -396,6 +411,7 @@ class Livestream {
     data['pk_like_points_b'] = pkLikePointsB;
     data['cross_room_like_points'] = crossRoomLikePoints;
     data['speed_challenge_eligible_gift_ids'] = speedChallengeEligibleGiftIds;
+    data['pinned_comment'] = pinnedComment?.toJson();
     return data;
   }
 
@@ -443,7 +459,8 @@ class Livestream {
       userId != null && (guestIds ?? const []).contains(userId);
 
   bool isOnStage(int? userId) =>
-      userId != null && (userId == hostId || isCoHost(userId) || isGuest(userId));
+      userId != null &&
+      (userId == hostId || isCoHost(userId) || isGuest(userId));
 
   AppUser? getHostUser(List<AppUser> users) {
     final controller = Get.find<FirebaseFirestoreController>();
@@ -618,4 +635,44 @@ class LivePoll {
   }
 
   int get totalVotes => voteCounts.fold(0, (sum, v) => sum + v);
+}
+
+/// The one comment currently pinned to a LIVE (client spec 14.2). A small
+/// snapshot of the source [LivestreamComment] rather than a reference to it,
+/// so it keeps displaying correctly even if the underlying comment doc is
+/// later removed from the feed.
+class PinnedComment {
+  int commentId;
+  int senderId;
+  String? username;
+  String? comment;
+  int pinnedAt;
+
+  PinnedComment({
+    required this.commentId,
+    required this.senderId,
+    this.username,
+    this.comment,
+    required this.pinnedAt,
+  });
+
+  factory PinnedComment.fromJson(Map<String, dynamic> json) {
+    return PinnedComment(
+      commentId: (json['comment_id'] as num?)?.toInt() ?? 0,
+      senderId: (json['sender_id'] as num?)?.toInt() ?? -1,
+      username: json['username'],
+      comment: json['comment'],
+      pinnedAt: (json['pinned_at'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'comment_id': commentId,
+      'sender_id': senderId,
+      'username': username,
+      'comment': comment,
+      'pinned_at': pinnedAt,
+    };
+  }
 }

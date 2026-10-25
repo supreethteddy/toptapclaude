@@ -100,7 +100,8 @@ class LiveStreamBottomView extends StatelessWidget {
                           ),
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 10),
-                            child: LiveStreamCommentView(controller: controller),
+                            child:
+                                LiveStreamCommentView(controller: controller),
                           ),
                         ),
                       );
@@ -492,7 +493,10 @@ class LiveStreamBottomView extends StatelessWidget {
                         _showLiveFilterSheet(context);
                       },
                     ),
-                  if (controller.isHost) ...[
+                  // A Moderator with guest-management delegated (client
+                  // spec 14.4) gets this entry too -- openMembersSheet()
+                  // itself decides which mode of the sheet that opens.
+                  if (controller.isHost || controller.canManageGuests)
                     ListTile(
                       leading: const Icon(Icons.groups_outlined),
                       title: Text(LKey.members.tr),
@@ -501,6 +505,7 @@ class LiveStreamBottomView extends StatelessWidget {
                         controller.openMembersSheet();
                       },
                     ),
+                  if (controller.isHost) ...[
                     ListTile(
                       leading: const Icon(Icons.person_outline),
                       title: const Text('About Me'),
@@ -558,14 +563,22 @@ class LiveStreamBottomView extends StatelessWidget {
                         );
                       },
                     ),
-                  ListTile(
-                    leading: const Icon(Icons.shield_outlined),
-                    title: Text(LKey.manageModerators.tr),
-                    onTap: () {
-                      Get.back();
-                      Get.to(() => const ManageModeratorsScreen());
-                    },
-                  ),
+                  // Host-only (client spec 14.5: Moderators must not assign
+                  // other Moderators) -- was previously reachable from this
+                  // same sheet with no check of its own, relying only on
+                  // the sheet's own host-only visibility; explicit now that
+                  // a Moderator with guest-management can also open this
+                  // sheet via the Members entry above.
+                  if (controller.isHost)
+                    ListTile(
+                      leading: const Icon(Icons.shield_outlined),
+                      title: Text(LKey.manageModerators.tr),
+                      onTap: () {
+                        Get.back();
+                        Get.to(() => ManageModeratorsScreen(
+                            roomID: controller.liveData.value.roomID ?? ''));
+                      },
+                    ),
                   if (controller.liveData.value.type != LivestreamType.battle)
                     ListTile(
                       leading: Image.asset(AssetRes.icBattleVs,
@@ -620,6 +633,7 @@ class LiveStreamBottomView extends StatelessWidget {
       ),
     );
   }
+
   /// Same DeepAR filter picker as the pre-LIVE Effects sheet
   /// (create_live_stream_screen_controller.dart's onEffectsTap), reachable
   /// from here while actually LIVE via the "Filters" entry above. Calls the
@@ -654,8 +668,7 @@ class LiveStreamBottomView extends StatelessWidget {
                                 .selectedLiveFilter.value.title ??
                             'None')
                         : 'None',
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -742,7 +755,6 @@ class LiveStreamBottomView extends StatelessWidget {
         ? Image.network(imagePath, fit: BoxFit.cover)
         : Image.asset(imagePath, fit: BoxFit.cover);
   }
-
 
   Widget _buildControlButton(
     BuildContext context, {
@@ -871,8 +883,7 @@ class _BattleViewerActionIcons extends StatelessWidget {
         // own on-stage roster (host + any co-hosts/guests), already
         // naturally 2v2-ready once a room has a co-host.
         teamA = stream.getAllUsers(allUsers);
-        teamB =
-            controller.opponentLiveData.value?.getAllUsers(allUsers) ?? [];
+        teamB = controller.opponentLiveData.value?.getAllUsers(allUsers) ?? [];
       } else {
         // Same-room PK Match: real team arrays set by _startPkMatch (falls
         // back to [host]/[first co-host] for pre-team-array battle data).
@@ -885,7 +896,8 @@ class _BattleViewerActionIcons extends StatelessWidget {
             .whereType<AppUser>()
             .toList();
       }
-      final showBattleGift = isNotOnStage && (teamA.isNotEmpty || teamB.isNotEmpty);
+      final showBattleGift =
+          isNotOnStage && (teamA.isNotEmpty || teamB.isNotEmpty);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1022,8 +1034,9 @@ class _BattleViewerActionIcons extends StatelessWidget {
 
   Widget _teamRecipientRow(
       BuildContext context, List<AppUser> team, BattleView side) {
-    final tint =
-        side == BattleView.red ? ColorRes.likeRed : ColorRes.battleProgressColor;
+    final tint = side == BattleView.red
+        ? ColorRes.likeRed
+        : ColorRes.battleProgressColor;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1053,7 +1066,8 @@ class _BattleViewerActionIcons extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 11),
                     ),
                   ),
                 ],
@@ -1164,8 +1178,8 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
                         ),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.bolt,
-                          color: Colors.white, size: 20),
+                      child:
+                          const Icon(Icons.bolt, color: Colors.white, size: 20),
                     ),
                   ),
                 ),

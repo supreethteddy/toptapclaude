@@ -30,6 +30,8 @@ import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
 import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/live_invite.dart';
+import 'package:shortzz/model/livestream/live_moderator.dart';
+import 'package:shortzz/model/livestream/moderation_log_entry.dart';
 import 'package:shortzz/model/livestream/pk_eligibility.dart';
 import 'package:shortzz/model/livestream/pk_invite.dart';
 import 'package:shortzz/model/livestream/pk_scores.dart';
@@ -196,6 +198,18 @@ class LivestreamScreenController extends BaseController
       .collection(FirebaseConst.liveStreams)
       .doc(liveData.value.roomID)
       .collection(FirebaseConst.comments);
+
+  // Per-session Moderator grants (client spec 14.1) — scoped to this one
+  // room, unlike the retired app_users/{hostId}/moderators list.
+  CollectionReference get liveModeratorsRef => db
+      .collection(FirebaseConst.liveStreams)
+      .doc(liveData.value.roomID)
+      .collection(FirebaseConst.moderators);
+
+  CollectionReference get moderationLogRef => db
+      .collection(FirebaseConst.liveStreams)
+      .doc(liveData.value.roomID)
+      .collection(FirebaseConst.moderationLog);
 
   CollectionReference get fanClubRef => db
       .collection(FirebaseConst.appUsers)
@@ -499,6 +513,30 @@ class LivestreamScreenController extends BaseController
   RxList<LivestreamComment> comments = <LivestreamComment>[].obs;
   RxList<LivestreamUserState> liveUsersStates = <LivestreamUserState>[].obs;
 
+  // Per-session Moderator grants (client spec Module 14) -- see
+  // listenLiveModerators/canModerate/canManageGuests below.
+  RxList<LiveModerator> liveModerators = <LiveModerator>[].obs;
+  StreamSubscription<QuerySnapshot>? _liveModeratorsListener;
+
+  /// Whoever is viewing this device's screen is a Moderator of THIS LIVE
+  /// session (never the host themselves -- isHost is checked separately
+  /// everywhere this matters, see canModerate/canManageGuests below).
+  bool get isLiveModerator =>
+      liveModerators.any((mod) => mod.userId == myUserId);
+
+  LiveModerator? get _myModeratorGrant =>
+      liveModerators.firstWhereOrNull((mod) => mod.userId == myUserId);
+
+  /// Pin/mute a participant (client spec 14.2/14.3) -- unconditional for
+  /// every Moderator, no separate delegation needed, unlike
+  /// [canManageGuests] below.
+  bool get canModerate => isHost || isLiveModerator;
+
+  /// Guest invite/accept/remove (client spec 14.4) -- only once the Host
+  /// has separately delegated it to this Moderator.
+  bool get canManageGuests =>
+      isHost || (_myModeratorGrant?.canManageGuests ?? false);
+
   // Cross-room Co-Host PK only -- a gift sent to the opponent host posts to
   // THEIR room's own comments subcollection, not mine, so TopGiftersRow
   // (ranking who gifted each side) needs this separate watch to know who
@@ -578,6 +616,7 @@ class LivestreamScreenController extends BaseController
     listenLiveStreamData();
     listenUserState();
     fetchLiveStreamComments();
+    listenLiveModerators();
     initAudioPlayer();
     rankingController = Get.put(
       LiveRankingController(liveData.value.hostId ?? -1),
@@ -635,6 +674,7 @@ class LivestreamScreenController extends BaseController
     videoPlayerController.value?.dispose();
     liveStreamUserStatesListener?.cancel();
     liveStreamCommentsListener?.cancel();
+    _liveModeratorsListener?.cancel();
     liveStreamDocListener?.cancel();
     _stopWatchingOpponent();
     battleStartPlayer.dispose();
@@ -794,7 +834,11 @@ class LivestreamScreenController extends BaseController
     HapticManager.shared.light();
     Get.bottomSheet(
       MembersSheet(
-          isHost: true,
+          // A Moderator with guest-management delegated (client spec 14.4)
+          // gets the same "host mode" of this sheet (Requests/Invited/
+          // Guests tabs) as the real host -- MembersSheet's own internal
+          // gates stay keyed off this one flag either way.
+          isHost: isHost || canManageGuests,
           initialTab: initialTab,
           roomID: liveData.value.roomID ?? ''),
       isScrollControlled: true,
@@ -1551,12 +1595,20 @@ class LivestreamScreenController extends BaseController
     bool resetToAudience = true,
   }) async {
     if (user?.userId == null) return;
+    // Client spec 14.4 -- rejecting a join request is guest-management.
+    // acceptJoinRequest below calls this internally with its own gate
+    // already checked, so this re-check is only ever reached a second time
+    // in that case, never a problem.
+    if (!canManageGuests) return;
 
     if (resetToAudience) {
       await updateUserStateToFirestore(
         user?.userId,
         type: LivestreamUserType.audience,
       );
+      if (!isHost) {
+        _logModerationAction('reject_guest_request', targetId: user?.userId);
+      }
     }
     LivestreamComment? liveComment;
     if (comment == null) {
@@ -1578,6 +1630,8 @@ class LivestreamScreenController extends BaseController
     LivestreamComment? comment,
   }) async {
     if (user?.userId == null) return;
+    // Client spec 14.4 -- accepting a join request is guest-management.
+    if (!canManageGuests) return;
 
     // Request-to-join always lands in the Guest Call role — Co-host Mode is
     // invite-only — so the cap checked here is the guest one.
@@ -1595,6 +1649,9 @@ class LivestreamScreenController extends BaseController
       user!.userId,
       type: LivestreamUserType.guest,
     );
+    if (!isHost) {
+      _logModerationAction('accept_guest_request', targetId: user.userId);
+    }
   }
 
   Future<void> deleteStreamOnFirebase() async {
@@ -1970,7 +2027,7 @@ class LivestreamScreenController extends BaseController
         switch (change.type) {
           case DocumentChangeType.added:
             if (comment.commentType == LivestreamCommentType.request &&
-                !isHost) {
+                !canManageGuests) {
               continue;
             }
             comments.add(comment);
@@ -2003,7 +2060,7 @@ class LivestreamScreenController extends BaseController
 
           case DocumentChangeType.modified:
             if (comment.commentType == LivestreamCommentType.request &&
-                !isHost) {
+                !canManageGuests) {
               return;
             }
             int index = comments.indexWhere((c) => c.id == comment.id);
@@ -2029,6 +2086,84 @@ class LivestreamScreenController extends BaseController
 
       comments.sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
     });
+  }
+
+  void listenLiveModerators() {
+    _liveModeratorsListener?.cancel();
+    _liveModeratorsListener = liveModeratorsRef.snapshots().listen(
+      (snapshot) {
+        liveModerators.value = snapshot.docs
+            .map((doc) =>
+                LiveModerator.fromJson(doc.data()! as Map<String, dynamic>))
+            .toList();
+      },
+      onError: (e) => Loggers.error('Live moderators listen error: $e'),
+    );
+  }
+
+  /// Client spec 14.5: "record moderation actions in the audit log." Fire-
+  /// and-forget, same as the gift/ranking writes elsewhere in this
+  /// controller -- a logging hiccup must never block the moderation action
+  /// itself.
+  void _logModerationAction(String action, {int? targetId, String? detail}) {
+    final actor =
+        firestoreController.users.firstWhereOrNull((u) => u.userId == myUserId);
+    final target = targetId == null
+        ? null
+        : firestoreController.users
+            .firstWhereOrNull((u) => u.userId == targetId);
+    final entry = ModerationLogEntry(
+      actorId: myUserId,
+      actorUsername: actor?.username,
+      action: action,
+      targetId: targetId,
+      targetUsername: target?.username,
+      detail: detail,
+      at: DateTime.now().millisecondsSinceEpoch,
+    );
+    unawaited(moderationLogRef.add(entry.toJson()));
+  }
+
+  /// Public wrapper so ManageModeratorsScreenController (a different class,
+  /// reached via Get.find(tag: roomID) rather than inheritance) can log a
+  /// moderator-grant change through the same audit trail as every other
+  /// moderation action above.
+  void logModeratorGrant(String action, AppUser target) {
+    _logModerationAction(action, targetId: target.userId);
+  }
+
+  /// Client spec 14.2 -- host or any Moderator, unconditionally. Only a
+  /// TEXT comment can be pinned (pinning a gift/join/request event doesn't
+  /// make sense). Pinning a second comment silently replaces the first --
+  /// there is only ever one slot, see Livestream.pinnedComment.
+  Future<void> pinComment(LivestreamComment comment) async {
+    if (!canModerate) return;
+    if (comment.commentType != LivestreamCommentType.text ||
+        comment.id == null) {
+      return;
+    }
+    final pinned = PinnedComment(
+      commentId: comment.id!,
+      senderId: comment.senderId ?? -1,
+      username: comment.senderUser?.username,
+      comment: comment.comment,
+      pinnedAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    await liveStreamDocRef.update({
+      FirebaseConst.pinnedComment: pinned.toJson(),
+    });
+    _logModerationAction('pin_comment',
+        targetId: comment.senderId, detail: comment.comment);
+  }
+
+  Future<void> unpinComment() async {
+    if (!canModerate) return;
+    final wasPinned = liveData.value.pinnedComment;
+    await liveStreamDocRef.update({
+      FirebaseConst.pinnedComment: FieldValue.delete(),
+    });
+    _logModerationAction('unpin_comment',
+        targetId: wasPinned?.senderId, detail: wasPinned?.comment);
   }
 
   Future<void> toggleCamera() async {
@@ -2549,6 +2684,10 @@ class LivestreamScreenController extends BaseController
     bool isInvited = false,
     LivestreamUserType role = LivestreamUserType.guest,
   }) {
+    // Client spec 14.4 -- inviting (and un-inviting) a guest is guest-
+    // management, only available to a Moderator once the Host has
+    // separately delegated it.
+    if (!canManageGuests) return;
     if (isInvited) {
       updateUserStateToFirestore(
         user?.userId,
@@ -2567,6 +2706,9 @@ class LivestreamScreenController extends BaseController
       type: LivestreamUserType.invited,
       invitedRole: role,
     );
+    if (!isHost) {
+      _logModerationAction('invite_guest', targetId: user?.userId);
+    }
   }
 
   /// The most recent out-of-room invite sent to [userId] for this room, if
@@ -2592,6 +2734,7 @@ class LivestreamScreenController extends BaseController
   /// this goes through LiveInviteService + an FCM nudge instead of
   /// [onInvite]'s direct Firestore write.
   Future<void> inviteOutOfRoom(User candidate, LivestreamUserType role) async {
+    if (!canManageGuests) return;
     final inviteeId = candidate.id;
     if (inviteeId == null || !role.isStageRole) return;
     if (!hasSeatFor(role)) {
@@ -2618,6 +2761,9 @@ class LivestreamScreenController extends BaseController
       return;
     }
     unawaited(_pushLiveInvite(invite));
+    if (!isHost) {
+      _logModerationAction('invite_guest', targetId: inviteeId);
+    }
   }
 
   Future<void> cancelOutOfRoomInvite(LiveInvite invite) =>
@@ -2895,10 +3041,18 @@ class LivestreamScreenController extends BaseController
   }
 
   void coHostAudioToggle(LivestreamUserState state) {
+    // Client spec 14.3 -- mute/unmute is unconditional for any Moderator,
+    // no separate delegation needed (unlike guest management below).
+    if (!canModerate) return;
+    final willMute = !state.isMuted;
     updateUserStateToFirestore(
       state.userId,
-      isMuted: state.isMuted ? false : true,
+      isMuted: willMute,
     );
+    if (!isHost) {
+      _logModerationAction(willMute ? 'mute' : 'unmute',
+          targetId: state.userId);
+    }
   }
 
   void updateStateAction(
@@ -2952,6 +3106,9 @@ class LivestreamScreenController extends BaseController
   }
 
   void coHostDelete(LivestreamUserState state) {
+    // Client spec 14.4 -- removing a guest is guest-management, only
+    // available to a Moderator once the Host has separately delegated it.
+    if (!canManageGuests) return;
     if (liveData.value.type == LivestreamType.battle) {
       showSnackBar('End the battle before removing a co-host.');
       return;
@@ -2967,6 +3124,9 @@ class LivestreamScreenController extends BaseController
         state.userId,
         type: LivestreamUserType.audience,
       );
+      if (!isHost) {
+        _logModerationAction('remove_guest', targetId: state.userId);
+      }
     }
   }
 

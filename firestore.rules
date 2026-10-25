@@ -40,18 +40,54 @@ rules_version = '2';
 // LeagueController.recordGift calls that used to write these directly
 // were removed for the same reason -- nothing in the app writes to these
 // paths anymore, so clients get read-only access.
+//
+// livestreams/{roomID}/moderators/ and /moderation_log/ (client spec
+// Module 14, redesigned 2026-10-26) are scoped below too: a room's own
+// roomID is always identical to its host's numeric user id (set together,
+// same `id`, in UserExtension.livestream() -- never two different users),
+// so `request.auth.uid == roomID` is the same "only the host" check the
+// retired app_users rule below used, just keyed by room instead of by a
+// separate hostId segment.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Persistent per-host moderator list (manage_moderators_screen_controller.dart) —
-    // app_users/{hostId}/moderators/{moderatorUserId}. Only the host
-    // themselves ever calls addModerator/removeModerator (confirmed in
-    // that controller's own doc comment); nothing else in the app writes
-    // here, so this is the one collection safe to scope to its owner today.
+    // RETIRED 2026-10-26 -- the permanent, cross-session moderator list
+    // this rule covered (manage_moderators_screen_controller.dart) was
+    // replaced by a per-LIVE-session one (see livestreams/{roomID}/
+    // moderators/ below), which is what new code reads/writes. Nothing
+    // should write here anymore; left in place only so a not-yet-updated
+    // client mid-rollout doesn't hard-fail outright.
     match /app_users/{hostId}/moderators/{moderatorUserId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
         && request.auth.uid == hostId;
+    }
+
+    // Per-LIVE-session Moderator grants (client spec 14.1: "Permissions
+    // apply only to the LIVE session for which the Moderator is
+    // authorized"). Only the host may grant/revoke -- spec 14.5: "Moderators
+    // must not... Assign other Moderators". Every Moderator, and anyone
+    // else in the room, can read the list (needed to compute their own
+    // canModerate/canManageGuests reactively).
+    match /livestreams/{roomID}/moderators/{moderatorUserId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == roomID;
+    }
+
+    // Append-only moderation audit trail (client spec 14.5: "record
+    // moderation actions in the audit log"). Anyone in the room can create
+    // an entry (the host's own actions get logged too in some paths, and
+    // this intentionally doesn't re-derive "is this caller actually a
+    // moderator" here -- the real gate is in the client methods that call
+    // this, e.g. coHostDelete/onInvite/pinComment; a rule strict enough to
+    // re-check Moderator status here via get() would need the exact same
+    // livestreams/{roomID}/moderators lookup those methods already make).
+    // update/delete are never allowed -- an entry can't be edited or
+    // erased once written, including by whoever wrote it.
+    match /livestreams/{roomID}/moderation_log/{logId} {
+      allow read: if request.auth != null && request.auth.uid == roomID;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
     }
 
     // Daily/hourly/weekly-League LIVE rankings (live_rankings/{day}/hosts/

@@ -298,6 +298,16 @@ class LKey {
   static const String remove = "Remove";
   static const String moderatorLimitReached =
       "You can add up to 30 moderators.";
+  static const String canManageGuests = "Can manage guests";
+  static const String canManageGuestsDescription =
+      "Lets this moderator invite, accept, and remove guests.";
+  static const String pinComment = "Pin comment";
+  static const String unpinComment = "Unpin comment";
+  static const String pinned = "Pinned";
+  static const String moderationLog = "Moderation log";
+  static const String moderationLogEmpty = "No moderation actions yet.";
+  static const String notAuthorizedForThisAction =
+      "You're not authorized to do that.";
   static const String mostWatchTime = "Most watch time";
   static const String giftGoals = "Gift Goals";
   static const String addGiftGoal = "Add Gift Goal";

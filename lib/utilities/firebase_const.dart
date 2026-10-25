@@ -57,6 +57,26 @@ class FirebaseConst {
   static const String countedAsViewer = 'counted_as_viewer';
   static const String moderators = 'moderators';
   static const String addedAt = 'added_at';
+  // Per-LIVE-session Moderator grant (client spec Module 14.1) — lives at
+  // livestreams/{roomID}/moderators/{userId}, distinct from the legacy
+  // permanent app_users/{hostId}/moderators list above (kept only for the
+  // old screen's migration path, no longer written to by new code).
+  static const String canManageGuests = 'can_manage_guests';
+  static const String moderationLog = 'moderation_log';
+  static const String actorId = 'actor_id';
+  static const String actorUsername = 'actor_username';
+  static const String action = 'action';
+  static const String targetId = 'target_id';
+  static const String targetUsername = 'target_username';
+  static const String detail = 'detail';
+  static const String at = 'at';
+  // Single-slot pinned comment on the room doc itself (client spec 14.2 —
+  // pinning another comment replaces this one, never a list).
+  static const String pinnedComment = 'pinned_comment';
+  static const String commentId = 'comment_id';
+  static const String senderId = 'sender_id';
+  static const String username = 'username';
+  static const String pinnedAt = 'pinned_at';
   static const String fanClub = 'fan_club';
   static const String opponentRoomId = 'opponent_room_id';
   // Co-Host Connection: opponentRoomId now means "connected", not

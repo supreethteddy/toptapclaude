@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shortzz/common/extensions/common_extension.dart';
 import 'package:shortzz/common/extensions/string_extension.dart';
+import 'package:shortzz/common/manager/haptic_manager.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
 import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
@@ -23,6 +24,19 @@ class LiveStreamCommentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Obx(() {
+          final pinned = controller.liveData.value.pinnedComment;
+          if (pinned == null) return const SizedBox();
+          return _PinnedCommentBanner(controller: controller, pinned: pinned);
+        }),
+        Expanded(child: _buildCommentList(context)),
+      ],
+    );
+  }
+
+  Widget _buildCommentList(BuildContext context) {
     return ShaderMask(
       shaderCallback: (Rect bounds) {
         return LinearGradient(
@@ -50,38 +64,54 @@ class LiveStreamCommentView extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           itemBuilder: (context, index) {
             LivestreamComment comment = controller.comments[index];
+            // Client spec 14.2: host or any Moderator can pin a plain text
+            // comment via a long-press, same gesture-based affordance used
+            // for guest gift-targeting elsewhere on this screen.
+            final canPin = controller.canModerate &&
+                comment.commentType == LivestreamCommentType.text;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 3.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomImage(
-                    size: const Size(38, 38),
-                    image: comment.senderUser?.profile?.addBaseURL(),
-                    fullName: comment.senderUser?.fullname,
-                    strokeWidth: 2,
-                    strokeColor: whitePure(context).withValues(alpha: .5),
-                    isStokeOutSide: true,
-                  ),
-                  const SizedBox(width: 5),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 3,
-                      children: [
-                        FullNameWithBlueTick(
-                          username: comment.senderUser?.username,
-                          isVerify: comment.senderUser?.isVerify,
-                          fontColor: whitePure(context),
-                          opacity: 0.7,
-                          fontSize: 12,
-                          iconSize: 18,
-                        ),
-                        _buildCommentContent(context, comment)
-                      ],
+              child: GestureDetector(
+                onLongPress: canPin
+                    ? () {
+                        HapticManager.shared.light();
+                        controller.pinComment(comment);
+                        Get.snackbar(
+                            '', '${LKey.pinned.tr}: ${comment.comment ?? ''}',
+                            duration: const Duration(seconds: 2));
+                      }
+                    : null,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomImage(
+                      size: const Size(38, 38),
+                      image: comment.senderUser?.profile?.addBaseURL(),
+                      fullName: comment.senderUser?.fullname,
+                      strokeWidth: 2,
+                      strokeColor: whitePure(context).withValues(alpha: .5),
+                      isStokeOutSide: true,
                     ),
-                  )
-                ],
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 3,
+                        children: [
+                          FullNameWithBlueTick(
+                            username: comment.senderUser?.username,
+                            isVerify: comment.senderUser?.isVerify,
+                            fontColor: whitePure(context),
+                            opacity: 0.7,
+                            fontSize: 12,
+                            iconSize: 18,
+                          ),
+                          _buildCommentContent(context, comment)
+                        ],
+                      ),
+                    )
+                  ],
+                ),
               ),
             );
           },
@@ -238,5 +268,58 @@ class LiveStreamCommentView extends StatelessWidget {
             style: TextStyleCustom.outFitRegular400(
                 color: whitePure(context).withValues(alpha: .80)));
     }
+  }
+}
+
+/// Client spec 14.2: the one currently-pinned comment, shown as a fixed
+/// banner above the scrolling feed (not part of it, so it stays visible
+/// while someone scrolls back through history). The unpin control is only
+/// shown to whoever could have pinned it in the first place.
+class _PinnedCommentBanner extends StatelessWidget {
+  final LivestreamScreenController controller;
+  final PinnedComment pinned;
+
+  const _PinnedCommentBanner({required this.controller, required this.pinned});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: .35),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.push_pin, size: 14, color: whitePure(context)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                  text: '${pinned.username ?? ''}: ',
+                  style: TextStyleCustom.outFitSemiBold600(
+                      fontSize: 12, color: whitePure(context)),
+                ),
+                TextSpan(
+                  text: pinned.comment ?? '',
+                  style: TextStyleCustom.outFitRegular400(
+                      fontSize: 12,
+                      color: whitePure(context).withValues(alpha: .85)),
+                ),
+              ]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (controller.canModerate)
+            InkWell(
+              onTap: controller.unpinComment,
+              child: Icon(Icons.close, size: 16, color: whitePure(context)),
+            ),
+        ],
+      ),
+    );
   }
 }

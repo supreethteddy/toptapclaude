@@ -11,14 +11,20 @@ import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
-/// Host-only quick moderation menu for one on-stage participant, opened from
-/// the "⋮" button on their tile in the LIVE grid — mute/camera/role/remove
-/// in one tap each, instead of leaving the grid to hunt through the Members
+/// Quick moderation menu for one on-stage participant, opened from the "⋮"
+/// button on their tile in the LIVE grid — mute/camera/role/remove in one
+/// tap each, instead of leaving the grid to hunt through the Members
 /// sheet's tabs for the same actions. Reads live state reactively (not the
 /// [state] snapshot it was opened with) so toggling mic/camera here updates
 /// the sheet immediately rather than looking unresponsive until it's
 /// reopened. "Check full profile" still routes to the existing
 /// [LiveStreamUserInfoSheet] rather than duplicating it here.
+///
+/// Reachable by the host or any Moderator (client spec Module 14), but not
+/// every action is -- Mute is unconditional for a Moderator (14.3), while
+/// Camera (not in the spec's Moderator permissions at all) and Remove
+/// (14.4, needs guest-management delegated) each check their own
+/// permission below rather than gating the whole sheet on one flag.
 class LiveParticipantQuickActionsSheet extends StatelessWidget {
   final AppUser user;
   final LivestreamUserState state;
@@ -33,8 +39,8 @@ class LiveParticipantQuickActionsSheet extends StatelessWidget {
 
   LivestreamUserState _liveState() =>
       controller.liveUsersStates.firstWhereOrNull(
-            (element) => element.userId == state.userId,
-          ) ??
+        (element) => element.userId == state.userId,
+      ) ??
       state;
 
   @override
@@ -100,16 +106,19 @@ class LiveParticipantQuickActionsSheet extends StatelessWidget {
                 onTap: () => controller.coHostAudioToggle(live),
               );
             }),
-            Obx(() {
-              final live = _liveState();
-              return ListTile(
-                leading: Icon(
-                    live.isVideoOn ? Icons.videocam : Icons.videocam_off),
-                title: Text(
-                    live.isVideoOn ? 'Turn camera off' : 'Turn camera on'),
-                onTap: () => controller.coHostVideoToggle(live),
-              );
-            }),
+            // Not part of the client's Moderator permissions (14.3 only
+            // covers the microphone) -- host only.
+            if (controller.isHost)
+              Obx(() {
+                final live = _liveState();
+                return ListTile(
+                  leading: Icon(
+                      live.isVideoOn ? Icons.videocam : Icons.videocam_off),
+                  title: Text(
+                      live.isVideoOn ? 'Turn camera off' : 'Turn camera on'),
+                  onTap: () => controller.coHostVideoToggle(live),
+                );
+              }),
             ListTile(
               leading: const Icon(Icons.person_outline),
               title: Text(LKey.checkProfile.tr),
@@ -117,21 +126,27 @@ class LiveParticipantQuickActionsSheet extends StatelessWidget {
                 Get.back();
                 Get.bottomSheet(
                   LiveStreamUserInfoSheet(
-                      isAudience: false, liveUser: user, controller: controller),
+                      isAudience: false,
+                      liveUser: user,
+                      controller: controller),
                   isScrollControlled: true,
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.person_remove_outlined,
-                  color: ColorRes.likeRed),
-              title: Text(LKey.removeFromStream.tr,
-                  style: const TextStyle(color: ColorRes.likeRed)),
-              onTap: () {
-                Get.back();
-                controller.coHostDelete(_liveState());
-              },
-            ),
+            // Guest management (14.4) -- needs the Host to have separately
+            // delegated it; coHostDelete itself also checks this, this just
+            // hides the option rather than letting it tap into a no-op.
+            if (controller.canManageGuests)
+              ListTile(
+                leading: const Icon(Icons.person_remove_outlined,
+                    color: ColorRes.likeRed),
+                title: Text(LKey.removeFromStream.tr,
+                    style: const TextStyle(color: ColorRes.likeRed)),
+                onTap: () {
+                  Get.back();
+                  controller.coHostDelete(_liveState());
+                },
+              ),
           ],
         ),
       ),

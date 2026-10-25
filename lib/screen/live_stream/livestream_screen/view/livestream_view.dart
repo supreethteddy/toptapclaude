@@ -341,11 +341,13 @@ class LiveStreamUserView extends StatelessWidget {
               state: state.obs,
               liveUser: liveUser,
               isMuteVisible: liveUser?.userId != controller.myUserId),
-        // Quick moderation menu: host-only, and never on the host's own
-        // tile (nothing there to moderate). Separate from tapping the
-        // name, which still opens the full profile sheet -- this is the
-        // fast path for mute/camera/role/remove without leaving the grid.
-        if (controller.isHost &&
+        // Quick moderation menu: host or an authorized Moderator (client
+        // spec 14.2/14.3/14.4), never on the host's own tile (nothing there
+        // to moderate). Separate from tapping the name, which still opens
+        // the full profile sheet -- this is the fast path for mute/camera/
+        // role/remove without leaving the grid. The sheet itself further
+        // restricts which of those actions a Moderator (vs. the host) sees.
+        if (controller.canModerate &&
             liveUser != null &&
             state != null &&
             liveUser.userId != controller.myUserId)
