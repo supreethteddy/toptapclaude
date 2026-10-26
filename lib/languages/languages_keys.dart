@@ -384,6 +384,8 @@ class LKey {
   static const String coHostConnectInviteFailed =
       "Couldn't send that invite. Try again.";
   static const String coHostConnectInviteExpired = "That invite has expired.";
+  static const String coHostConnectInviteDeclinedNotice =
+      "@name declined your Co-Host invite.";
   static const String coHostConnectInviteTitle = "Co-Host Invitation";
   static const String coHostConnectInviteDescription =
       "@name wants to connect as a Co-Host.";
@@ -391,6 +393,8 @@ class LKey {
   static const String pkMatchRequestFailed =
       "Couldn't send that request. Try again.";
   static const String pkMatchRequestExpired = "That request has expired.";
+  static const String pkMatchRequestDeclinedNotice =
+      "@name declined your Play PK Match request.";
   static const String pkMatchRequestTitle = "Play PK Match?";
   static const String pkMatchRequestDescription =
       "@name wants to start a 5-minute PK Match.";

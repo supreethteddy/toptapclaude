@@ -1880,6 +1880,30 @@ class LivestreamScreenController extends BaseController
           }
         }
 
+        // Client spec 3.2 ("If Declined or Expired... Notify the
+        // inviter.") for the two CROSS-ROOM invites, which (unlike the
+        // same-room pkInviteFromId case above) never shared a doc with the
+        // inviter in the first place -- see declineCoHostConnectInvite/
+        // declinePkMatchRequest, which write these fields onto MY OWN doc
+        // when the other side declines or the invite I sent expires.
+        // Self-acknowledging: shown once, then cleared by me.
+        if (isHost && stream.coHostConnectInviteDeclinedFor != null) {
+          final decliner = firestoreController.users.firstWhereOrNull(
+              (user) => user.userId == stream.coHostConnectInviteDeclinedFor);
+          showSnackBar(LKey.coHostConnectInviteDeclinedNotice
+              .trParams({'name': decliner?.username ?? 'They'}));
+          unawaited(liveStreamDocRef
+              .update({FirebaseConst.coHostConnectInviteDeclinedFor: null}));
+        }
+        if (isHost && stream.pkMatchRequestDeclinedFor != null) {
+          final decliner = firestoreController.users.firstWhereOrNull(
+              (user) => user.userId == stream.pkMatchRequestDeclinedFor);
+          showSnackBar(LKey.pkMatchRequestDeclinedNotice
+              .trParams({'name': decliner?.username ?? 'They'}));
+          unawaited(liveStreamDocRef
+              .update({FirebaseConst.pkMatchRequestDeclinedFor: null}));
+        }
+
         // Host: every required player has accepted — start the match.
         if (isHost &&
             stream.pkInviteFromId == myUserId &&
@@ -3561,10 +3585,21 @@ class LivestreamScreenController extends BaseController
   }
 
   Future<void> declineCoHostConnectInvite() async {
+    // Captured before clearing -- this field IS the inviter's host id, and
+    // this method is also what expiry funnels through (see
+    // _showIncomingCoHostConnectDialog and TimedInviteDialog's own timeout),
+    // so one fix here covers both "Declined or Expired" per client spec 3.2.
+    final inviterHostId = liveData.value.pendingBattleInviteFromId;
     await liveStreamDocRef.update({
       FirebaseConst.pendingBattleInviteFromId: null,
       FirebaseConst.battleInviteSentAt: null,
     });
+    if (inviterHostId != null) {
+      unawaited(_notifyInviteDeclined(
+        targetHostId: inviterHostId,
+        field: FirebaseConst.coHostConnectInviteDeclinedFor,
+      ));
+    }
   }
 
   /// Establishes the connection ONLY -- never touches `type`/`battleType`.
@@ -3795,10 +3830,35 @@ class LivestreamScreenController extends BaseController
   }
 
   Future<void> declinePkMatchRequest() async {
+    // Same "declined or expired both funnel through here" reasoning as
+    // declineCoHostConnectInvite above.
+    final requesterHostId = liveData.value.pendingPkMatchRequestFromId;
     await liveStreamDocRef.update({
       FirebaseConst.pendingPkMatchRequestFromId: null,
       FirebaseConst.pkMatchRequestSentAt: null,
     });
+    if (requesterHostId != null) {
+      unawaited(_notifyInviteDeclined(
+        targetHostId: requesterHostId,
+        field: FirebaseConst.pkMatchRequestDeclinedFor,
+      ));
+    }
+  }
+
+  /// Shared by declineCoHostConnectInvite/declinePkMatchRequest -- writes a
+  /// short-lived "your invite was declined/expired" signal onto the
+  /// ORIGINAL SENDER's own room doc (client spec 3.2). Fire-and-forget,
+  /// same as every other best-effort cross-room write in this controller --
+  /// a failure here shouldn't block the decline itself.
+  Future<void> _notifyInviteDeclined({
+    required int targetHostId,
+    required String field,
+  }) async {
+    try {
+      await _roomDocRef('$targetHostId').update({field: myUserId});
+    } catch (e) {
+      Loggers.error('Failed to notify invite decline ($field): $e');
+    }
   }
 
   /// Actually starts the battle -- always a single flat 5-minute round, no

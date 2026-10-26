@@ -85,6 +85,14 @@ class Livestream {
   // AppRes.battleInviteExpiryInSecond without needing a server timer.
   int? battleInviteSentAt;
 
+  // Client spec 3.2: "If Declined or Expired... Notify the inviter." Set on
+  // THIS room's doc (the inviter's own) once their sent invite/request is
+  // declined or expires elsewhere -- see declineCoHostConnectInvite /
+  // declinePkMatchRequest. Value is the declining host's id; cleared by the
+  // inviter's own device right after showing the notice.
+  int? coHostConnectInviteDeclinedFor;
+  int? pkMatchRequestDeclinedFor;
+
   // "Play PK Match" request: set on the OTHER connected co-host's doc once
   // this room's host taps Play PK Match. The battle itself only starts once
   // that other host accepts (acceptPkMatch()) -- same accept/decline/expiry
@@ -224,6 +232,8 @@ class Livestream {
     this.coHostConnectedAt,
     this.pendingBattleInviteFromId,
     this.battleInviteSentAt,
+    this.coHostConnectInviteDeclinedFor,
+    this.pkMatchRequestDeclinedFor,
     this.pendingPkMatchRequestFromId,
     this.pkMatchRequestSentAt,
     this.battleResultsVisibleUntil,
@@ -295,6 +305,9 @@ class Livestream {
     coHostConnectedAt = json['co_host_connected_at'];
     pendingBattleInviteFromId = json['pending_battle_invite_from_id'];
     battleInviteSentAt = json['battle_invite_sent_at'];
+    coHostConnectInviteDeclinedFor =
+        json['co_host_connect_invite_declined_for'];
+    pkMatchRequestDeclinedFor = json['pk_match_request_declined_for'];
     pendingPkMatchRequestFromId = json['pending_pk_match_request_from_id'];
     pkMatchRequestSentAt = json['pk_match_request_sent_at'];
     battleResultsVisibleUntil = json['battle_results_visible_until'];
@@ -384,6 +397,9 @@ class Livestream {
     data['co_host_connected_at'] = coHostConnectedAt;
     data['pending_battle_invite_from_id'] = pendingBattleInviteFromId;
     data['battle_invite_sent_at'] = battleInviteSentAt;
+    data['co_host_connect_invite_declined_for'] =
+        coHostConnectInviteDeclinedFor;
+    data['pk_match_request_declined_for'] = pkMatchRequestDeclinedFor;
     data['pending_pk_match_request_from_id'] = pendingPkMatchRequestFromId;
     data['pk_match_request_sent_at'] = pkMatchRequestSentAt;
     data['battle_results_visible_until'] = battleResultsVisibleUntil;

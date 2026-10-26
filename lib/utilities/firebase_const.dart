@@ -85,6 +85,17 @@ class FirebaseConst {
   static const String pendingBattleInviteFromId =
       'pending_battle_invite_from_id';
   static const String battleInviteSentAt = 'battle_invite_sent_at';
+  // Written onto the INVITER's own room doc when their Co-Host connect
+  // invite / Play PK Match request gets declined or expires on the other
+  // side (client spec 3.2: "If Declined or Expired... Notify the
+  // inviter."). Value is the declining host's user id, purely for the
+  // snackbar's username lookup -- the inviter clears it themselves right
+  // after showing that snackbar, same self-acknowledging pattern as the
+  // other pending_*_from_id fields in this file.
+  static const String coHostConnectInviteDeclinedFor =
+      'co_host_connect_invite_declined_for';
+  static const String pkMatchRequestDeclinedFor =
+      'pk_match_request_declined_for';
 
   // "Play PK Match": same request/accept shape as pendingBattleInviteFromId
   // above, but for starting a battle on an ALREADY-connected pair, rather

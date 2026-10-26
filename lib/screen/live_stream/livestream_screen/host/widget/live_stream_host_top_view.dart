@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -49,7 +51,8 @@ class _LiveStreamHostTopViewState extends State<LiveStreamHostTopView> {
   // offset. Cheap: just a RenderBox size read, no extra layout work.
   void _reportHeight(_) {
     final height = _measureKey.currentContext?.size?.height;
-    if (height != null && (height - controller.topHeaderHeight.value).abs() > 0.5) {
+    if (height != null &&
+        (height - controller.topHeaderHeight.value).abs() > 0.5) {
       controller.topHeaderHeight.value = height;
     }
   }
@@ -140,6 +143,8 @@ class _LiveStreamHostTopViewState extends State<LiveStreamHostTopView> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      LiveDurationPill(controller: controller),
                       const SizedBox(width: 6),
 
                       // Stop button
@@ -307,6 +312,68 @@ class LikesCountPill extends StatelessWidget {
   }
 }
 
+/// Running "how long has this LIVE been going" clock (client spec Module
+/// 2: "Viewer count and LIVE duration") shown next to the viewer-count
+/// pill. Ticks on its own `Timer.periodic` inside this StatefulWidget
+/// rather than wiring a new reactive field into LivestreamScreenController
+/// -- `createdAt` itself never changes mid-LIVE, only the display does, so
+/// there's nothing for an Obx to usefully react to here.
+class LiveDurationPill extends StatefulWidget {
+  final LivestreamScreenController controller;
+
+  const LiveDurationPill({super.key, required this.controller});
+
+  @override
+  State<LiveDurationPill> createState() => _LiveDurationPillState();
+}
+
+class _LiveDurationPillState extends State<LiveDurationPill> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final createdAt = widget.controller.liveData.value.createdAt;
+    if (createdAt == null || createdAt <= 0) return const SizedBox();
+    return Container(
+      height: 28,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, color: Colors.white, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            createdAt.elapsedTimeFromEpoch,
+            style: TextStyleCustom.outFitMedium500(
+              color: Colors.white,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// "#N Today" chip next to the host name. Tap to open the daily ranking.
 class LiveRankChip extends StatelessWidget {
   final LivestreamScreenController controller;
@@ -453,7 +520,8 @@ class MyEarningsBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final earnings = SessionManager.instance.currentUser.value?.earningsBalanceUsd;
+      final earnings =
+          SessionManager.instance.currentUser.value?.earningsBalanceUsd;
       if (earnings == null || earnings <= 0) return const SizedBox();
       return Container(
         height: 20,
