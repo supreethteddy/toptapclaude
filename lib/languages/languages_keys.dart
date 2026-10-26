@@ -401,6 +401,15 @@ class LKey {
   static const String playPkMatch = "Play PK Match";
   static const String exitCoHostConnection = "Exit";
   static const String addTeammate = "Add Teammate";
+  static const String teammateInviteSent = "Teammate invite sent!";
+  static const String teammateInviteFailed =
+      "Couldn't send that invite. Try again.";
+  static const String teammateInviteExpired = "That invite has expired.";
+  static const String teammateInviteDeclinedNotice =
+      "@name declined your teammate invite.";
+  static const String teammateInviteTitle = "Team Up for 2v2?";
+  static const String teammateInviteDescription =
+      "@name wants you to be their teammate in a 2v2 PK Match.";
 
   // Same-room co-host PK Match (1v1 for now — 2v2 setup/arena ships later).
   static const String oneVsOneMatch = "1v1 Match";

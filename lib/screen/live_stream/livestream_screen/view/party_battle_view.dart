@@ -61,8 +61,18 @@ class _PartyBattleOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final myViews = controller.streamViews;
-      final opponentViews = controller.opponentStreamViews;
+      // 2v2 (client spec Module 6/7): my teammate's / the opponent's
+      // teammate's own independently-live room just adds a second tile to
+      // that side -- a 1v1 match has no teammate, so these watchers'
+      // streamViews stay empty and this is identical to before.
+      final myViews = [
+        ...controller.streamViews,
+        ...controller.teammateWatch.streamViews,
+      ];
+      final opponentViews = [
+        ...controller.opponentStreamViews,
+        ...controller.opponentTeammateWatch.streamViews,
+      ];
       final stream = controller.liveData.value;
       // Likes tapped on each half of the screen (see onLikeButtonTap) count
       // toward the PK score too, same as the same-room arena already does
@@ -79,10 +89,12 @@ class _PartyBattleOverlay extends StatelessWidget {
           ((controller.opponentLiveData.value?.crossRoomLikePoints ?? 0) *
                   pointsPerLike)
               .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
-      final red = controller.mySideBattleCoins -
+      // Team totals (fold back to mySideBattleCoins/opponentSideBattleCoins
+      // when there's no 2v2 teammate) -- see myTeamBattleCoins's own doc.
+      final red = controller.myTeamBattleCoins -
           controller.roundBaselineRed.value +
           redLikePoints;
-      final blue = controller.opponentSideBattleCoins -
+      final blue = controller.opponentTeamBattleCoins -
           controller.roundBaselineBlue.value +
           blueLikePoints;
 
@@ -244,10 +256,17 @@ class _PartyBattleStats extends StatelessWidget {
                 showGifters: !showVictoryLap,
                 teamAUserIds: [
                   if (stream.hostId != null) stream.hostId!,
+                  if (controller.teammateWatch.liveData.value?.hostId != null)
+                    controller.teammateWatch.liveData.value!.hostId!,
                 ],
                 teamBUserIds: [
                   if (controller.opponentLiveData.value?.hostId != null)
                     controller.opponentLiveData.value!.hostId!,
+                  if (controller.opponentTeammateWatch.liveData.value
+                          ?.hostId !=
+                      null)
+                    controller
+                        .opponentTeammateWatch.liveData.value!.hostId!,
                 ],
                 center: stream.battleType == BattleType.end && controller.isHost
                     ? _rematchOrNextRoundButton(context)

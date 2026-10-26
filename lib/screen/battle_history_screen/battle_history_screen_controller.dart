@@ -21,9 +21,9 @@ class BattleHistoryScreenController extends BaseController {
   RxList<BattleResult> battles = <BattleResult>[].obs;
 
   int get totalBattles => battles.length;
-  int get wins => battles.where((b) => !b.isDraw && b.winnerHostId == myUserId).length;
+  int get wins => battles.where((b) => b.wonBy(myUserId)).length;
   int get losses =>
-      battles.where((b) => !b.isDraw && b.winnerHostId != myUserId).length;
+      battles.where((b) => !b.isDraw && !b.wonBy(myUserId)).length;
   int get draws => battles.where((b) => b.isDraw).length;
   String get winRateDisplay {
     if (totalBattles == 0) return '0%';

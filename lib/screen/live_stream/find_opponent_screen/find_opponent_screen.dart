@@ -24,12 +24,19 @@ import 'package:shortzz/utilities/theme_res.dart';
 /// PK candidate).
 class FindOpponentScreen extends StatelessWidget {
   final LivestreamScreenController myLive;
+  final bool isTeammateInvite;
 
-  const FindOpponentScreen({super.key, required this.myLive});
+  const FindOpponentScreen({
+    super.key,
+    required this.myLive,
+    this.isTeammateInvite = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(FindOpponentScreenController(myLive));
+    final controller = Get.put(
+      FindOpponentScreenController(myLive, isTeammateInvite: isTeammateInvite),
+    );
 
     return Scaffold(
       backgroundColor: adaptiveBackground(context),
@@ -49,7 +56,9 @@ class FindOpponentScreen extends StatelessWidget {
                   Expanded(
                     child: Center(
                       child: Text(
-                        LKey.findOpponent.tr,
+                        isTeammateInvite
+                            ? LKey.addTeammate.tr
+                            : LKey.findOpponent.tr,
                         style: TextStyleCustom.outFitBold700(
                             color: adaptiveTextColor(context), fontSize: 16),
                       ),
@@ -172,8 +181,12 @@ class _OpponentCard extends StatelessWidget {
                 ),
                 child: Text(
                   invited
-                      ? LKey.coHostConnectInviteSent.tr
-                      : LKey.inviteAsCoHost.tr,
+                      ? (controller.isTeammateInvite
+                          ? LKey.teammateInviteSent.tr
+                          : LKey.coHostConnectInviteSent.tr)
+                      : (controller.isTeammateInvite
+                          ? LKey.addTeammate.tr
+                          : LKey.inviteAsCoHost.tr),
                   style: TextStyleCustom.outFitMedium500(
                       color: invited ? textLightGrey(context) : Colors.white,
                       fontSize: 13),

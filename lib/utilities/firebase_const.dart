@@ -119,6 +119,17 @@ class FirebaseConst {
   static const String coHostOpponentTeamRoomIds =
       'co_host_opponent_team_room_ids';
   static const String pkMode = 'pk_mode';
+
+  // Four-person Team PK (client spec Module 6): same request/accept/
+  // expire/decline shape as pendingBattleInviteFromId above, but for
+  // bringing a second, independently-live room in as MY teammate (joining
+  // my side of an already-connected 1v1 pair, making it 2v2) rather than
+  // for the primary opponent connection itself.
+  static const String pendingTeammateInviteFromId =
+      'pending_teammate_invite_from_id';
+  static const String teammateInviteSentAt = 'teammate_invite_sent_at';
+  static const String teammateInviteDeclinedFor =
+      'teammate_invite_declined_for';
   static const String speedChallengeEligibleGiftIds =
       'speed_challenge_eligible_gift_ids';
 

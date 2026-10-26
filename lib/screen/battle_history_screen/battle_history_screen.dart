@@ -118,11 +118,13 @@ class _BattleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myScore = battle.scoreFor(myUserId);
+    // teamTotalFor degrades to scoreFor for a 1v1/solo-recorded battle, so
+    // this reads correctly either way without branching on isTeamBattle.
+    final myScore = battle.teamTotalFor(myUserId);
     final opponentId = battle.opponentIdFor(myUserId);
     final opponentScore =
-        opponentId == null ? 0 : battle.scoreFor(opponentId);
-    final isWin = !battle.isDraw && battle.winnerHostId == myUserId;
+        opponentId == null ? 0 : battle.teamTotalFor(opponentId);
+    final isWin = battle.wonBy(myUserId);
     final isDraw = battle.isDraw;
     final resultLabel = isDraw ? 'DRAW' : (isWin ? 'WIN' : 'LOSS');
     final resultColor =

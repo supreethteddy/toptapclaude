@@ -16,6 +16,12 @@ import 'package:shortzz/utilities/firebase_const.dart';
 /// so this screen no longer has an in-room section at all.
 class FindOpponentScreenController extends BaseController {
   final LivestreamScreenController myLive;
+  // Four-person Team PK (client spec Module 6): true when this screen was
+  // opened from "Add Teammate" rather than the normal Co-Host "link" icon --
+  // same independently-live, not-already-connected candidate pool either
+  // way (a teammate must be exactly as available as a fresh Co-Host
+  // connection target), just a different action on tap.
+  final bool isTeammateInvite;
   final FirebaseFirestore db = FirebaseFirestore.instance;
   final firestoreController = Get.find<FirebaseFirestoreController>();
 
@@ -23,7 +29,7 @@ class FindOpponentScreenController extends BaseController {
   RxSet<int> invitedHostIds = <int>{}.obs;
   StreamSubscription<QuerySnapshot>? _listener;
 
-  FindOpponentScreenController(this.myLive);
+  FindOpponentScreenController(this.myLive, {this.isTeammateInvite = false});
 
   @override
   void onInit() {
@@ -43,6 +49,7 @@ class FindOpponentScreenController extends BaseController {
         // optionally one 2v2 teammate link, at a time per host).
         if (stream.opponentRoomId != null) return false;
         if (stream.pendingBattleInviteFromId != null) return false;
+        if (stream.pendingTeammateInviteFromId != null) return false;
         final heartbeat = stream.lastHeartbeatAt ?? stream.createdAt;
         return heartbeat == null || now - heartbeat <= 60000;
       }).toList();
@@ -59,6 +66,10 @@ class FindOpponentScreenController extends BaseController {
   Future<void> inviteCoHostConnect(Livestream stream) async {
     if (stream.hostId == null) return;
     invitedHostIds.add(stream.hostId!);
-    await myLive.sendCoHostConnectInvite(stream.hostId!);
+    if (isTeammateInvite) {
+      await myLive.sendTeammateInvite(stream.hostId!);
+    } else {
+      await myLive.sendCoHostConnectInvite(stream.hostId!);
+    }
   }
 }

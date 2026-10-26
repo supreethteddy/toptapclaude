@@ -879,11 +879,20 @@ class _BattleViewerActionIcons extends StatelessWidget {
       List<AppUser> teamA;
       List<AppUser> teamB;
       if (stream.opponentRoomId != null) {
-        // Cross-room party battle: each side's "team" is just that room's
-        // own on-stage roster (host + any co-hosts/guests), already
-        // naturally 2v2-ready once a room has a co-host.
-        teamA = stream.getAllUsers(allUsers);
-        teamB = controller.opponentLiveData.value?.getAllUsers(allUsers) ?? [];
+        // Cross-room party battle: each side's "team" is that room's own
+        // on-stage roster (host + any co-hosts/guests) PLUS, once a Four-
+        // person Team PK teammate (client spec Module 6/7) has joined, that
+        // teammate's own independently-live room's roster too -- absent for
+        // a plain 1v1 match, so teamA/teamB are unchanged from before.
+        teamA = [
+          ...stream.getAllUsers(allUsers),
+          ...?controller.teammateWatch.liveData.value?.getAllUsers(allUsers),
+        ];
+        teamB = [
+          ...?controller.opponentLiveData.value?.getAllUsers(allUsers),
+          ...?controller.opponentTeammateWatch.liveData.value
+              ?.getAllUsers(allUsers),
+        ];
       } else {
         // Same-room PK Match: real team arrays set by _startPkMatch (falls
         // back to [host]/[first co-host] for pre-team-array battle data).
@@ -1183,6 +1192,33 @@ class _HostLinkAndGuestIcons extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Four-person Team PK (client spec Module 6): only once
+                // connected and not already teamed up with someone -- team
+                // roster is fixed before a battle starts, same as the Play
+                // PK Match button it sits next to.
+                if (stream.coHostTeammateRoomId == null) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: LKey.addTeammate.tr,
+                    child: GestureDetector(
+                      onTap: () => Get.to(() => FindOpponentScreen(
+                          myLive: controller, isTeammateInvite: true)),
+                      child: Container(
+                        height: 37,
+                        width: 37,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        child: const Icon(Icons.person_add_alt_1,
+                            color: Colors.white, size: 18),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ],
           );

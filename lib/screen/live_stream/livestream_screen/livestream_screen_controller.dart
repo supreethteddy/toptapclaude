@@ -166,6 +166,16 @@ class LivestreamScreenController extends BaseController
   int? _lastHandledRematchFromId;
   int? _lastHandledPkMatchRequestFromId;
 
+  // Four-person Team PK (client spec Module 6/7): the two extra rooms a
+  // 2v2 match can involve beyond the primary opponentRoomId pair above --
+  // my own teammate's room, and the opponent team's extra member's room.
+  // Both null/unwatched in 1v1. See WatchedRoom for the shared mechanics.
+  final WatchedRoom teammateWatch =
+      WatchedRoom(FirebaseFirestore.instance, ZegoExpressEngine.instance);
+  final WatchedRoom opponentTeammateWatch =
+      WatchedRoom(FirebaseFirestore.instance, ZegoExpressEngine.instance);
+  int? _lastHandledTeammateInviteFromId;
+
   // Same-room PK Match invite: deduped by (fromId, sentAt) rather than just
   // fromId, since the same host re-sending after a decline must re-trigger
   // the dialog on the invitee's side.
@@ -547,7 +557,12 @@ class LivestreamScreenController extends BaseController
   List<LivestreamComment> get allBattleComments =>
       liveData.value.opponentRoomId == null
           ? comments
-          : [...comments, ...opponentComments];
+          : [
+              ...comments,
+              ...opponentComments,
+              ...teammateWatch.comments,
+              ...opponentTeammateWatch.comments,
+            ];
 
   Rx<AppUser?> selectedGiftUser = Rx(null);
   Rx<VideoPlayerController?> videoPlayerController = Rx(null);
@@ -677,6 +692,8 @@ class LivestreamScreenController extends BaseController
     _liveModeratorsListener?.cancel();
     liveStreamDocListener?.cancel();
     _stopWatchingOpponent();
+    teammateWatch.stop();
+    opponentTeammateWatch.stop();
     battleStartPlayer.dispose();
     winAudioPlayer.dispose();
     stopListenEvent();
@@ -1922,6 +1939,50 @@ class LivestreamScreenController extends BaseController
             _startWatchingOpponent(stream.opponentRoomId!);
           } else {
             _stopWatchingOpponent();
+          }
+        }
+
+        // Four-person Team PK (client spec Module 6): an incoming "join my
+        // team" invite -- same dedup-by-value pattern as the Co-Host
+        // connect/Play PK Match dialogs above (see forceCheckPendingCoHostInvite
+        // for why only a changed value re-triggers this).
+        if (isHost &&
+            stream.pendingTeammateInviteFromId != null &&
+            stream.pendingTeammateInviteFromId != _lastHandledTeammateInviteFromId) {
+          _lastHandledTeammateInviteFromId = stream.pendingTeammateInviteFromId;
+          _showIncomingTeammateInviteDialog(stream.pendingTeammateInviteFromId!);
+        }
+        if (stream.pendingTeammateInviteFromId == null) {
+          _lastHandledTeammateInviteFromId = null;
+        }
+        if (isHost && stream.teammateInviteDeclinedFor != null) {
+          final decliner = firestoreController.users.firstWhereOrNull(
+              (user) => user.userId == stream.teammateInviteDeclinedFor);
+          showSnackBar(LKey.teammateInviteDeclinedNotice
+              .trParams({'name': decliner?.username ?? 'They'}));
+          unawaited(liveStreamDocRef
+              .update({FirebaseConst.teammateInviteDeclinedFor: null}));
+        }
+
+        // Four-person Team PK: start/stop watching my teammate's room and
+        // the opponent team's extra member's room as those come and go --
+        // same shape as the primary opponent-watch just above.
+        if (stream.coHostTeammateRoomId != teammateWatch.roomId) {
+          if (stream.coHostTeammateRoomId != null) {
+            teammateWatch.watch(stream.coHostTeammateRoomId!);
+          } else {
+            teammateWatch.stop();
+          }
+        }
+        final opponentTeammateRoomId =
+            (stream.coHostOpponentTeamRoomIds?.isNotEmpty ?? false)
+                ? stream.coHostOpponentTeamRoomIds!.first
+                : null;
+        if (opponentTeammateRoomId != opponentTeammateWatch.roomId) {
+          if (opponentTeammateRoomId != null) {
+            opponentTeammateWatch.watch(opponentTeammateRoomId);
+          } else {
+            opponentTeammateWatch.stop();
           }
         }
       },
@@ -3347,8 +3408,12 @@ class LivestreamScreenController extends BaseController
     final nextRound = (liveData.value.battleCurrentRound ?? 1) + 1;
     final opponentRoomId = liveData.value.opponentRoomId;
     if (opponentRoomId != null) {
-      final myCoins = mySideBattleCoins;
-      final opponentCoins = opponentSideBattleCoins;
+      // Team totals (fold back to mySideBattleCoins/opponentSideBattleCoins
+      // when there's no 2v2 teammate) -- a 2v2 round's baseline/win must
+      // track the SAME total the scoreboard showed, not just this one
+      // room's own coins.
+      final myCoins = myTeamBattleCoins;
+      final opponentCoins = opponentTeamBattleCoins;
       // A tied round previously always credited MY side with the round win
       // (`myWon = myCoins >= opponentCoins`) — neither side should score a
       // round win on a genuine tie.
@@ -3356,23 +3421,39 @@ class LivestreamScreenController extends BaseController
       final myWon = !isRoundDraw && myCoins > opponentCoins;
       roundBaselineRed.value = myCoins;
       roundBaselineBlue.value = opponentCoins;
+      final myTeammateRoomId = liveData.value.coHostTeammateRoomId;
+      final opponentTeammateRoomId = opponentLiveData.value?.coHostTeammateRoomId;
       try {
+        final roundFields = {
+          FirebaseConst.battleType: BattleType.waiting.value,
+          FirebaseConst.battleCreatedAt: now,
+          FirebaseConst.battleCurrentRound: nextRound,
+          FirebaseConst.firstGiftBonusClaimed: false,
+        };
         final batch = db.batch();
         batch.update(liveStreamDocRef, {
-          FirebaseConst.battleType: BattleType.waiting.value,
-          FirebaseConst.battleCreatedAt: now,
+          ...roundFields,
           FirebaseConst.battleRoundWins: FieldValue.increment(myWon ? 1 : 0),
-          FirebaseConst.battleCurrentRound: nextRound,
-          FirebaseConst.firstGiftBonusClaimed: false,
         });
         batch.update(_roomDocRef(opponentRoomId), {
-          FirebaseConst.battleType: BattleType.waiting.value,
-          FirebaseConst.battleCreatedAt: now,
+          ...roundFields,
           FirebaseConst.battleRoundWins:
               FieldValue.increment((!isRoundDraw && !myWon) ? 1 : 0),
-          FirebaseConst.battleCurrentRound: nextRound,
-          FirebaseConst.firstGiftBonusClaimed: false,
         });
+        if (myTeammateRoomId != null) {
+          batch.update(_roomDocRef(myTeammateRoomId), {
+            ...roundFields,
+            FirebaseConst.battleRoundWins:
+                FieldValue.increment(myWon ? 1 : 0),
+          });
+        }
+        if (opponentTeammateRoomId != null) {
+          batch.update(_roomDocRef(opponentTeammateRoomId), {
+            ...roundFields,
+            FirebaseConst.battleRoundWins:
+                FieldValue.increment((!isRoundDraw && !myWon) ? 1 : 0),
+          });
+        }
         await batch.commit();
       } catch (e) {
         Loggers.error('Failed to start next cross-room round: $e');
@@ -3429,6 +3510,20 @@ class LivestreamScreenController extends BaseController
 
   int get opponentSideBattleCoins => opponentUserStates.fold(
       0, (total, state) => total + state.currentBattleCoin);
+
+  /// [mySideBattleCoins] plus my 2v2 teammate's own room's coins -- equal to
+  /// [mySideBattleCoins] alone when there's no teammate (1v1), so every
+  /// existing 1v1 caller of the team-total getters below stays correct
+  /// without checking `coHostTeammateRoomId` itself.
+  int get myTeamBattleCoins =>
+      mySideBattleCoins +
+      teammateWatch.userStates
+          .fold(0, (total, state) => total + state.currentBattleCoin);
+
+  int get opponentTeamBattleCoins =>
+      opponentSideBattleCoins +
+      opponentTeammateWatch.userStates
+          .fold(0, (total, state) => total + state.currentBattleCoin);
 
   DocumentReference _roomDocRef(String roomId) =>
       db.collection(FirebaseConst.liveStreams).doc(roomId);
@@ -3733,46 +3828,318 @@ class LivestreamScreenController extends BaseController
     if (!isHost) return;
     final opponentRoomId = liveData.value.opponentRoomId;
     if (opponentRoomId == null) return;
-    // If a battle happens to still be running, end it first rather than
-    // leaving an orphaned battle state on either doc.
+    await _forfeitActiveBattleIfAny();
+    await _dissolveTeamConnection();
+  }
+
+  /// Four-person Team PK (client spec Module 6): a teammate choosing to
+  /// leave their team, as opposed to [exitCoHostConnection] (the primary
+  /// pair disconnecting entirely). Scoped simply, on purpose: rather than
+  /// trying to gracefully demote a 2v2 back to a clean 1v1 (which needs the
+  /// two PRIMARY hosts to still be paired correctly, teams re-validated,
+  /// etc.), either kind of exit just dissolves the whole connected group
+  /// back to "everyone unconnected" -- predictable, and matches how
+  /// disruptive leaving mid-match already is for the primary pair. Anyone
+  /// who still wants to battle reconnects/re-invites from scratch.
+  Future<void> leaveTeammateConnection() async {
+    if (!isHost) return;
+    if (liveData.value.coHostTeammateRoomId == null &&
+        liveData.value.opponentRoomId == null) {
+      return;
+    }
+    await _forfeitActiveBattleIfAny();
+    await _dissolveTeamConnection();
+  }
+
+  /// Shared by [exitCoHostConnection]/[leaveTeammateConnection] -- forfeits
+  /// an in-progress battle for MY side before the fields it reads get
+  /// wiped (client spec, Module 9.1's asymmetric cancel rule, same as
+  /// onStopButtonTap's manual-stop path).
+  Future<void> _forfeitActiveBattleIfAny() async {
     if (liveData.value.battleType == BattleType.waiting ||
         liveData.value.battleType == BattleType.running) {
-      // Asymmetric cancel rule (client spec, Module 9.1): disconnecting out
-      // of an active cross-room battle forfeits it, same as tapping Stop
-      // mid-battle (see onStopButtonTap). Must run before endBattleOnly,
-      // which wipes the battle fields this reads, and before the batch
-      // below clears opponentRoomId.
       await _recordBattleHistory(
           endReason: 'cross_room_disconnect', forfeitedByMe: true);
       await endBattleOnly();
     }
+  }
+
+  /// Resets opponentRoomId/coHostTeammateRoomId/coHostOpponentTeamRoomIds/
+  /// pkMode back to a clean, unconnected state on every room still part of
+  /// MY connected group -- myself, my primary opponent (if any), my own
+  /// teammate (if any), and the opponent team's extra member (if any, 2v2
+  /// only). Up to 4 docs in one batch.
+  Future<void> _dissolveTeamConnection() async {
+    final opponentRoomId = liveData.value.opponentRoomId;
     final teammateRoomId = liveData.value.coHostTeammateRoomId;
+    final opponentTeammateRoomId =
+        (liveData.value.coHostOpponentTeamRoomIds?.isNotEmpty ?? false)
+            ? liveData.value.coHostOpponentTeamRoomIds!.first
+            : null;
+    final clearFields = {
+      FirebaseConst.opponentRoomId: null,
+      FirebaseConst.coHostConnectedAt: null,
+      FirebaseConst.coHostTeammateRoomId: null,
+      FirebaseConst.coHostOpponentTeamRoomIds: null,
+      FirebaseConst.pkMode: null,
+    };
     try {
       final batch = db.batch();
-      batch.update(liveStreamDocRef, {
-        FirebaseConst.opponentRoomId: null,
-        FirebaseConst.coHostConnectedAt: null,
-        FirebaseConst.coHostTeammateRoomId: null,
-        FirebaseConst.coHostOpponentTeamRoomIds: null,
-        FirebaseConst.pkMode: null,
-      });
-      batch.update(_roomDocRef(opponentRoomId), {
-        FirebaseConst.opponentRoomId: null,
-        FirebaseConst.coHostConnectedAt: null,
-        FirebaseConst.coHostTeammateRoomId: null,
-        FirebaseConst.coHostOpponentTeamRoomIds: null,
-        FirebaseConst.pkMode: null,
-      });
+      batch.update(liveStreamDocRef, clearFields);
+      if (opponentRoomId != null) {
+        batch.update(_roomDocRef(opponentRoomId), clearFields);
+      }
       if (teammateRoomId != null) {
-        batch.update(_roomDocRef(teammateRoomId), {
-          FirebaseConst.coHostTeammateRoomId: null,
-          FirebaseConst.coHostOpponentTeamRoomIds: null,
-          FirebaseConst.pkMode: null,
-        });
+        batch.update(_roomDocRef(teammateRoomId), clearFields);
+      }
+      if (opponentTeammateRoomId != null) {
+        batch.update(_roomDocRef(opponentTeammateRoomId), clearFields);
       }
       await batch.commit();
     } catch (e) {
       Loggers.error('Failed to exit Co-Host connection: $e');
+    }
+  }
+
+  // ───────────────────────── Four-person Team PK ─────────────────────────
+  // Bringing a second, independently-live room in as MY teammate, joining
+  // my side of an already-connected 1v1 pair (client spec Module 6). Same
+  // request/accept/decline/expiry shape as the Co-Host connect invite
+  // above, reusing sendCoHostConnectInvite's exact patterns.
+
+  /// [candidateHostId]'s room joins MY side. Requires I'm already connected
+  /// to a primary opponent (client spec 6.1: connect first, then team up)
+  /// and don't already have a teammate of my own.
+  Future<void> sendTeammateInvite(int candidateHostId) async {
+    if (!isHost) return;
+    if (liveData.value.opponentRoomId == null) return;
+    if (liveData.value.coHostTeammateRoomId != null) return;
+    try {
+      final targetRef = _roomDocRef('$candidateHostId');
+      await db.runTransaction((transaction) async {
+        final snapshot = await transaction.get(targetRef);
+        final data = snapshot.data() as Map<String, dynamic>?;
+        if (data == null) {
+          throw Exception('Target room no longer exists');
+        }
+        final target = Livestream.fromJson(data);
+        if (target.pendingTeammateInviteFromId != null ||
+            target.pendingBattleInviteFromId != null ||
+            target.opponentRoomId != null ||
+            target.coHostTeammateRoomId != null) {
+          throw Exception('Target is unavailable');
+        }
+        transaction.update(targetRef, {
+          FirebaseConst.pendingTeammateInviteFromId: myUserId,
+          FirebaseConst.teammateInviteSentAt:
+              DateTime.now().millisecondsSinceEpoch,
+        });
+      });
+      showSnackBar(LKey.teammateInviteSent.tr);
+      unawaited(_pushTeammateInvite(candidateHostId));
+    } catch (e) {
+      Loggers.error('Failed to send teammate invite: $e');
+      showSnackBar(LKey.teammateInviteFailed.tr);
+    }
+  }
+
+  /// Same realtime-listener-can-be-slow nudge sendCoHostConnectInvite uses.
+  Future<void> _pushTeammateInvite(int candidateHostId) async {
+    try {
+      final recipient =
+          await UserService.instance.fetchUserDetails(userId: candidateHostId);
+      final token = recipient?.deviceToken;
+      if (token == null || token.isEmpty) return;
+      await NotificationService.instance.pushNotification(
+        type: NotificationType.coHostConnectInvite,
+        title: myUser.value?.fullname ?? myUser.value?.username ?? '',
+        body: LKey.teammateInviteDescription
+            .trParams({'name': myUser.value?.username ?? ''}),
+        data: {
+          'room_id': '$candidateHostId',
+          'from_host_id': '$myUserId',
+        },
+        token: token,
+        deviceType: recipient?.device,
+      );
+    } catch (e) {
+      Loggers.error('Teammate invite push failed: $e');
+    }
+  }
+
+  void _showIncomingTeammateInviteDialog(int fromHostId) {
+    // Already connected to someone, or not independently available any
+    // more -- quietly decline rather than showing a dialog for an invite
+    // that can't actually be accepted.
+    if (liveData.value.opponentRoomId != null ||
+        liveData.value.coHostTeammateRoomId != null) {
+      declineTeammateInvite();
+      return;
+    }
+    final sentAt = liveData.value.teammateInviteSentAt;
+    if (sentAt != null) {
+      final elapsedSeconds =
+          (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
+      if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
+        declineTeammateInvite();
+        return;
+      }
+    }
+    final inviter = firestoreController.users
+        .firstWhereOrNull((user) => user.userId == fromHostId);
+    final remaining = sentAt == null
+        ? AppRes.battleInviteExpiryInSecond
+        : (AppRes.battleInviteExpiryInSecond -
+                (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000)
+            .round()
+            .clamp(1, AppRes.battleInviteExpiryInSecond);
+    Get.dialog(
+      TimedInviteDialog(
+        title: LKey.teammateInviteTitle.tr,
+        description: LKey.teammateInviteDescription
+            .trParams({'name': inviter?.username ?? 'A creator'}),
+        requester: inviter,
+        expirySeconds: remaining,
+        onDecline: declineTeammateInvite,
+        onAccept: () => acceptTeammateInvite(fromHostId),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> declineTeammateInvite() async {
+    final inviterHostId = liveData.value.pendingTeammateInviteFromId;
+    await liveStreamDocRef.update({
+      FirebaseConst.pendingTeammateInviteFromId: null,
+      FirebaseConst.teammateInviteSentAt: null,
+    });
+    if (inviterHostId != null) {
+      unawaited(_notifyInviteDeclined(
+        targetHostId: inviterHostId,
+        field: FirebaseConst.teammateInviteDeclinedFor,
+      ));
+    }
+  }
+
+  /// Links my room in as [fromHostId]'s teammate -- inherits their primary
+  /// opponent (so the existing opponentRoomId-keyed watch/score/video code
+  /// works unchanged for me too), and tells that opponent (and the
+  /// opponent's own teammate, if they already have one) that my room is
+  /// now part of the opposing team. Up to 4 docs in one transaction.
+  Future<void> acceptTeammateInvite(int fromHostId) async {
+    if (!isHost) return;
+    final sentAt = liveData.value.teammateInviteSentAt;
+    if (sentAt != null) {
+      final elapsedSeconds =
+          (DateTime.now().millisecondsSinceEpoch - sentAt) / 1000;
+      if (elapsedSeconds >= AppRes.battleInviteExpiryInSecond) {
+        showSnackBar(LKey.teammateInviteExpired.tr);
+        await declineTeammateInvite();
+        return;
+      }
+    }
+    final myRoomId = liveData.value.roomID;
+    if (myRoomId == null) return;
+    final teammateRoomId = '$fromHostId';
+    try {
+      await db.runTransaction((transaction) async {
+        // Firestore transactions require every read before any write --
+        // the opponent's teammate ref (if any) is only knowable after
+        // reading the opponent's own doc, so all four possible reads are
+        // sequenced here FIRST, with every transaction.update(...) moved
+        // to the end. An earlier version of this interleaved them (read
+        // the opponent's teammate doc after already writing two other
+        // docs) and would have thrown at runtime -- caught in review, not
+        // left in place.
+        final mySnapshot = await transaction.get(liveStreamDocRef);
+        final teammateSnapshot =
+            await transaction.get(_roomDocRef(teammateRoomId));
+        final myData = mySnapshot.data() as Map<String, dynamic>?;
+        final teammateData = teammateSnapshot.data() as Map<String, dynamic>?;
+        if (myData == null || teammateData == null) {
+          throw Exception('Room no longer exists');
+        }
+        final myLatest = Livestream.fromJson(myData);
+        final teammateLatest = Livestream.fromJson(teammateData);
+        if (myLatest.pendingTeammateInviteFromId != fromHostId) {
+          throw Exception('Invite no longer pending');
+        }
+        if (teammateLatest.opponentRoomId == null) {
+          throw Exception('Inviter is no longer connected');
+        }
+        if (teammateLatest.coHostTeammateRoomId != null) {
+          throw Exception('Inviter already has a teammate');
+        }
+        final primaryOpponentRoomId = teammateLatest.opponentRoomId!;
+        Livestream? opponentLatest;
+        if (primaryOpponentRoomId.isNotEmpty) {
+          final opponentSnapshot =
+              await transaction.get(_roomDocRef(primaryOpponentRoomId));
+          final opponentData = opponentSnapshot.data() as Map<String, dynamic>?;
+          if (opponentData != null) {
+            opponentLatest = Livestream.fromJson(opponentData);
+          }
+        }
+        final opponentTeammateRoomId = opponentLatest?.coHostTeammateRoomId;
+        List<String> opponentTeammateExistingIds = const [];
+        if (opponentTeammateRoomId != null) {
+          final opponentTeammateSnapshot =
+              await transaction.get(_roomDocRef(opponentTeammateRoomId));
+          final opponentTeammateData =
+              opponentTeammateSnapshot.data() as Map<String, dynamic>?;
+          opponentTeammateExistingIds = opponentTeammateData == null
+              ? const []
+              : Livestream.fromJson(opponentTeammateData)
+                      .coHostOpponentTeamRoomIds ??
+                  const [];
+        }
+
+        // --- All reads above; every write from here on. ---
+
+        // I join fromHostId's side: same primary opponent as them, teammate
+        // = them, mode = 2v2.
+        transaction.update(liveStreamDocRef, {
+          FirebaseConst.opponentRoomId: primaryOpponentRoomId,
+          FirebaseConst.coHostTeammateRoomId: teammateRoomId,
+          FirebaseConst.coHostOpponentTeamRoomIds:
+              teammateLatest.coHostOpponentTeamRoomIds,
+          FirebaseConst.pkMode: '2v2',
+          FirebaseConst.pendingTeammateInviteFromId: null,
+          FirebaseConst.teammateInviteSentAt: null,
+        });
+        // fromHostId's own doc: teammate = me, mode = 2v2.
+        transaction.update(_roomDocRef(teammateRoomId), {
+          FirebaseConst.coHostTeammateRoomId: myRoomId,
+          FirebaseConst.pkMode: '2v2',
+        });
+        // The primary opponent learns my room is now part of the team
+        // they're facing.
+        if (opponentLatest != null) {
+          transaction.update(_roomDocRef(primaryOpponentRoomId), {
+            FirebaseConst.coHostOpponentTeamRoomIds: [
+              ...?opponentLatest.coHostOpponentTeamRoomIds,
+              myRoomId,
+            ],
+            FirebaseConst.pkMode: '2v2',
+          });
+          // If the opponent already has their own teammate, that teammate
+          // needs to know about me too, so their own TopGiftersRow/video
+          // grid picks up the full opposing team.
+          if (opponentTeammateRoomId != null) {
+            transaction.update(_roomDocRef(opponentTeammateRoomId), {
+              FirebaseConst.coHostOpponentTeamRoomIds: [
+                ...opponentTeammateExistingIds,
+                myRoomId,
+              ],
+              FirebaseConst.pkMode: '2v2',
+            });
+          }
+        }
+      });
+      unawaited(_announceCoHostConnected(fromHostId));
+    } catch (e) {
+      Loggers.error('Failed to accept teammate invite: $e');
+      showSnackBar(LKey.teammateInviteFailed.tr);
     }
   }
 
@@ -3909,6 +4276,13 @@ class LivestreamScreenController extends BaseController
             myLatest.pendingPkMatchRequestFromId != fromHostId) {
           throw Exception('Match request no longer valid');
         }
+        final opponentLatest = Livestream.fromJson(opponentData);
+        // 2v2 (client spec Module 7): a confirmed teammate on either side
+        // joins the SAME battle at the SAME instant -- there's no separate
+        // confirmation step for them, joining as a teammate already implied
+        // agreeing to fight together.
+        final myTeammateRoomId = myLatest.coHostTeammateRoomId;
+        final opponentTeammateRoomId = opponentLatest.coHostTeammateRoomId;
         final now = DateTime.now().millisecondsSinceEpoch;
         // RUNNING, not WAITING -- a co-host PK match starts the instant
         // both sides confirm, no pre-battle countdown stage (the old
@@ -3932,6 +4306,13 @@ class LivestreamScreenController extends BaseController
           FirebaseConst.pkMatchRequestSentAt: null,
         });
         transaction.update(_roomDocRef(opponentRoomId), battleFields);
+        if (myTeammateRoomId != null) {
+          transaction.update(_roomDocRef(myTeammateRoomId), battleFields);
+        }
+        if (opponentTeammateRoomId != null) {
+          transaction.update(
+              _roomDocRef(opponentTeammateRoomId), battleFields);
+        }
       });
     } catch (e) {
       Loggers.error('Failed to accept Play PK Match request: $e');
@@ -4368,6 +4749,12 @@ class LivestreamScreenController extends BaseController
         FirebaseConst.battleEndedAt: null,
         FirebaseConst.crossRoomLikePoints: 0,
       };
+      // 2v2: a confirmed teammate's connection is untouched by a battle
+      // ending either (same reasoning as the primary pair above), so they
+      // just need the same fresh battleFields, no opponentRoomId re-link.
+      final myTeammateRoomId = liveData.value.coHostTeammateRoomId;
+      final opponentTeammateRoomId =
+          opponentLiveData.value?.coHostTeammateRoomId;
       final batch = db.batch();
       batch.update(liveStreamDocRef, {
         ...battleFields,
@@ -4378,6 +4765,12 @@ class LivestreamScreenController extends BaseController
         ...battleFields,
         FirebaseConst.opponentRoomId: myRoomId,
       });
+      if (myTeammateRoomId != null) {
+        batch.update(_roomDocRef(myTeammateRoomId), battleFields);
+      }
+      if (opponentTeammateRoomId != null) {
+        batch.update(_roomDocRef(opponentTeammateRoomId), battleFields);
+      }
       await batch.commit();
     } catch (e) {
       Loggers.error('Failed to accept rematch: $e');
@@ -4418,43 +4811,91 @@ class LivestreamScreenController extends BaseController
       late final List<String> roomIds;
       late final Map<String, int> finalScores;
       late final Map<String, int> roundsWon;
+      late final List<int> teamAHostIds;
+      late final List<int> teamBHostIds;
 
       if (isCrossRoom) {
         opponentHostId = int.tryParse(stream.opponentRoomId!) ?? -1;
         if (opponentHostId == -1) return;
-        roomIds = [myRoomId, stream.opponentRoomId!]..sort();
-        // Match what the live arena actually showed both hosts
+        // 2v2 (client spec Module 7): a confirmed teammate on either side
+        // adds a second individual to that side's team array and
+        // finalScores entry -- absent entirely for a plain 1v1 match, same
+        // shape as before.
+        final myTeammateHostId = stream.coHostTeammateRoomId == null
+            ? null
+            : int.tryParse(stream.coHostTeammateRoomId!);
+        final opponentTeammateHostId =
+            opponentLiveData.value?.coHostTeammateRoomId == null
+                ? null
+                : int.tryParse(opponentLiveData.value!.coHostTeammateRoomId!);
+        teamAHostIds = [
+          myHostId,
+          if (myTeammateHostId != null) myTeammateHostId,
+        ];
+        teamBHostIds = [
+          opponentHostId,
+          if (opponentTeammateHostId != null) opponentTeammateHostId,
+        ];
+        roomIds = [
+          myRoomId,
+          stream.opponentRoomId!,
+          if (stream.coHostTeammateRoomId != null)
+            stream.coHostTeammateRoomId!,
+          if (opponentLiveData.value?.coHostTeammateRoomId != null)
+            opponentLiveData.value!.coHostTeammateRoomId!,
+        ]..sort();
+        // Match what the live arena actually showed every host
         // (party_battle_view.dart's red/blue) -- mySideBattleCoins/
         // opponentSideBattleCoins alone omit tap-tap/like points entirely,
         // which could let the permanently-recorded winner disagree with
         // what was on screen during the match. Capped the same way
         // pkTeamScore/party_battle_view already cap it (client spec,
         // Module 8.1) -- crossRoomLikePoints itself is uncapped, only this
-        // score contribution is.
+        // score contribution is. Each room's taps count only toward its OWN
+        // individual score, since crossRoomLikePoints is a per-room field.
         final pointsPerLike = setting?.pkLikePoints ?? 1;
-        final myLikePoints = ((stream.crossRoomLikePoints ?? 0) * pointsPerLike)
+        int likePointsFor(int? rawLikes) => ((rawLikes ?? 0) * pointsPerLike)
             .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
-        final opponentLikePoints =
-            ((opponentLiveData.value?.crossRoomLikePoints ?? 0) * pointsPerLike)
-                .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
         finalScores = {
-          '$myHostId': mySideBattleCoins + myLikePoints,
-          '$opponentHostId': opponentSideBattleCoins + opponentLikePoints,
+          '$myHostId':
+              mySideBattleCoins + likePointsFor(stream.crossRoomLikePoints),
+          '$opponentHostId': opponentSideBattleCoins +
+              likePointsFor(opponentLiveData.value?.crossRoomLikePoints),
+          if (myTeammateHostId != null)
+            '$myTeammateHostId': teammateWatch.userStates.fold(0,
+                    (total, state) => total + state.currentBattleCoin) +
+                likePointsFor(
+                    teammateWatch.liveData.value?.crossRoomLikePoints),
+          if (opponentTeammateHostId != null)
+            '$opponentTeammateHostId': opponentTeammateWatch.userStates.fold(
+                    0, (total, state) => total + state.currentBattleCoin) +
+                likePointsFor(opponentTeammateWatch
+                    .liveData.value?.crossRoomLikePoints),
         };
         roundsWon = {
           '$myHostId': stream.battleRoundWins ?? 0,
           '$opponentHostId': opponentLiveData.value?.battleRoundWins ?? 0,
+          if (myTeammateHostId != null)
+            '$myTeammateHostId':
+                teammateWatch.liveData.value?.battleRoundWins ?? 0,
+          if (opponentTeammateHostId != null)
+            '$opponentTeammateHostId':
+                opponentTeammateWatch.liveData.value?.battleRoundWins ?? 0,
         };
       } else {
         // Team-based (pkTeamAIds/pkTeamBIds, with the usual host/first-co-
         // host fallback) rather than a raw currentBattleCoin lookup, so a
         // history entry's final score always matches what the live arena
         // showed for it — including like points and any gift-eligibility
-        // restriction the match was set up with.
+        // restriction the match was set up with. Same-room 2v2 team
+        // assignment/arena isn't shipped yet (see pkIneligibleMessage's own
+        // comment), so this stays 1v1-only.
         final teamB = pkTeamBUserIds;
         if (teamB.isEmpty) return;
         opponentHostId = teamB.first;
         roomIds = [myRoomId];
+        teamAHostIds = [myHostId];
+        teamBHostIds = [opponentHostId];
         finalScores = {
           '$myHostId': pkTeamAScore().total,
           '$opponentHostId': pkTeamBScore().total,
@@ -4465,8 +4906,10 @@ class LivestreamScreenController extends BaseController
         };
       }
 
-      final myScore = finalScores['$myHostId'] ?? 0;
-      final opponentScore = finalScores['$opponentHostId'] ?? 0;
+      final myScore = teamAHostIds.fold(
+          0, (total, id) => total + (finalScores['$id'] ?? 0));
+      final opponentScore = teamBHostIds.fold(
+          0, (total, id) => total + (finalScores['$id'] ?? 0));
       // forfeitedByMe skips the score comparison entirely -- cancelling an
       // active match is a loss no matter how far ahead the canceller was.
       final outcome = forfeitedByMe
@@ -4481,10 +4924,15 @@ class LivestreamScreenController extends BaseController
       final battleId =
           '${sortedIds[0]}_${sortedIds[1]}_${stream.battleCreatedAt ?? 0}';
 
+      // Only non-null for an actual 2v2 (client spec 7.1) -- a 1v1 keeps the
+      // exact pre-2v2 history shape, where the team is already implied by
+      // participantHostIds alone.
+      final isTeamBattle = teamAHostIds.length > 1 || teamBHostIds.length > 1;
+
       final result = BattleResult(
         battleId: battleId,
         isCrossRoom: isCrossRoom,
-        participantHostIds: [myHostId, opponentHostId],
+        participantHostIds: [...teamAHostIds, ...teamBHostIds],
         roomIds: roomIds,
         finalScores: finalScores,
         roundsWon: roundsWon,
@@ -4494,6 +4942,8 @@ class LivestreamScreenController extends BaseController
         battleCreatedAt: stream.battleCreatedAt,
         battleEndedAt: DateTime.now().millisecondsSinceEpoch,
         endReason: endReason,
+        teamAHostIds: isTeamBattle ? teamAHostIds : null,
+        teamBHostIds: isTeamBattle ? teamBHostIds : null,
       );
 
       await db
@@ -4514,15 +4964,22 @@ class LivestreamScreenController extends BaseController
     if (myRoomId == null || opponentRoomId == null) return;
     try {
       final battleEndedAt = DateTime.now().millisecondsSinceEpoch;
+      final endFields = {
+        FirebaseConst.battleType: BattleType.end.value,
+        FirebaseConst.battleEndedAt: battleEndedAt,
+      };
       final batch = db.batch();
-      batch.update(liveStreamDocRef, {
-        FirebaseConst.battleType: BattleType.end.value,
-        FirebaseConst.battleEndedAt: battleEndedAt,
-      });
-      batch.update(_roomDocRef(opponentRoomId), {
-        FirebaseConst.battleType: BattleType.end.value,
-        FirebaseConst.battleEndedAt: battleEndedAt,
-      });
+      batch.update(liveStreamDocRef, endFields);
+      batch.update(_roomDocRef(opponentRoomId), endFields);
+      final myTeammateRoomId = liveData.value.coHostTeammateRoomId;
+      final opponentTeammateRoomId =
+          opponentLiveData.value?.coHostTeammateRoomId;
+      if (myTeammateRoomId != null) {
+        batch.update(_roomDocRef(myTeammateRoomId), endFields);
+      }
+      if (opponentTeammateRoomId != null) {
+        batch.update(_roomDocRef(opponentTeammateRoomId), endFields);
+      }
       await batch.commit();
     } catch (e) {
       Loggers.error('Failed to end cross-room battle: $e');
@@ -4539,6 +4996,16 @@ class LivestreamScreenController extends BaseController
   /// for the one function that does).
   Future<void> endBattleOnly() async {
     final opponentRoomId = liveData.value.opponentRoomId;
+    final myTeammateRoomId = liveData.value.coHostTeammateRoomId;
+    final opponentTeammateRoomId =
+        opponentLiveData.value?.coHostTeammateRoomId;
+    final resetFields = {
+      FirebaseConst.battleType: BattleType.initiate.value,
+      FirebaseConst.type: LivestreamType.livestream.value,
+      FirebaseConst.battleRoundWins: 0,
+      FirebaseConst.battleCreatedAt: null,
+      FirebaseConst.battleEndedAt: null,
+    };
     try {
       await updateLiveStreamData(
         battleType: BattleType.initiate,
@@ -4550,13 +5017,13 @@ class LivestreamScreenController extends BaseController
         FirebaseConst.battleEndedAt: null,
       });
       if (opponentRoomId != null) {
-        await _roomDocRef(opponentRoomId).update({
-          FirebaseConst.battleType: BattleType.initiate.value,
-          FirebaseConst.type: LivestreamType.livestream.value,
-          FirebaseConst.battleRoundWins: 0,
-          FirebaseConst.battleCreatedAt: null,
-          FirebaseConst.battleEndedAt: null,
-        });
+        await _roomDocRef(opponentRoomId).update(resetFields);
+      }
+      if (myTeammateRoomId != null) {
+        await _roomDocRef(myTeammateRoomId).update(resetFields);
+      }
+      if (opponentTeammateRoomId != null) {
+        await _roomDocRef(opponentTeammateRoomId).update(resetFields);
       }
     } catch (e) {
       Loggers.error('Failed to reset after cross-room battle: $e');
@@ -5123,4 +5590,101 @@ class StreamView {
   bool isMuted;
 
   StreamView(this.streamId, this.streamViewId, this.streamView, this.isMuted);
+}
+
+/// One additional room watched for Four-person Team PK (client spec Module
+/// 6/7) -- a read-only mirror of the same doc/user_state/comments/video-
+/// subscription shape `_startWatchingOpponent` already keeps for the
+/// primary opponent, generalized so 2v2 doesn't need two hand-copies of
+/// that whole subsystem (one for my own teammate's room, one for the
+/// opponent team's extra member's room). Deliberately does NOT replicate
+/// the primary opponent's reconnect-grace/auto-forfeit timer -- if a
+/// teammate's stream drops, their tile just shows a reconnecting
+/// placeholder; only the primary two-room connection auto-ends a battle on
+/// a prolonged drop, scoped the same way it already was before 2v2.
+class WatchedRoom {
+  final FirebaseFirestore _db;
+  final ZegoExpressEngine _zegoEngine;
+
+  WatchedRoom(this._db, this._zegoEngine);
+
+  String? roomId;
+  Rx<Livestream?> liveData = Rx(null);
+  RxList<LivestreamUserState> userStates = <LivestreamUserState>[].obs;
+  RxList<LivestreamComment> comments = <LivestreamComment>[].obs;
+  RxList<StreamView> streamViews = <StreamView>[].obs;
+  StreamSubscription<DocumentSnapshot>? _liveDocListener;
+  StreamSubscription<QuerySnapshot>? _userStatesListener;
+  StreamSubscription<QuerySnapshot>? _commentsListener;
+
+  void watch(String newRoomId) {
+    if (roomId == newRoomId) return;
+    stop();
+    roomId = newRoomId;
+    final ref = _db.collection(FirebaseConst.liveStreams).doc(newRoomId);
+    _liveDocListener = ref.snapshots().listen((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return;
+      final stream = Livestream.fromJson(data);
+      liveData.value = stream;
+      if (streamViews.isEmpty && stream.hostId != null) {
+        _playStream(stream.hostId!);
+      }
+    }, onError: (e) => Loggers.error('Watched-room doc listener failed: $e'));
+    _userStatesListener = ref
+        .collection(FirebaseConst.userState)
+        .snapshots()
+        .listen((snapshot) {
+      userStates.value = snapshot.docs
+          .map((doc) => LivestreamUserState.fromJson(doc.data()))
+          .toList();
+    },
+            onError: (e) => Loggers.error(
+                'Watched-room user-states listener failed: $e'));
+    _commentsListener = ref
+        .collection(FirebaseConst.comments)
+        .snapshots()
+        .listen((snapshot) {
+      comments.value = snapshot.docs
+          .map((doc) => LivestreamComment.fromJson(doc.data()))
+          .toList();
+    },
+            onError: (e) =>
+                Loggers.error('Watched-room comments listener failed: $e'));
+  }
+
+  Future<void> _playStream(int hostId) async {
+    try {
+      final streamId = '$hostId';
+      final canvasViewWidget = await _zegoEngine.createCanvasView((viewID) {
+        _zegoEngine.startPlayingStream(
+          streamId,
+          canvas: ZegoCanvas(viewID, viewMode: ZegoViewMode.AspectFill),
+        );
+      });
+      if (canvasViewWidget != null) {
+        streamViews.add(StreamView(streamId, -1, canvasViewWidget, false));
+      }
+    } catch (e) {
+      Loggers.error('Failed to play watched-room stream: $e');
+    }
+  }
+
+  void stop() {
+    if (roomId == null) return;
+    roomId = null;
+    _liveDocListener?.cancel();
+    _userStatesListener?.cancel();
+    _commentsListener?.cancel();
+    _liveDocListener = null;
+    _userStatesListener = null;
+    _commentsListener = null;
+    liveData.value = null;
+    userStates.clear();
+    comments.clear();
+    for (final view in streamViews) {
+      _zegoEngine.stopPlayingStream(view.streamId);
+    }
+    streamViews.clear();
+  }
 }

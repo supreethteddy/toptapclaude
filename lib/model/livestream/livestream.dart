@@ -121,6 +121,16 @@ class Livestream {
   // can be transiently asymmetric mid-teammate-invite.
   String? pkMode; // '1v1' | '2v2'
 
+  // Four-person Team PK (client spec Module 6): a pending "join my team as
+  // teammate" invite, set on the INVITEE's own doc -- same shape as
+  // pendingBattleInviteFromId/battleInviteSentAt above, just for this
+  // separate relationship.
+  int? pendingTeammateInviteFromId;
+  int? teammateInviteSentAt;
+  // Client spec 3.2's "notify the inviter" rule, extended to this invite
+  // type -- set on the ORIGINAL SENDER's own doc once declined/expired.
+  int? teammateInviteDeclinedFor;
+
   // Same shape as [pendingBattleInviteFromId], written after a battle has
   // ended rather than before one starts — the other host requested a
   // rematch and it's awaiting accept/decline on THIS room's doc.
@@ -240,6 +250,9 @@ class Livestream {
     this.coHostTeammateRoomId,
     this.coHostOpponentTeamRoomIds,
     this.pkMode,
+    this.pendingTeammateInviteFromId,
+    this.teammateInviteSentAt,
+    this.teammateInviteDeclinedFor,
     this.pendingRematchFromId,
     this.battleRoundWins,
     this.battleRoundWinsHost,
@@ -317,6 +330,9 @@ class Livestream {
             ?.map((e) => e.toString())
             .toList();
     pkMode = json['pk_mode'];
+    pendingTeammateInviteFromId = json['pending_teammate_invite_from_id'];
+    teammateInviteSentAt = json['teammate_invite_sent_at'];
+    teammateInviteDeclinedFor = json['teammate_invite_declined_for'];
     pendingRematchFromId = json['pending_rematch_from_id'];
     battleRoundWins = json['battle_round_wins'];
     battleRoundWinsHost = json['battle_round_wins_host'];
@@ -406,6 +422,9 @@ class Livestream {
     data['co_host_teammate_room_id'] = coHostTeammateRoomId;
     data['co_host_opponent_team_room_ids'] = coHostOpponentTeamRoomIds;
     data['pk_mode'] = pkMode;
+    data['pending_teammate_invite_from_id'] = pendingTeammateInviteFromId;
+    data['teammate_invite_sent_at'] = teammateInviteSentAt;
+    data['teammate_invite_declined_for'] = teammateInviteDeclinedFor;
     data['pending_rematch_from_id'] = pendingRematchFromId;
     data['battle_round_wins'] = battleRoundWins;
     data['battle_round_wins_host'] = battleRoundWinsHost;
