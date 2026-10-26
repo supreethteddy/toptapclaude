@@ -104,11 +104,14 @@ class FirebaseConst {
       'pending_pk_match_request_from_id';
   static const String pkMatchRequestSentAt = 'pk_match_request_sent_at';
 
-  // Written the moment a battle ends: now + 60s. Every participant/viewer
-  // gates the post-match results UI on this, then it auto-clears -- the
-  // co-host connection itself is untouched.
-  static const String battleResultsVisibleUntil =
-      'battle_results_visible_until';
+  // Written the moment a battle ends (client spec 9.4) -- the shared
+  // reference point every participant/viewer computes the post-match
+  // display phase from (PostBattlePhase/postBattlePhaseFor, pk_scores.dart)
+  // rather than running their own unsynced local countdown. Nulled again
+  // once the arena fully resets. Written for BOTH same-room and cross-room
+  // battles now (used to be cross-room only, under the name
+  // battleResultsVisibleUntil, and was actually never read by anything).
+  static const String battleEndedAt = 'battle_ended_at';
 
   // 2v2 team assembly across independently-live rooms (see Livestream
   // model doc comments for the full shape).

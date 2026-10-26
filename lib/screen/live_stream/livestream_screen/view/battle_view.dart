@@ -107,6 +107,14 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
       int blue = widget.controller.pkTeamBScore().total;
 
       final isEnded = stream.battleType == BattleType.end;
+      final phase = postBattlePhaseFor(
+          battleType: stream.battleType, battleEndedAt: stream.battleEndedAt);
+      // Client spec 9.4: full result details for the first minute, then a
+      // plain "Victory Lap" display for the rest of the 3-minute window --
+      // isEnded itself (used below for the Rematch/Next Round button) stays
+      // true throughout both, since that control is unaffected.
+      final showResultDetails = phase == PostBattlePhase.fullResults;
+      final showVictoryLap = phase == PostBattlePhase.victoryLap;
       final outcome = determineBattleOutcome(red, blue);
       final isDraw = outcome == BattleOutcome.draw;
       final isRedWin = outcome == BattleOutcome.sideAWins;
@@ -125,7 +133,8 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
           // behind or below it.
           child: Column(
             children: [
-              BuildProgressBar(red: red, blue: blue, showScoreLabels: true),
+              if (!showVictoryLap)
+                BuildProgressBar(red: red, blue: blue, showScoreLabels: true),
               Expanded(
                 child: Stack(
                   alignment: Alignment.topCenter,
@@ -139,7 +148,7 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                               alignment: Alignment.center,
                               children: [
                                 _buildSlot(teamAView, hostUser),
-                                if (isEnded)
+                                if (showResultDetails)
                                   _BattleResultEmoji(
                                       emoji: pkSideEmoji(
                                           outcome: outcome, isSideA: true)),
@@ -151,7 +160,7 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                               alignment: Alignment.center,
                               children: [
                                 _buildSlot(teamBView, coHostUser),
-                                if (isEnded)
+                                if (showResultDetails)
                                   _BattleResultEmoji(
                                       emoji: pkSideEmoji(
                                           outcome: outcome, isSideA: false)),
@@ -162,11 +171,15 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                       ),
                     ),
                     // BattleTimer fades itself to invisible once the match
-                    // ends (see its own isBattleEnd check) — no separate
-                    // post-match "Victory lap" countdown replacing it here
-                    // anymore (client found the 3-minute cosmetic timer
-                    // unnecessary); the real return-to-main-view countdown
-                    // is LivestreamExistMessageBar, unaffected by this.
+                    // ends (see its own isBattleEnd check). The client's
+                    // 2026-10-13 removal of the old 3-minute cosmetic
+                    // Victory Lap *countdown* stands -- this isn't that; see
+                    // VictoryLapBanner (client spec 9.4, clarified
+                    // 2026-10-26) for the current plain-label version with
+                    // no countdown of its own, driven by postBattlePhaseFor
+                    // below. The real return-to-main-view countdown is still
+                    // LivestreamExistMessageBar, just now running 3 minutes
+                    // instead of 20 seconds.
                     Positioned(
                       top: 8,
                       left: 0,
@@ -184,26 +197,32 @@ class _LiveBattleOverlayWidgetState extends State<LiveBattleOverlayWidget> {
                     Positioned(
                       top: 8,
                       left: 10,
-                      child: (isEnded && !isDraw && !isRedWin)
-                          ? const ResultPill(isDraw: false)
-                          : (isEnded && isDraw)
-                              ? const ResultPill(isDraw: true)
-                              : WinPill(
-                                  count: hostWins, color: ColorRes.likeRed),
+                      child: showVictoryLap
+                          ? const SizedBox()
+                          : (isEnded && !isDraw && !isRedWin)
+                              ? const ResultPill(isDraw: false)
+                              : (isEnded && isDraw)
+                                  ? const ResultPill(isDraw: true)
+                                  : WinPill(
+                                      count: hostWins, color: ColorRes.likeRed),
                     ),
                     Positioned(
                       top: 8,
                       right: 10,
-                      child: (isEnded && !isDraw && isRedWin)
-                          ? const ResultPill(isDraw: false)
-                          : (isEnded && isDraw)
-                              ? const ResultPill(isDraw: true)
-                              : WinPill(
-                                  count: coHostWins,
-                                  color: ColorRes.battleProgressColor),
+                      child: showVictoryLap
+                          ? const SizedBox()
+                          : (isEnded && !isDraw && isRedWin)
+                              ? const ResultPill(isDraw: false)
+                              : (isEnded && isDraw)
+                                  ? const ResultPill(isDraw: true)
+                                  : WinPill(
+                                      count: coHostWins,
+                                      color: ColorRes.battleProgressColor),
                     ),
                     BuildBottomInfo(
-                        stream: stream, controller: widget.controller),
+                        stream: stream,
+                        controller: widget.controller,
+                        showVictoryLap: showVictoryLap),
                     GiftComboBadge(controller: widget.controller),
                   ],
                 ),
@@ -546,9 +565,17 @@ class _FirstGiftBonusBannerState extends State<FirstGiftBonusBanner> {
 class BuildBottomInfo extends StatelessWidget {
   final Livestream stream;
   final LivestreamScreenController controller;
+  // Client spec 9.4: hides TopGiftersRow (the "gift-sender list"/"gifting
+  // details") for the Victory Lap phase, replacing it with a plain label.
+  // The Rematch/Next Round button right above is unaffected -- it's a
+  // control, not a stat, so it stays exactly as it already worked.
+  final bool showVictoryLap;
 
   const BuildBottomInfo(
-      {super.key, required this.stream, required this.controller});
+      {super.key,
+      required this.stream,
+      required this.controller,
+      this.showVictoryLap = false});
 
   @override
   Widget build(BuildContext context) {
@@ -585,8 +612,39 @@ class BuildBottomInfo extends StatelessWidget {
                 ),
               ),
             ),
-          TopGiftersRow(controller: controller),
+          if (showVictoryLap)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: VictoryLapBanner(),
+            )
+          else
+            TopGiftersRow(controller: controller),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown in place of the detailed match-result stats (scores, gifting
+/// details, gift-sender lists) for the Victory Lap phase of the post-match
+/// window (client spec 9.4, clarified 2026-10-26) -- a plain label, not a
+/// countdown or a control. Gift animations and the comment feed continue
+/// unaffected; this only replaces the in-arena stat widgets.
+class VictoryLapBanner extends StatelessWidget {
+  const VictoryLapBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: .55),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        LKey.victoryLap.tr,
+        style: TextStyleCustom.outFitSemiBold600(
+            color: Colors.white, fontSize: 13),
       ),
     );
   }
@@ -611,6 +669,11 @@ class TopGiftersRow extends StatelessWidget {
   // the Rematch button) -- null preserves the exact 2-child row this
   // widget always rendered, so the same-room caller is unaffected.
   final Widget? center;
+  // Client spec 9.4: the Victory Lap phase hides the gifter seat clusters
+  // ("gift-sender lists") while [center] (the Rematch/Next Round control)
+  // stays visible -- false keeps this row down to just that center child,
+  // centered, instead of the usual 3-child layout.
+  final bool showGifters;
 
   const TopGiftersRow({
     super.key,
@@ -618,10 +681,19 @@ class TopGiftersRow extends StatelessWidget {
     this.teamAUserIds,
     this.teamBUserIds,
     this.center,
+    this.showGifters = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (!showGifters) {
+      return center == null
+          ? const SizedBox()
+          : Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Center(child: center!),
+            );
+    }
     return Obx(() {
       final stream = controller.liveData.value;
       final comments = controller.allBattleComments;

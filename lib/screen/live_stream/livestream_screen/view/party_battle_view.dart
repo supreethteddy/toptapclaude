@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
+import 'package:shortzz/model/livestream/pk_scores.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/view/battle_view.dart';
 import 'package:shortzz/utilities/app_res.dart';
@@ -74,11 +75,10 @@ class _PartyBattleOverlay extends StatelessWidget {
       final pointsPerLike = controller.setting?.pkLikePoints ?? 1;
       final redLikePoints = ((stream.crossRoomLikePoints ?? 0) * pointsPerLike)
           .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
-      final blueLikePoints = ((controller.opponentLiveData.value
-                      ?.crossRoomLikePoints ??
-                  0) *
-              pointsPerLike)
-          .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
+      final blueLikePoints =
+          ((controller.opponentLiveData.value?.crossRoomLikePoints ?? 0) *
+                  pointsPerLike)
+              .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
       final red = controller.mySideBattleCoins -
           controller.roundBaselineRed.value +
           redLikePoints;
@@ -87,6 +87,9 @@ class _PartyBattleOverlay extends StatelessWidget {
           blueLikePoints;
 
       final inBattle = stream.battleType != BattleType.initiate;
+      final phase = postBattlePhaseFor(
+          battleType: stream.battleType, battleEndedAt: stream.battleEndedAt);
+      final showVictoryLap = phase == PostBattlePhase.victoryLap;
 
       return SafeArea(
         bottom: false,
@@ -103,7 +106,7 @@ class _PartyBattleOverlay extends StatelessWidget {
           // no score bar/stats/combo badge.
           child: Column(
             children: [
-              if (inBattle)
+              if (inBattle && !showVictoryLap)
                 BuildProgressBar(red: red, blue: blue, showScoreLabels: true),
               Expanded(
                 child: Stack(
@@ -124,7 +127,8 @@ class _PartyBattleOverlay extends StatelessWidget {
                           red: red,
                           blue: blue,
                           controller: controller,
-                          stream: stream),
+                          stream: stream,
+                          showVictoryLap: showVictoryLap),
                       GiftComboBadge(controller: controller),
                     ],
                   ],
@@ -162,12 +166,18 @@ class _PartyBattleStats extends StatelessWidget {
   final int blue;
   final LivestreamScreenController controller;
   final Livestream stream;
+  // Client spec 9.4: Victory Lap phase hides the winner/loser tags and the
+  // gift-sender list, replacing them with a plain "Victory Lap" label --
+  // the Rematch/Next Round button (TopGiftersRow's center slot) stays put,
+  // unaffected, same as the same-room arena.
+  final bool showVictoryLap;
 
   const _PartyBattleStats(
       {required this.red,
       required this.blue,
       required this.controller,
-      required this.stream});
+      required this.stream,
+      this.showVictoryLap = false});
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +215,7 @@ class _PartyBattleStats extends StatelessWidget {
                       ),
                     )
                   : const SizedBox()),
-              if (stream.battleType == BattleType.end)
+              if (stream.battleType == BattleType.end && !showVictoryLap)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -215,14 +225,23 @@ class _PartyBattleStats extends StatelessWidget {
                         rightSide: true, isWinner: !isRedWin, isDraw: isDraw),
                   ],
                 ),
+              if (showVictoryLap)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 6),
+                  child: Center(child: VictoryLapBanner()),
+                ),
               // Top-3 gifters seat row for each side, right at the bottom
               // edge of the video (client reference) -- replaces the plain
               // red/blue hostname strip this used to be. Next Round/Rematch
               // sits in the gap between the two seat clusters, not as its
               // own full-width bar over the video (client correction: was
-              // overlapping the video card).
+              // overlapping the video card). showGifters hides just the
+              // seat clusters for the Victory Lap phase (client spec 9.4),
+              // keeping the Rematch/Next Round button in `center` -- that's
+              // a control, not a stat, so it's unaffected by the phase.
               TopGiftersRow(
                 controller: controller,
+                showGifters: !showVictoryLap,
                 teamAUserIds: [
                   if (stream.hostId != null) stream.hostId!,
                 ],
@@ -249,7 +268,8 @@ class _PartyBattleStats extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: InkWell(
-        onTap: isNextRound ? controller.startNextRound : controller.requestRematch,
+        onTap:
+            isNextRound ? controller.startNextRound : controller.requestRematch,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           height: 32,
@@ -315,5 +335,4 @@ class _PartyBattleStats extends StatelessWidget {
       ),
     );
   }
-
 }

@@ -39,18 +39,11 @@ class AppRes {
   /// Total duration of the battle (in minutes)
   static const int battleDurationInMinutes = 1;
 
-  /// Duration to show the main view after battle ends (in seconds)
-  static const int battleEndMainViewInSecond = 10;
-
   /// Max number of per-host LIVE moderators
   static const int maxLivestreamModerators = 30;
 
   /// Max number of simultaneous Gift Goals in one LIVE
   static const int maxGiftGoals = 3;
-
-  /// Cooldown duration after a battle ends.
-  /// Please wait some time before starting a new battle. (in seconds)
-  static const int battleCooldownDurationInSecond = 10;
 
   /// Fixed number of rounds per PK Battle match ("Round 1/2").
   static const int battleTotalRounds = 2;
@@ -60,9 +53,12 @@ class AppRes {
   static const int firstGiftBonusWindowInSecond = 30;
   static const int firstGiftBonusMultiplier = 3;
 
-  /// Same-room PK Match: how long the winning side's "Victory lap" countdown
-  /// runs for after the match ends — purely a local, cosmetic timer, not
-  /// synced through Firestore.
+  /// Total length of the post-match window (client spec 9.4), seconds from
+  /// the moment a battle ends -- the first
+  /// [battleResultsVisibleDurationInSecond] of this show full results, the
+  /// rest is the minimal "Victory Lap" display (see PostBattlePhase /
+  /// postBattlePhaseFor in pk_scores.dart). Never gates any action --
+  /// starting a rematch or leaving works at any point regardless of phase.
   static const int pkVictoryLapDurationInSecond = 180;
 
   /// How long a Co-Host Connect invite (and a "Play PK Match" request on an
@@ -89,9 +85,11 @@ class AppRes {
   /// (see pkTeamScore).
   static const int tapTapMaxPkPointsPerMatch = 3;
 
-  /// How long post-match results (scores, winner/loser, emojis, gifting
-  /// stats) stay visible before auto-clearing. The co-host connection
-  /// itself is untouched by this -- only the battle-result chrome.
+  /// Client spec 9.4: how long the FULL post-match results (scores,
+  /// winner/loser, emojis, gifting stats, gift-sender lists) stay visible
+  /// before the display narrows to just the minimal "Victory Lap" for the
+  /// rest of [pkVictoryLapDurationInSecond]. The co-host connection itself
+  /// is untouched by this -- only the battle-result chrome.
   static const int battleResultsVisibleDurationInSecond = 60;
 
   // Pagination limit

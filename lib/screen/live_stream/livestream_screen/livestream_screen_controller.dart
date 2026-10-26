@@ -1330,6 +1330,7 @@ class LivestreamScreenController extends BaseController
     dynamic battleTotalRounds,
     dynamic battleCurrentRound,
     dynamic firstGiftBonusClaimed,
+    int? battleEndedAt,
   }) async {
     bool isExist = (await liveStreamDocRef.get()).exists;
     if (!isExist) return;
@@ -1342,6 +1343,7 @@ class LivestreamScreenController extends BaseController
         FirebaseConst.commentsEnabled: commentsEnabled,
       if (battleCreatedAt != null)
         FirebaseConst.battleCreatedAt: battleCreatedAt,
+      if (battleEndedAt != null) FirebaseConst.battleEndedAt: battleEndedAt,
       if (battleDuration != null) FirebaseConst.battleDuration: battleDuration,
       if (coHostId != null) FirebaseConst.coHostIds: coHostId,
       if (guestId != null) FirebaseConst.guestIds: guestId,
@@ -2322,7 +2324,16 @@ class LivestreamScreenController extends BaseController
   }) {
     final availableUsers = List<AppUser>.from(users)
       ..removeWhere((element) => element.userId == myUserId);
-    if (liveData.value.type == LivestreamType.battle &&
+    // Only a BATTLE-tagged gift (the PK-scoring one) stops being sendable
+    // once the match is decided -- there's nothing left to score it into.
+    // This used to also block the regular gift icon (GiftType.livestream)
+    // for the same ~10-20s window, which went unnoticed while that window
+    // was short; now that the post-match window runs the full 3 minutes of
+    // client spec 9.4's Victory Lap ("players can enjoy gift animations"),
+    // blocking ordinary gifting for all of it would directly contradict
+    // that -- narrowed to GiftType.battle only.
+    if (type == GiftType.battle &&
+        liveData.value.type == LivestreamType.battle &&
         liveData.value.battleType == BattleType.end) {
       return showSnackBar(LKey.battleEndedGiftNotSent.tr);
     }
@@ -3656,7 +3667,7 @@ class LivestreamScreenController extends BaseController
           FirebaseConst.type: LivestreamType.livestream.value,
           FirebaseConst.battleType: BattleType.initiate.value,
           FirebaseConst.battleCreatedAt: null,
-          FirebaseConst.battleResultsVisibleUntil: null,
+          FirebaseConst.battleEndedAt: null,
           FirebaseConst.battleRoundWins: 0,
           FirebaseConst.battleCurrentRound: 1,
           FirebaseConst.battleTotalRounds: 1,
@@ -4354,7 +4365,7 @@ class LivestreamScreenController extends BaseController
         FirebaseConst.battleRoundWins: 0,
         FirebaseConst.battleTotalRounds: 1,
         FirebaseConst.battleCurrentRound: 1,
-        FirebaseConst.battleResultsVisibleUntil: null,
+        FirebaseConst.battleEndedAt: null,
         FirebaseConst.crossRoomLikePoints: 0,
       };
       final batch = db.batch();
@@ -4502,15 +4513,15 @@ class LivestreamScreenController extends BaseController
     final opponentRoomId = liveData.value.opponentRoomId;
     if (myRoomId == null || opponentRoomId == null) return;
     try {
-      final resultsVisibleUntil = DateTime.now().millisecondsSinceEpoch + 60000;
+      final battleEndedAt = DateTime.now().millisecondsSinceEpoch;
       final batch = db.batch();
       batch.update(liveStreamDocRef, {
         FirebaseConst.battleType: BattleType.end.value,
-        FirebaseConst.battleResultsVisibleUntil: resultsVisibleUntil,
+        FirebaseConst.battleEndedAt: battleEndedAt,
       });
       batch.update(_roomDocRef(opponentRoomId), {
         FirebaseConst.battleType: BattleType.end.value,
-        FirebaseConst.battleResultsVisibleUntil: resultsVisibleUntil,
+        FirebaseConst.battleEndedAt: battleEndedAt,
       });
       await batch.commit();
     } catch (e) {
@@ -4536,7 +4547,7 @@ class LivestreamScreenController extends BaseController
       );
       await liveStreamDocRef.update({
         FirebaseConst.battleCreatedAt: null,
-        FirebaseConst.battleResultsVisibleUntil: null,
+        FirebaseConst.battleEndedAt: null,
       });
       if (opponentRoomId != null) {
         await _roomDocRef(opponentRoomId).update({
@@ -4544,7 +4555,7 @@ class LivestreamScreenController extends BaseController
           FirebaseConst.type: LivestreamType.livestream.value,
           FirebaseConst.battleRoundWins: 0,
           FirebaseConst.battleCreatedAt: null,
-          FirebaseConst.battleResultsVisibleUntil: null,
+          FirebaseConst.battleEndedAt: null,
         });
       }
     } catch (e) {
@@ -4832,7 +4843,10 @@ class LivestreamScreenController extends BaseController
         if (liveData.value.opponentRoomId != null) {
           _endCrossRoomBattleType();
         } else {
-          updateLiveStreamData(battleType: BattleType.end);
+          updateLiveStreamData(
+            battleType: BattleType.end,
+            battleEndedAt: DateTime.now().millisecondsSinceEpoch,
+          );
         }
       }
     });

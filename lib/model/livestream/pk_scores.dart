@@ -1,4 +1,5 @@
 import 'package:shortzz/model/livestream/battle_result.dart';
+import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/utilities/app_res.dart';
 
 /// One side's PK score. Team score = sum of its members' eligible-gift
@@ -67,8 +68,10 @@ PkPersonalResult pkPersonalResult({
   }
   final winners = outcome == BattleOutcome.sideAWins ? teamA : teamB;
   final losers = outcome == BattleOutcome.sideAWins ? teamB : teamA;
-  if (myUserId != null && winners.contains(myUserId)) return PkPersonalResult.won;
-  if (myUserId != null && losers.contains(myUserId)) return PkPersonalResult.lost;
+  if (myUserId != null && winners.contains(myUserId))
+    return PkPersonalResult.won;
+  if (myUserId != null && losers.contains(myUserId))
+    return PkPersonalResult.lost;
   return PkPersonalResult.spectator;
 }
 
@@ -88,4 +91,48 @@ String pkSideEmoji({required BattleOutcome outcome, required bool isSideA}) {
       ? outcome == BattleOutcome.sideAWins
       : outcome == BattleOutcome.sideBWins;
   return sideWon ? '😄' : '😢';
+}
+
+/// Client spec 9.4 (clarified 2026-10-26): the post-match window is 3
+/// minutes total from the moment a battle ends, on the EXISTING arena
+/// screen -- never a separate screen, never gating any action (a rematch
+/// or leaving the room both work at any point regardless of phase, see
+/// LivestreamScreenController.startNextRound/requestRematch/
+/// onStopButtonTap, none of which reference this).
+enum PostBattlePhase {
+  /// No battle has just ended (battleType != end) -- nothing to show.
+  active,
+
+  /// First AppRes.battleResultsVisibleDurationInSecond (60s): full match
+  /// results -- scores, gifting details, gift-sender lists, match activity.
+  fullResults,
+
+  /// From there until AppRes.pkVictoryLapDurationInSecond (180s total from
+  /// battle end): scores/gifting-details/match-activity hidden, a plain
+  /// "Victory Lap" display stays up so players can enjoy gift animations
+  /// and keep talking -- no new controls, nothing else changes.
+  victoryLap,
+
+  /// Past 180s -- the arena should have already reset to the normal view
+  /// (see LivestreamExistMessageBar); treated the same as [active] by any
+  /// caller that reaches this before that write lands.
+  reset,
+}
+
+PostBattlePhase postBattlePhaseFor({
+  required BattleType? battleType,
+  required int? battleEndedAt,
+  DateTime? now,
+}) {
+  if (battleType != BattleType.end) return PostBattlePhase.active;
+  if (battleEndedAt == null) return PostBattlePhase.fullResults;
+  final elapsedSeconds =
+      ((now ?? DateTime.now()).millisecondsSinceEpoch - battleEndedAt) / 1000;
+  if (elapsedSeconds < AppRes.battleResultsVisibleDurationInSecond) {
+    return PostBattlePhase.fullResults;
+  }
+  if (elapsedSeconds < AppRes.pkVictoryLapDurationInSecond) {
+    return PostBattlePhase.victoryLap;
+  }
+  return PostBattlePhase.reset;
 }

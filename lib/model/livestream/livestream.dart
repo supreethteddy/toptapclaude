@@ -101,12 +101,12 @@ class Livestream {
   int? pendingPkMatchRequestFromId;
   int? pkMatchRequestSentAt;
 
-  // Written the moment a battle ends (battleType -> END): now + 60s. Every
-  // connected participant/viewer independently gates the post-match results
-  // UI (scores, winner/loser, emojis, gifting stats) on this timestamp
-  // still being in the future, then it auto-clears -- the co-host
-  // CONNECTION is untouched by this, only the battle-result chrome.
-  int? battleResultsVisibleUntil;
+  // Written the moment a battle ends (battleType -> END), for same-room and
+  // cross-room alike -- the shared reference point postBattlePhaseFor
+  // (pk_scores.dart) computes the post-match display phase from. Nulled
+  // again once the arena fully resets. The co-host CONNECTION is untouched
+  // by this, only the battle-result chrome.
+  int? battleEndedAt;
 
   // 2v2 team assembly: a second independently-live room that joined THIS
   // room's team (null in 1v1). Symmetric -- the teammate's own doc points
@@ -236,7 +236,7 @@ class Livestream {
     this.pkMatchRequestDeclinedFor,
     this.pendingPkMatchRequestFromId,
     this.pkMatchRequestSentAt,
-    this.battleResultsVisibleUntil,
+    this.battleEndedAt,
     this.coHostTeammateRoomId,
     this.coHostOpponentTeamRoomIds,
     this.pkMode,
@@ -310,7 +310,7 @@ class Livestream {
     pkMatchRequestDeclinedFor = json['pk_match_request_declined_for'];
     pendingPkMatchRequestFromId = json['pending_pk_match_request_from_id'];
     pkMatchRequestSentAt = json['pk_match_request_sent_at'];
-    battleResultsVisibleUntil = json['battle_results_visible_until'];
+    battleEndedAt = json['battle_ended_at'];
     coHostTeammateRoomId = json['co_host_teammate_room_id'];
     coHostOpponentTeamRoomIds =
         (json['co_host_opponent_team_room_ids'] as List<dynamic>?)
@@ -402,7 +402,7 @@ class Livestream {
     data['pk_match_request_declined_for'] = pkMatchRequestDeclinedFor;
     data['pending_pk_match_request_from_id'] = pendingPkMatchRequestFromId;
     data['pk_match_request_sent_at'] = pkMatchRequestSentAt;
-    data['battle_results_visible_until'] = battleResultsVisibleUntil;
+    data['battle_ended_at'] = battleEndedAt;
     data['co_host_teammate_room_id'] = coHostTeammateRoomId;
     data['co_host_opponent_team_room_ids'] = coHostOpponentTeamRoomIds;
     data['pk_mode'] = pkMode;

@@ -7,6 +7,7 @@ import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 import 'package:shortzz/utilities/app_res.dart';
+import 'package:shortzz/utilities/firebase_const.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
 import 'package:shortzz/utilities/theme_res.dart';
 
@@ -34,32 +35,48 @@ class _LivestreamExistMessageBarState extends State<LivestreamExistMessageBar> {
     startCountDown();
   }
 
+  // Client spec 9.4 (clarified 2026-10-26): the post-match window is 3
+  // minutes total (AppRes.pkVictoryLapDurationInSecond) from the shared
+  // battleEndedAt timestamp every device reads -- not a fresh local
+  // countdown seeded at whatever moment this bar happens to mount, which
+  // is what let a remount/late-join skew this bar out of sync with the
+  // actual arena display (see PostBattlePhase/postBattlePhaseFor in
+  // pk_scores.dart, which the arena views key off the same timestamp for).
   void startCountDown() async {
-    currentSecLeft =
-        (!isBattleView ? 10 : AppRes.battleEndMainViewInSecond).obs;
+    if (!isBattleView) {
+      currentSecLeft = 10.obs;
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (currentSecLeft.value <= 1) {
+          _timer?.cancel();
+          widget.controller.hostEndStream();
+        } else {
+          currentSecLeft.value--;
+        }
+      });
+      return;
+    }
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
-      Loggers.info(!isBattleView
-          ? '[LIVESTREAM END] in $currentSecLeft sec.'
-          : '[BATTLE END] Main View in $currentSecLeft sec.');
+    final battleEndedAt = widget.stream.battleEndedAt;
+    final elapsedSeconds = battleEndedAt == null
+        ? 0
+        : (DateTime.now().millisecondsSinceEpoch - battleEndedAt) ~/ 1000;
+    currentSecLeft = (AppRes.pkVictoryLapDurationInSecond - elapsedSeconds)
+        .clamp(0, AppRes.pkVictoryLapDurationInSecond)
+        .obs;
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      Loggers.info('[BATTLE END] Victory Lap resets in $currentSecLeft sec.');
       if (currentSecLeft.value <= 1) {
         _timer?.cancel();
-        if (isBattleView) {
-          await widget.controller.updateLiveStreamData(
-              battleType: BattleType.end, type: LivestreamType.livestream);
-          widget.controller.updateUserStateToFirestore(
-              widget.controller.myUserId,
-              currentBattleCoin: 0);
-          Future.delayed(
-              const Duration(seconds: AppRes.battleCooldownDurationInSecond),
-              () {
-            widget.controller
-                .updateLiveStreamData(battleType: BattleType.initiate);
-            widget.controller.startMinViewerTimeoutCheck();
-          });
-        } else {
-          widget.controller.hostEndStream();
-        }
+        unawaited(widget.controller.updateUserStateToFirestore(
+            widget.controller.myUserId,
+            currentBattleCoin: 0));
+        unawaited(widget.controller.liveStreamDocRef.update({
+          FirebaseConst.battleType: BattleType.initiate.value,
+          FirebaseConst.type: LivestreamType.livestream.value,
+          FirebaseConst.battleEndedAt: null,
+        }));
+        widget.controller.startMinViewerTimeoutCheck();
       } else {
         currentSecLeft.value--;
       }
