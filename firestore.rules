@@ -1,14 +1,20 @@
 rules_version = '2';
 
-// FIRST REAL PASS — still requires a human to paste this into Firebase
-// console > Firestore Database > Rules by hand (no Firebase CLI/service
-// account configured for deploys on this Mac). Do NOT apply before
-// confirming Stage 1+2 of the Firestore-auth-bridge work are live and a
-// real login has been verified to produce request.auth.uid == the app's
-// own numeric user id (see GlobalFunction::generateFirebaseCustomToken on
-// the Laravel backend, and AuthScreenController._registration() on the
-// Flutter side) — applying this against the OLD email/Google/Apple-uid
-// sessions would just silently fail every uid-scoped check below.
+// DEPLOYED 2026-10-26 (live on project toptap-24cab, replacing the fully-
+// open `allow read, write` draft that shipped before this) -- pushed via
+// the Firebase Rules API (firebaserules.googleapis.com) using the VPS's
+// existing service account (googleCredentials.json, already used for FCM
+// and Firestore Admin REST), not the Firebase CLI (none configured on this
+// Mac). A real device login was verified beforehand to produce
+// request.auth.uid == the app's own numeric user id (see
+// GlobalFunction::generateFirebaseCustomToken on the Laravel backend, and
+// AuthScreenController._registration() on the Flutter side) -- confirmed
+// both via a temporary debug log and by exercising a real LIVE session
+// (start stream, post a comment) against these exact rules with zero
+// PERMISSION_DENIED errors. This file is the source of truth for what's
+// live; keep it in sync with the console on any future change (there is
+// still no CLI-based deploy pipeline, so future edits need the same manual
+// Rules-API or console push).
 //
 // What changed from the old fully-open draft: every read/write now
 // requires request.auth != null (closes the single worst gap — today
