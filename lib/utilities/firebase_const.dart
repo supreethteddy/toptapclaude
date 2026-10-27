@@ -177,4 +177,10 @@ class FirebaseConst {
   // Cross-room Co-Host PK only -- this room's own side's like count (see
   // the doc comment on Livestream.crossRoomLikePoints).
   static const String crossRoomLikePoints = 'cross_room_like_points';
+  // Client spec 15.2: "Shares, where tracked" -- the Summary screen had no
+  // shares figure at all, since nothing counted them. Incremented on both
+  // shareLiveStream() (the native share sheet) and copyLiveStreamInvite()
+  // (copy-to-clipboard invite), the two actions that actually share this
+  // LIVE with someone else.
+  static const String shareCount = 'share_count';
 }

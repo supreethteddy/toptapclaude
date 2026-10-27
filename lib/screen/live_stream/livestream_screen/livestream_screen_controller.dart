@@ -34,6 +34,7 @@ import 'package:shortzz/model/livestream/live_moderator.dart';
 import 'package:shortzz/model/livestream/moderation_log_entry.dart';
 import 'package:shortzz/model/livestream/pk_eligibility.dart';
 import 'package:shortzz/model/livestream/pk_invite.dart';
+import 'package:shortzz/model/livestream/pk_gifters.dart';
 import 'package:shortzz/model/livestream/pk_scores.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_comment.dart';
@@ -431,7 +432,7 @@ class LivestreamScreenController extends BaseController
   /// that round is admin-configurable.
   int get pkMatchDurationMinutes => setting?.pkBattleDurationMinutes ?? 5;
   int get pkMatchTotalRounds => setting?.pkBattleRounds ?? 1;
-  int get pkMatchInviteExpirySeconds => setting?.pkInviteExpirySeconds ?? 60;
+  int get pkMatchInviteExpirySeconds => setting?.pkInviteExpirySeconds ?? 30;
 
   // ── Same-room PK Match scoring ──────────────────────────────────────────
   // Team membership for the battle currently in progress (or just ended):
@@ -522,6 +523,13 @@ class LivestreamScreenController extends BaseController
   StreamView? _lastOwnStreamView;
   RxList<LivestreamComment> comments = <LivestreamComment>[].obs;
   RxList<LivestreamUserState> liveUsersStates = <LivestreamUserState>[].obs;
+  // Client spec 15.2: the Summary's "Viewers" figure was always a final
+  // head-count (liveUsersStates.length at the moment LIVE ends), never a
+  // tracked peak. Updated every time listenUserState's snapshot listener
+  // fires below -- local to this device/session only, no Firestore field
+  // needed, since it only has to survive until this host's own Summary
+  // screen reads it at streamEnded().
+  int peakViewers = 0;
 
   // Per-session Moderator grants (client spec Module 14) -- see
   // listenLiveModerators/canModerate/canManageGuests below.
@@ -2046,6 +2054,9 @@ class LivestreamScreenController extends BaseController
                 break;
             }
           }
+          if (liveUsersStates.length > peakViewers) {
+            peakViewers = liveUsersStates.length;
+          }
           requestList.value = liveUsersStates
               .where((element) => element.type == LivestreamUserType.requested)
               .toList();
@@ -2518,7 +2529,10 @@ class LivestreamScreenController extends BaseController
         user?.userId == liveData.value.hostId &&
         liveData.value.hasLiveGoal == true &&
         liveData.value.liveGoalType == 'gifts') {
-      incrementLiveGoalProgress(1);
+      // Client spec 1.3: the Goal tracks gift COIN VALUE, not a flat +1 per
+      // gift sent -- a 500-coin gift and a 5-coin gift must not count the
+      // same toward the target.
+      incrementLiveGoalProgress(coinPrice);
     }
     if (type == GiftType.livestream &&
         user?.userId == liveData.value.hostId &&
@@ -3314,6 +3328,13 @@ class LivestreamScreenController extends BaseController
           isHost: isHost,
           viewers: viewers,
           mostWatchedUsers: _mostWatchedViewers(excludeUserId: myUserId),
+          peakViewers: peakViewers,
+          shareCount: liveData.value.shareCount ?? 0,
+          topGifters: _sessionTopGifters(),
+          leagueDivision: leagueController?.division.value,
+          leagueRank: (leagueController?.hostRank.value ?? 0) > 0
+              ? leagueController!.hostRank.value
+              : null,
         ),
       );
     } else {
@@ -3357,6 +3378,26 @@ class LivestreamScreenController extends BaseController
           .firstWhereOrNull((user) => user.userId == state.userId);
     }
     return viewers.take(3).toList();
+  }
+
+  /// Client spec 15.2: "Top Gifters" for the end-of-LIVE summary -- who
+  /// gifted ME (the host) across the WHOLE session, by real coin value, not
+  /// just the current/last battle round. See topGiftersForSession's own
+  /// doc comment for why it's a separate function from the in-battle
+  /// topGiftersForTeam.
+  List<(AppUser?, int)> _sessionTopGifters() {
+    final ranks = topGiftersForSession(
+      comments: comments,
+      recipientId: myUserId,
+      limit: 10,
+    );
+    return ranks
+        .map((rank) => (
+              firestoreController.users
+                  .firstWhereOrNull((u) => u.userId == rank.senderId),
+              rank.points,
+            ))
+        .toList();
   }
 
   togglePlayerAudioToggle() {
@@ -5270,11 +5311,26 @@ class LivestreamScreenController extends BaseController
         subject: 'TopTap LIVE',
       ),
     );
+    unawaited(_incrementShareCount());
   }
 
   Future<void> copyLiveStreamInvite() async {
     await Clipboard.setData(ClipboardData(text: liveShareText));
     showSnackBar('LIVE invitation copied.');
+    unawaited(_incrementShareCount());
+  }
+
+  /// Client spec 15.2 ("Shares, where tracked") -- best-effort, fire-and-
+  /// forget, same as every other non-critical bookkeeping write in this
+  /// controller; a failure here must never block the share action itself.
+  Future<void> _incrementShareCount() async {
+    try {
+      await liveStreamDocRef.update({
+        FirebaseConst.shareCount: FieldValue.increment(1),
+      });
+    } catch (e) {
+      Loggers.error('Failed to increment share count: $e');
+    }
   }
 
   void battleRunning() {

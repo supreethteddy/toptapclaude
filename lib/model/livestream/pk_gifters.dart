@@ -59,3 +59,33 @@ List<GifterRank> topGiftersForTeam({
     ..sort((a, b) => b.points.compareTo(a.points));
   return ranked.take(limit).toList();
 }
+
+/// Ranks viewers who gifted [recipientId] across the WHOLE LIVE session --
+/// client spec 15.2's "Top Gifters" for the end-of-LIVE summary, as
+/// distinct from [topGiftersForTeam]'s current-match-only ranking. Sums real
+/// gift COIN VALUE, not PK points: there's no PK match context here (the
+/// session may never have had one, or may have had several), so neither
+/// battlePointsForGift's tier mapping nor the Speed Challenge window
+/// multiplier apply -- only what the recipient actually received matters
+/// for a financial summary. [comments] is expected to be the session's own
+/// full comment history (already scoped to this LIVE's own createdAt
+/// onward, not any one battle's).
+List<GifterRank> topGiftersForSession({
+  required List<LivestreamComment> comments,
+  required int recipientId,
+  int limit = 10,
+}) {
+  final totals = <int, int>{};
+  for (final comment in comments) {
+    if (comment.commentType != LivestreamCommentType.gift) continue;
+    if (comment.receiverId != recipientId) continue;
+    final senderId = comment.senderId;
+    if (senderId == null) continue;
+    totals[senderId] = (totals[senderId] ?? 0) + (comment.coinValue ?? 0);
+  }
+  final ranked = totals.entries
+      .map((entry) => GifterRank(senderId: entry.key, points: entry.value))
+      .toList()
+    ..sort((a, b) => b.points.compareTo(a.points));
+  return ranked.take(limit).toList();
+}

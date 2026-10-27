@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
 import 'package:shortzz/screen/live_stream/live_stream_end_screen/widget/livestream_summary.dart';
 
@@ -8,13 +9,23 @@ class LiveStreamEndScreen extends StatelessWidget {
   final bool isHost;
   final int viewers;
   final List<LivestreamUserState> mostWatchedUsers;
+  final int peakViewers;
+  final int shareCount;
+  final List<(AppUser?, int)> topGifters;
+  final String? leagueDivision;
+  final int? leagueRank;
 
   const LiveStreamEndScreen(
       {super.key,
       required this.userState,
       required this.isHost,
       required this.viewers,
-      this.mostWatchedUsers = const []});
+      this.mostWatchedUsers = const [],
+      this.peakViewers = 0,
+      this.shareCount = 0,
+      this.topGifters = const [],
+      this.leagueDivision,
+      this.leagueRank});
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +40,11 @@ class LiveStreamEndScreen extends StatelessWidget {
           isHost: isHost,
           viewers: viewers,
           mostWatchedUsers: mostWatchedUsers,
+          peakViewers: peakViewers,
+          shareCount: shareCount,
+          topGifters: topGifters,
+          leagueDivision: leagueDivision,
+          leagueRank: leagueRank,
           onGoHomeTap: _goHome,
         ),
       ),

@@ -191,6 +191,10 @@ class Livestream {
   // of every cross-room match (see acceptPkMatch/acceptRematch).
   int? crossRoomLikePoints;
 
+  // Client spec 15.2: how many times this LIVE was shared (native share
+  // sheet or copy-invite), for the end-of-LIVE summary's "Shares" figure.
+  int? shareCount;
+
   // Speed Challenge: during minute 2-3 of a Co-Host PK battle, eligible
   // gifts contribute 3x their normal value to the PK score ONLY (never to
   // actual coin/earnings -- see speedChallengeMultiplierFor()). null/empty
@@ -273,6 +277,7 @@ class Livestream {
     this.pkLikePointsA,
     this.pkLikePointsB,
     this.crossRoomLikePoints,
+    this.shareCount,
     this.speedChallengeEligibleGiftIds,
     this.pinnedComment,
   });
@@ -368,6 +373,7 @@ class Livestream {
     pkLikePointsA = json['pk_like_points_a'];
     pkLikePointsB = json['pk_like_points_b'];
     crossRoomLikePoints = json['cross_room_like_points'];
+    shareCount = json['share_count'];
     speedChallengeEligibleGiftIds =
         (json['speed_challenge_eligible_gift_ids'] as List<dynamic>?)
             ?.map((e) => (e as num).toInt())
@@ -445,6 +451,7 @@ class Livestream {
     data['pk_like_points_a'] = pkLikePointsA;
     data['pk_like_points_b'] = pkLikePointsB;
     data['cross_room_like_points'] = crossRoomLikePoints;
+    data['share_count'] = shareCount;
     data['speed_challenge_eligible_gift_ids'] = speedChallengeEligibleGiftIds;
     data['pinned_comment'] = pinnedComment?.toJson();
     return data;

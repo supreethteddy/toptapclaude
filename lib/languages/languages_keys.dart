@@ -513,6 +513,9 @@ class LKey {
   static const String streamedFor = "Streamed For";
   static const String followersGained = "Followers Gained";
   static const String totalCoinsCollected = "Total Coins Collected";
+  static const String peakViewers = "Peak Viewers";
+  static const String shares = "Shares";
+  static const String topGifters = "Top Gifters";
   static const String goHome = "Go Home";
   static const String streamEnded = "Stream Ended!";
   static const String yourStreamEnded = "Your Stream Ended!";

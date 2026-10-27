@@ -9,8 +9,8 @@ import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
 import 'package:shortzz/common/widget/gradient_text.dart';
 import 'package:shortzz/languages/languages_keys.dart';
+import 'package:shortzz/model/livestream/app_user.dart';
 import 'package:shortzz/model/livestream/livestream_user_state.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_stream_background_blur_image.dart';
 import 'package:shortzz/utilities/color_res.dart';
 import 'package:shortzz/utilities/style_res.dart';
 import 'package:shortzz/utilities/text_style_custom.dart';
@@ -21,6 +21,12 @@ class LiveStreamSummary extends StatelessWidget {
   final int viewers;
   final bool isHost;
   final List<LivestreamUserState> mostWatchedUsers;
+  // Client spec Module 15.2 — host-only summary metrics.
+  final int peakViewers;
+  final int shareCount;
+  final List<(AppUser?, int)> topGifters;
+  final String? leagueDivision;
+  final int? leagueRank;
   final VoidCallback? onGoHomeTap;
 
   const LiveStreamSummary(
@@ -29,6 +35,11 @@ class LiveStreamSummary extends StatelessWidget {
       required this.isHost,
       required this.viewers,
       this.mostWatchedUsers = const [],
+      this.peakViewers = 0,
+      this.shareCount = 0,
+      this.topGifters = const [],
+      this.leagueDivision,
+      this.leagueRank,
       this.onGoHomeTap});
 
   @override
@@ -97,11 +108,21 @@ class LiveStreamSummary extends StatelessWidget {
                       title: LKey.viewers.tr,
                       value:
                           '${(viewers - 1).clamp(0, viewers)}'),
+                  if (isHost)
+                    BuildTextAndValueTiles(
+                      title: LKey.peakViewers.tr,
+                      value: '${(peakViewers - 1).clamp(0, peakViewers)}',
+                    ),
                   BuildTextAndValueTiles(
                     title: LKey.followersGained.tr,
                     value:
                         '${userState?.followersGained.length ?? 0}',
                   ),
+                  if (isHost)
+                    BuildTextAndValueTiles(
+                      title: LKey.shares.tr,
+                      value: '$shareCount',
+                    ),
                   BuildTextAndValueTiles(
                     title: LKey.totalCoinsCollected.tr,
                     value:
@@ -119,6 +140,15 @@ class LiveStreamSummary extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (isHost && leagueDivision != null)
+                    BuildTextAndValueTiles(
+                      title: LKey.league.tr,
+                      value: leagueRank != null
+                          ? '$leagueDivision · #$leagueRank'
+                          : '$leagueDivision',
+                    ),
+                  if (isHost && topGifters.isNotEmpty)
+                    SessionTopGiftersSection(topGifters: topGifters),
                   if (isHost && mostWatchedUsers.isNotEmpty)
                     MostWatchedSection(users: mostWatchedUsers),
                 ],
@@ -152,6 +182,71 @@ class LiveStreamSummary extends StatelessWidget {
           ),
         )
       ],
+    );
+  }
+}
+
+/// Client spec 15.2's "Top Gifters from the session" -- who gave the most
+/// (by real coin value) across the whole LIVE, not just the last PK round.
+/// See LivestreamScreenController._sessionTopGifters/topGiftersForSession.
+class SessionTopGiftersSection extends StatelessWidget {
+  final List<(AppUser?, int)> topGifters;
+
+  const SessionTopGiftersSection({super.key, required this.topGifters});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            child: Text(
+              LKey.topGifters.tr,
+              style: TextStyleCustom.outFitMedium500(
+                  color: ColorRes.green1, fontSize: 16),
+            ),
+          ),
+          for (final (index, entry) in topGifters.indexed)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 18, vertical: 6),
+              child: Row(
+                children: [
+                  Text(
+                    '${index + 1}',
+                    style: TextStyleCustom.outFitMedium500(
+                        color: ColorRes.green1, fontSize: 13),
+                  ),
+                  const SizedBox(width: 10),
+                  CustomImage(
+                    size: const Size(36, 36),
+                    image: entry.$1?.profile?.addBaseURL(),
+                    fullName: entry.$1?.fullname,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FullNameWithBlueTick(
+                      username: entry.$1?.username,
+                      fontColor: ColorRes.green1,
+                      isVerify: entry.$1?.isVerify,
+                      fontSize: 13,
+                      iconSize: 16,
+                    ),
+                  ),
+                  Text(
+                    '${entry.$2}',
+                    style: TextStyleCustom.outFitMedium500(
+                        color: ColorRes.green1, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
