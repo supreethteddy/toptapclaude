@@ -34,7 +34,7 @@ class PostOptionsSheet extends StatelessWidget {
                 borderRadius:
                     const SmoothBorderRadius.vertical(
                         top: SmoothRadius(
-                            cornerRadius: 40,
+                            cornerRadius: 56,
                             cornerSmoothing: 1)),
               )),
           child: SafeArea(
