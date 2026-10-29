@@ -56,6 +56,20 @@ class _SessionExpiredScreenState extends State<SessionExpiredScreen> {
                           final description =
                               widget.type.description(value: helpMail).tr;
 
+                          // Only SessionType.freeze's message template
+                          // actually contains a {support_mail} placeholder --
+                          // sessionExpiredMessage (SessionType.unauthorized)
+                          // has none, so splicing in a tappable helpMail span
+                          // unconditionally here used to append it to every
+                          // session-expired message regardless, with no
+                          // separator.
+                          if (helpMail.isEmpty ||
+                              !description.contains(helpMail)) {
+                            return Text(description,
+                                style: TextStyleCustom.outFitRegular400(
+                                    color: bgGrey(context), fontSize: 17));
+                          }
+
                           final parts = description.split(helpMail);
 
                           return RichText(
@@ -73,8 +87,7 @@ class _SessionExpiredScreenState extends State<SessionExpiredScreen> {
                                       },
                                     style: TextStyleCustom.outFitBold700(
                                         color: bgGrey(context), fontSize: 17)),
-                                if (parts.length > 1)
-                                  TextSpan(text: parts.last),
+                                TextSpan(text: parts.last),
                               ],
                             ),
                           );

@@ -116,6 +116,22 @@ class UserService {
     return userModel.data;
   }
 
+  // Mints a fresh Firebase custom token for the already-logged-in session
+  // and returns it (or null on any failure). Call this on cold start before
+  // fetchUserDetails -- session restore never otherwise touches Firebase
+  // Auth at all, unlike the one-time interactive login flow, which left an
+  // already-logged-in user permanently unauthenticated to Firestore once
+  // security rules started requiring request.auth != null.
+  Future<String?> refreshFirebaseSession() async {
+    final response = await ApiService.instance
+        .call<Map<String, dynamic>>(url: WebService.user.refreshFirebaseSession);
+    if (response['status'] == true) {
+      final token = response['data'];
+      return token is String && token.isNotEmpty ? token : null;
+    }
+    return null;
+  }
+
   Future<User?> updateUserDetails(
       {XFile? profilePhoto,
       String? fullname,

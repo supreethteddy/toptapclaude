@@ -55,6 +55,8 @@ class _User {
   String logOutUser = "${apiURL}user/logOutUser";
   String fetchUserDetails =
       "${apiURL}user/fetchUserDetails";
+  String refreshFirebaseSession =
+      "${apiURL}user/refreshFirebaseSession";
   String updateUserDetails =
       "${apiURL}user/updateUserDetails";
   String checkUsernameAvailability =

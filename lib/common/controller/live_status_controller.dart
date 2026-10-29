@@ -32,6 +32,8 @@ class LiveStatusController extends GetxController {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _listener;
   Timer? _pruneTimer;
+  Timer? _retryTimer;
+  int _retryDelaySeconds = 2;
   final Set<int> _cleaningUp = {};
   final Map<int, int> _firstSeenStaleAt = {};
 
@@ -51,6 +53,7 @@ class LiveStatusController extends GetxController {
   void onClose() {
     _listener?.cancel();
     _pruneTimer?.cancel();
+    _retryTimer?.cancel();
     super.onClose();
   }
 
@@ -60,6 +63,10 @@ class LiveStatusController extends GetxController {
         .collection(FirebaseConst.liveStreams)
         .snapshots()
         .listen((snapshot) {
+      // A prior error (e.g. permission-denied while Firebase Auth was still
+      // being established right after cold start -- see
+      // SplashScreenController) has now cleared; stop backing off.
+      _retryDelaySeconds = 2;
       for (final change in snapshot.docChanges) {
         final data = change.doc.data();
         if (data == null) continue;
@@ -74,7 +81,20 @@ class LiveStatusController extends GetxController {
         }
       }
       _publish();
-    }, onError: (e) => Loggers.error('LiveStatus listen error: $e'));
+    }, onError: (e) {
+      // A PERMISSION_DENIED (or any other) error terminates this
+      // subscription for good in the Firestore client -- it never
+      // resubscribes on its own, even once the underlying cause (e.g. no
+      // Firebase Auth session yet) resolves moments later. Without an
+      // explicit retry here, liveByHost stays empty for the rest of the
+      // app's lifetime and every LIVE-status UI (rings, Discovery Feed,
+      // search) silently breaks. Backs off up to 30s so a persistent error
+      // doesn't spin.
+      Loggers.error('LiveStatus listen error: $e, retrying in ${_retryDelaySeconds}s');
+      _retryTimer?.cancel();
+      _retryTimer = Timer(Duration(seconds: _retryDelaySeconds), _listen);
+      _retryDelaySeconds = (_retryDelaySeconds * 2).clamp(2, 30);
+    });
   }
 
   void _publish() {

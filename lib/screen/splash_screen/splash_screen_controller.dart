@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:csv/csv.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:shortzz/common/controller/base_controller.dart';
@@ -162,6 +163,29 @@ class SplashScreenController extends BaseController {
       // 🔒 Navigate BEFORE restart to ensure proper flow
       // RestartWidget will reinitialize GetX with new translations
       if (SessionManager.instance.isLogin()) {
+        // Cold-start session restore never otherwise touches Firebase Auth
+        // -- only the one-time interactive login flow
+        // (AuthScreenController._registration) does. An already-logged-in
+        // user whose Firebase session had expired or was never established
+        // would silently fail every Firestore read once security rules
+        // started requiring request.auth != null, breaking LIVE status
+        // app-wide (LiveStatusController's listener) with no visible error.
+        // Best-effort and non-blocking, same reasoning as the login flow.
+        try {
+          final firebaseCustomToken =
+              await UserService.instance.refreshFirebaseSession();
+          if (firebaseCustomToken != null) {
+            await FirebaseAuth.instance
+                .signInWithCustomToken(firebaseCustomToken);
+          } else {
+            Loggers.warning(
+                '⚠️ [SPLASH] No firebase_custom_token from refreshFirebaseSession.');
+          }
+        } catch (e) {
+          Loggers.warning(
+              '⚠️ [SPLASH] Firebase session refresh failed: $e');
+        }
+
         UserService.instance
             .fetchUserDetails(
                 userId: SessionManager.instance.getUserID())
