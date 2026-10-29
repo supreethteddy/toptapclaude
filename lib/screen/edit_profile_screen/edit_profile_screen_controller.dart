@@ -9,7 +9,6 @@ import 'package:shortzz/common/controller/base_controller.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
 import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/utils/profile_completion_helper.dart';
 import 'package:shortzz/common/widget/confirmation_dialog.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/general/settings_model.dart';
@@ -199,45 +198,42 @@ class EditProfileScreenController extends BaseController {
     if (fullNameController.text.trim().isEmpty) {
       return showSnackBar(LKey.fullNameEmpty.tr);
     }
-    if (usernameController.text.trim().isEmpty) {
-      return showSnackBar(LKey.usernameEmpty.tr);
-    }
-    if (!isValidUserName.value) {
+    // Nickname/username is optional at sign-up (client spec: settable now
+    // or later) -- only validate format/availability when the user
+    // actually chose one. An empty field here means "keep the
+    // backend-assigned default username", never "blank it out" -- see the
+    // userName: null guard below, since the backend unconditionally
+    // overwrites on any non-null value, even an empty string.
+    if (usernameController.text.trim().isNotEmpty &&
+        !isValidUserName.value) {
       return showSnackBar(LKey.validUsernameEmpty.tr);
     }
-    if (isProfileCompletionRequired) {
-      final profilePhoto = fileProfileImage.value?.path ??
-          (userData.value?.profilePhoto?.trim() ?? '');
-      if (bioController.text.trim().isEmpty) {
-        return showSnackBar('Please enter your bio.');
-      }
-      if (emailController.text.trim().isEmpty) {
-        return showSnackBar(LKey.enterEmail.tr);
-      }
-      if (!GetUtils.isEmail(emailController.text.trim())) {
-        return showSnackBar(LKey.invalidEmail.tr);
-      }
-      if (phoneNumberController.text.trim().isEmpty) {
-        return showSnackBar('Please enter your phone number.');
-      }
-      if (profilePhoto.isEmpty) {
-        return showSnackBar('Please select a profile image.');
-      }
-    }
+    // Bio, email, phone number and profile picture are all optional at
+    // sign-up too (client spec) -- only full name blocks initial
+    // registration; everything else is completable later from here.
 
     showLoader();
 
     User? updatedUser =
         await UserService.instance.updateUserDetails(
       fullname: fullNameController.text.trim(),
-      userName: usernameController.text.trim(),
+      userName: usernameController.text.trim().isEmpty
+          ? null
+          : usernameController.text.trim(),
       bio: bioController.text.trim(),
       email: emailController.text.trim(),
       profilePhoto: fileProfileImage.value,
       phoneNumber: phoneNumberController.text.trim(),
-      mobileCountryCode: int.parse(phoneController
-          .selectedCode.value!.phoneCode
-          .replaceAll('+', '')),
+      // selectedCode can still be null here now that phone number is no
+      // longer a required field reached only after its async country-code
+      // lookup settles -- guard the crash, same as country/countryCode
+      // below already do.
+      mobileCountryCode:
+          phoneController.selectedCode.value != null
+              ? int.parse(phoneController
+                  .selectedCode.value!.phoneCode
+                  .replaceAll('+', ''))
+              : null,
       country:
           phoneController.selectedCode.value?.countryName,
       countryCode:
@@ -271,16 +267,13 @@ class EditProfileScreenController extends BaseController {
       }
     }
 
-    if (isProfileCompletionRequired) {
-      final missingFields =
-          ProfileCompletionHelper.missingFields(updatedUser);
-      if (missingFields.isNotEmpty) {
-        return showSnackBar(
-            'Please complete all profile fields: ${missingFields.join(', ')}.');
-      }
-      return;
+    // isProfileCompletionRequired's caller navigates away itself via
+    // onUpdateUser (now always satisfied once full name is set, see
+    // ProfileCompletionHelper) -- this screen was reached via Get.offAll,
+    // so there's nothing behind it to pop back to.
+    if (!isProfileCompletionRequired) {
+      Get.back();
     }
-    Get.back();
   }
 
   // void onSaveTap() async {
