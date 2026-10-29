@@ -305,9 +305,17 @@ class DashboardScreen extends StatelessWidget {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
+                              // Transparent: PostOptionsSheet draws its own
+                              // rounded-corner background via
+                              // ShapeDecoration/SmoothRectangleBorder. An
+                              // opaque color here paints the modal route's
+                              // own square Material surface behind it, which
+                              // shows through as a flat white corner outside
+                              // the rounded curve -- same color as the sheet
+                              // itself, so easy to miss in a light-mode
+                              // screenshot, but it was there.
                               backgroundColor:
-                                  adaptiveBackground(
-                                      context),
+                                  Colors.transparent,
                               builder: (context) =>
                                   PostOptionsSheet(
                                       controller:
