@@ -69,21 +69,16 @@ class AppRes {
   /// Co-Host PK Battle: always a single flat round, this many minutes.
   static const int coHostBattleDurationInMinutes = 5;
 
-  /// Speed Challenge: during this window of a Co-Host PK battle (seconds
-  /// elapsed since it started), eligible gifts contribute
-  /// [speedChallengeMultiplier]x their normal value to the PK score ONLY --
-  /// never to actual coin/earnings. Client spec: minute 2 to minute 3.
-  static const int speedChallengeWindowStartSecond = 120;
-  static const int speedChallengeWindowEndSecond = 180;
-  static const int speedChallengeMultiplier = 3;
-
-  /// Co-Host PK Battle: however many times viewers double-tap to like a
-  /// side during one match, that side's tap-tap contribution to the PK
-  /// score caps here for the whole match (client spec, Module 8.1) --
-  /// the raw tap count itself (pkLikePointsA/B, crossRoomLikePoints) is
-  /// still incremented without limit, only the SCORE this feeds is capped
-  /// (see pkTeamScore).
-  static const int tapTapMaxPkPointsPerMatch = 3;
+  /// Final Tap-Tap & PK Match Scoring Algorithm (client spec, 2026-10-30):
+  /// each unique viewer's FIRST tap on a side during an active PK Match
+  /// credits that side this many PK points, once only, ever, for that
+  /// match -- never capped per-side, since further unique viewers each add
+  /// their own contribution (see onLikeButtonTap's pk_tap_contributors
+  /// dedup doc and pkTeamScore). Replaces the old flat 3-point-per-side-
+  /// total cap this same constant used to enforce. The Total Tap Counter
+  /// (Livestream.likeCount) is a completely separate, always-uncapped
+  /// counter -- see onLikeButtonTap.
+  static const int pkTapPointsPerContribution = 3;
 
   /// Client spec 9.4: how long the FULL post-match results (scores,
   /// winner/loser, emojis, gifting stats, gift-sender lists) stay visible

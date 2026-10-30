@@ -21,9 +21,12 @@ class LivestreamComment {
   // than assumed so a future multi-send feature doesn't have to guess old
   // events meant 1. coinValue is a snapshot of the gift's real coin price
   // at send time (gift catalogue prices can change later). pkPoints is the
-  // battle-tier score value (see battlePointsForGift) -- null for a
-  // non-battle gift, and deliberately NOT the same number as coinValue
-  // (see _handleGiftSent's own comment on why those differ). isGuestGift
+  // PK Match score this gift contributed -- null for a non-battle gift,
+  // strictly 1:1 with the gift's real coin value (Final Tap-Tap & PK
+  // Match Scoring Algorithm, client spec 2026-10-30), except it
+  // deliberately ignores any first-gift-bonus multiplier baked into
+  // coinValue (see _handleGiftSent's own comment on why those two can
+  // differ). isGuestGift
   // mirrors the backend's own WalletController::sendGift flag: true when
   // this was sent via the guest-specific recipient path rather than
   // straight to the room's host. transactionId/transactionNumber link back

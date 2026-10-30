@@ -72,8 +72,6 @@ class BattleContributorsSheet extends StatelessWidget {
                 teamMemberIds: teamMemberIds,
                 battleCreatedAt: stream.battleCreatedAt,
                 eligibleGiftIds: stream.pkEligibleGiftIds,
-                speedChallengeEligibleGiftIds:
-                    stream.speedChallengeEligibleGiftIds,
                 limit: 10,
               );
               return NoDataView(

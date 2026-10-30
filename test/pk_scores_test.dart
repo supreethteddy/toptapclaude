@@ -8,8 +8,7 @@ void main() {
       final a = pkTeamScore(
         memberIds: [1, 3],
         battleCoinByUser: {1: 40, 2: 100, 3: 10, 4: 5},
-        likeEvents: 7,
-        pointsPerLike: 2,
+        likePoints: 14,
       );
       expect(a.giftPoints, 50);
       expect(a.likePoints, 14);
@@ -25,10 +24,22 @@ void main() {
       expect(s.giftPoints, 10);
     });
 
-    test('members with no counter yet score zero, likes default to 1 point', () {
-      final s = pkTeamScore(memberIds: [9], battleCoinByUser: {}, likeEvents: 3);
+    test('members with no counter yet score zero, like points pass through',
+        () {
+      final s =
+          pkTeamScore(memberIds: [9], battleCoinByUser: {}, likePoints: 3);
       expect(s.giftPoints, 0);
       expect(s.likePoints, 3);
+    });
+
+    test('like points are never capped, unlike the old per-match ceiling',
+        () {
+      // Final Tap-Tap & PK Match Scoring Algorithm (client spec,
+      // 2026-10-30): many unique viewers each contributing their own
+      // one-time 3 points must be able to add up past the old flat-3 cap.
+      final s = pkTeamScore(
+          memberIds: [9], battleCoinByUser: {}, likePoints: 30103);
+      expect(s.likePoints, 30103);
     });
   });
 

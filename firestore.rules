@@ -117,6 +117,22 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Final Tap-Tap & PK Match Scoring Algorithm (client spec, 2026-10-30):
+    // one doc per (battle, viewer), id "{battleCreatedAt}_{userId}" --
+    // create-once is the WHOLE enforcement mechanism for "each viewer may
+    // contribute their one-time 3 PK Tap Points to only one side, ever,
+    // for this match, no matter how many times they tap, reconnect,
+    // refresh, or switch between the two battling LIVE screens" (see
+    // LivestreamScreenController.onLikeButtonTap). update/delete: if false
+    // means a second write to the same doc id is rejected outright by
+    // Firestore itself before it ever reaches app logic — not just
+    // discouraged by the client's own best-effort check.
+    match /pk_tap_contributors/{contributorId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
     // Everything else: authentication required, same as above, but not
     // yet further restricted per-field — see the file-level comment.
     match /{document=**} {

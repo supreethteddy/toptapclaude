@@ -704,14 +704,12 @@ class TopGiftersRow extends StatelessWidget {
         teamMemberIds: teamAIds,
         battleCreatedAt: stream.battleCreatedAt,
         eligibleGiftIds: stream.pkEligibleGiftIds,
-        speedChallengeEligibleGiftIds: stream.speedChallengeEligibleGiftIds,
       );
       final teamBRanks = topGiftersForTeam(
         comments: comments,
         teamMemberIds: teamBIds,
         battleCreatedAt: stream.battleCreatedAt,
         eligibleGiftIds: stream.pkEligibleGiftIds,
-        speedChallengeEligibleGiftIds: stream.speedChallengeEligibleGiftIds,
       );
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

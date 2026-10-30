@@ -25,6 +25,13 @@ class FirebaseConst {
   // LiveStream
   static const String liveStreams = 'livestreams';
   static const String battleHistory = 'battle_history';
+  // Final Tap-Tap & PK Match Scoring Algorithm (client spec, 2026-10-30):
+  // one doc per (battle, viewer) -- doc id "{battleCreatedAt}_{userId}" --
+  // created exactly once to claim that viewer's one-time PK Tap Points
+  // contribution for that match. Firestore rules allow create but never
+  // update/delete on this collection, so a second attempt is rejected
+  // server-side regardless of reconnects, refreshes or a modified client.
+  static const String pkTapContributors = 'pk_tap_contributors';
   static const String comments = 'comments';
   static const String userState = 'user_state';
   static const String type = 'type';
@@ -130,8 +137,6 @@ class FirebaseConst {
   static const String teammateInviteSentAt = 'teammate_invite_sent_at';
   static const String teammateInviteDeclinedFor =
       'teammate_invite_declined_for';
-  static const String speedChallengeEligibleGiftIds =
-      'speed_challenge_eligible_gift_ids';
 
   // PK Battle rounds: how many rounds each side has won across the current
   // multi-round match (cleared only when the whole match ends, not between

@@ -1,4 +1,3 @@
-import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
 import 'package:shortzz/model/livestream/livestream_comment.dart';
 import 'package:shortzz/model/livestream/pk_eligibility.dart';
 
@@ -25,12 +24,6 @@ List<GifterRank> topGiftersForTeam({
   required List<int> teamMemberIds,
   required int? battleCreatedAt,
   List<int>? eligibleGiftIds,
-  // Speed Challenge (see speedChallengeMultiplierFor): recomputing from
-  // raw comment history has to apply the same 3x window multiplier the
-  // live write side already baked into currentBattleCoin
-  // (LivestreamScreenController._handleGiftSent), or this ranked list
-  // would silently disagree with the team score bar it sits next to.
-  List<int>? speedChallengeEligibleGiftIds,
   int limit = 3,
 }) {
   if (battleCreatedAt == null || teamMemberIds.isEmpty) return const [];
@@ -43,15 +36,11 @@ List<GifterRank> topGiftersForTeam({
     final senderId = comment.senderId;
     if (senderId == null) continue;
     if (!giftCountsForPk(comment.giftId, eligibleGiftIds)) continue;
-    final points = battlePointsForGift(comment.giftId,
-        fallbackCoins: comment.gift?.coinPrice ?? 0);
-    final multiplier = speedChallengeMultiplierFor(
-      giftId: comment.giftId,
-      atMillisecondsSinceEpoch: comment.id ?? 0,
-      battleCreatedAt: battleCreatedAt,
-      eligibleGiftIds: speedChallengeEligibleGiftIds,
-    );
-    totals[senderId] = (totals[senderId] ?? 0) + points * multiplier;
+    // Final Tap-Tap & PK Match Scoring Algorithm (client spec,
+    // 2026-10-30): strict 1:1 of the gift's real coin value -- no tier
+    // mapping, no Speed Challenge window multiplier, both removed.
+    final points = comment.gift?.coinPrice ?? 0;
+    totals[senderId] = (totals[senderId] ?? 0) + points;
   }
   final ranked = totals.entries
       .map((entry) => GifterRank(senderId: entry.key, points: entry.value))
@@ -64,10 +53,9 @@ List<GifterRank> topGiftersForTeam({
 /// client spec 15.2's "Top Gifters" for the end-of-LIVE summary, as
 /// distinct from [topGiftersForTeam]'s current-match-only ranking. Sums real
 /// gift COIN VALUE, not PK points: there's no PK match context here (the
-/// session may never have had one, or may have had several), so neither
-/// battlePointsForGift's tier mapping nor the Speed Challenge window
-/// multiplier apply -- only what the recipient actually received matters
-/// for a financial summary. [comments] is expected to be the session's own
+/// session may never have had one, or may have had several) -- only what
+/// the recipient actually received matters for a financial summary.
+/// [comments] is expected to be the session's own
 /// full comment history (already scoped to this LIVE's own createdAt
 /// onward, not any one battle's).
 List<GifterRank> topGiftersForSession({

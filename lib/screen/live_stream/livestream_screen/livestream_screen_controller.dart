@@ -17,7 +17,6 @@ import 'package:shortzz/common/manager/haptic_manager.dart';
 import 'package:shortzz/common/manager/live_invite_watcher.dart';
 import 'package:shortzz/common/manager/logger.dart';
 import 'package:shortzz/common/utilities/beautify_controls_mixin.dart';
-import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
 import 'package:shortzz/config/gifts/premium_gift_animations.dart';
 import 'package:shortzz/model/livestream/battle_result.dart';
 import 'package:shortzz/common/manager/session_manager.dart';
@@ -472,8 +471,7 @@ class LivestreamScreenController extends BaseController
       memberIds: members,
       battleCoinByUser: _currentBattleCoinByUser,
       baselineByUser: {for (final id in members) id: roundBaselineRed.value},
-      likeEvents: liveData.value.pkLikePointsA ?? 0,
-      pointsPerLike: setting?.pkLikePoints ?? 1,
+      likePoints: liveData.value.pkLikePointsA ?? 0,
     );
   }
 
@@ -483,8 +481,7 @@ class LivestreamScreenController extends BaseController
       memberIds: members,
       battleCoinByUser: _currentBattleCoinByUser,
       baselineByUser: {for (final id in members) id: roundBaselineBlue.value},
-      likeEvents: liveData.value.pkLikePointsB ?? 0,
-      pointsPerLike: setting?.pkLikePoints ?? 1,
+      likePoints: liveData.value.pkLikePointsB ?? 0,
     );
   }
 
@@ -2349,31 +2346,66 @@ class LivestreamScreenController extends BaseController
     onLikeTap?.call(tapPosition);
     _lastAnimatedLikeCount++;
     bool isExist = (await liveStreamDocRef.get()).exists;
-    if (isExist) {
-      final stream = liveData.value;
-      final updates = <String, dynamic>{
-        FirebaseConst.likeCount: FieldValue.increment(1),
-      };
-      final isCrossRoomBattling =
-          stream.opponentRoomId != null && stream.type == LivestreamType.battle;
-      if (isLeftHalf != null &&
-          stream.battleType == BattleType.waiting &&
-          stream.pkTeamAIds != null) {
-        updates[isLeftHalf
-            ? FirebaseConst.pkLikePointsA
-            : FirebaseConst.pkLikePointsB] = FieldValue.increment(1);
-      } else if (isLeftHalf != null && isCrossRoomBattling) {
-        if (isLeftHalf) {
-          updates[FirebaseConst.crossRoomLikePoints] = FieldValue.increment(1);
-        } else {
-          unawaited(_roomDocRef(stream.opponentRoomId!).update({
-            FirebaseConst.crossRoomLikePoints: FieldValue.increment(1),
-          }));
-        }
-      }
-      liveStreamDocRef.update(updates);
+    if (!isExist) return;
 
-      // Like goals read directly from the atomically incremented like count.
+    final stream = liveData.value;
+    // Total Tap Counter (Final Tap-Tap & PK Match Scoring Algorithm, client
+    // spec 2026-10-30): every single tap counts here, unconditionally, in
+    // every LIVE session type -- Solo, Guest, or an active PK Match --
+    // completely separate from the PK Tap Points gated below. No maximum,
+    // ever, and never delayed behind the PK-points round-trip below.
+    liveStreamDocRef.update({FirebaseConst.likeCount: FieldValue.increment(1)});
+    // Like goals read directly from the atomically incremented like count.
+
+    final isCrossRoomBattling =
+        stream.opponentRoomId != null && stream.type == LivestreamType.battle;
+    final isSameRoomBattleActive =
+        stream.battleType == BattleType.waiting && stream.pkTeamAIds != null;
+    if (isLeftHalf == null || !(isSameRoomBattleActive || isCrossRoomBattling)) {
+      return;
+    }
+    final battleCreatedAt = stream.battleCreatedAt;
+    if (battleCreatedAt == null) return;
+
+    // PK Tap Points: each unique viewer's FIRST qualifying tap this battle
+    // credits their chosen side AppRes.pkTapPointsPerContribution points,
+    // once ever for the whole match -- a later tap, even one on the other
+    // side, earns nothing further. Server-enforced: this doc can only ever
+    // be created once per (battle, viewer) -- firestore.rules allows
+    // create but never update/delete on this collection -- so a repeat
+    // tap, an app restart, a reconnect, or switching between the two
+    // battling LIVE screens all just fail to create it again here, with no
+    // way for the client to force a second credit.
+    final contributorRef = db
+        .collection(FirebaseConst.pkTapContributors)
+        .doc('${battleCreatedAt}_$myUserId');
+    try {
+      await contributorRef.set({
+        'side': isLeftHalf ? 'A' : 'B',
+        'tapped_at': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Already contributed to this battle, on whichever side claimed it
+      // first -- correctly no further PK points.
+      return;
+    }
+
+    final pkPoints = AppRes.pkTapPointsPerContribution;
+    if (isSameRoomBattleActive) {
+      liveStreamDocRef.update({
+        (isLeftHalf ? FirebaseConst.pkLikePointsA : FirebaseConst.pkLikePointsB):
+            FieldValue.increment(pkPoints),
+      });
+    } else {
+      if (isLeftHalf) {
+        liveStreamDocRef.update({
+          FirebaseConst.crossRoomLikePoints: FieldValue.increment(pkPoints),
+        });
+      } else {
+        unawaited(_roomDocRef(stream.opponentRoomId!).update({
+          FirebaseConst.crossRoomLikePoints: FieldValue.increment(pkPoints),
+        }));
+      }
     }
   }
 
@@ -2454,20 +2486,25 @@ class LivestreamScreenController extends BaseController
     Gift gift = giftManager.gift;
     AppUser? user = giftManager.streamUser;
 
-    int coinPrice = gift.coinPrice?.toInt() ?? 0;
+    final realCoinPrice = gift.coinPrice?.toInt() ?? 0;
+    int coinPrice = realCoinPrice;
     if (type == GiftType.battle) {
       coinPrice = await _claimFirstGiftBonusIfEligible(coinPrice);
     }
-    // Battle score and real coin value are deliberately different numbers:
-    // battleGiftTiers lets specific gifts (Rose/Heart/Coffee/Galaxy) be
-    // worth a fixed, configured point value in a PK Battle (e.g. Galaxy =
-    // 1000) independent of what they actually cost in coins. Everything
-    // else (liveCoin, the ranking/league controllers below) still uses the
-    // real coinPrice, including the first-gift bonus applied above — only
-    // the live match SCORE (currentBattleCoin) reads battlePoints. A gift
-    // with no tier mapping falls back to coinPrice 1:1, so this is a no-op
-    // for every gift not explicitly configured.
-    final battlePoints = battlePointsForGift(gift.id, fallbackCoins: coinPrice);
+    // Final Tap-Tap & PK Match Scoring Algorithm (client spec, 2026-10-30):
+    // every eligible gift's PK Score contribution is a strict 1:1 of its
+    // real Coin Value -- "no additional conversion rate, multiplier, or
+    // reduction." Deliberately reads realCoinPrice, NOT the first-gift-
+    // bonus-adjusted coinPrice above: that bonus still pays out real
+    // tripled coins (coinValue/battleCoin below are unaffected by this),
+    // it just must never also inflate the PK score beyond the gift's own
+    // real value. Replaces the old battleGiftTiers config-tiered point
+    // mapping and the Speed Challenge 3x window, both removed -- gifts no
+    // longer have a battle-specific point value independent of their real
+    // price. topGiftersForTeam mirrors this exactly when recomputing from
+    // comment history, so the live score and the gifter-rank list never
+    // disagree.
+    final battlePoints = realCoinPrice;
     // A PK Match can restrict scoring to specific gifts (pkEligibleGiftIds,
     // set from the match setup sheet); null/empty means every gift counts,
     // same as every battle before this existed. The gift itself still sends
@@ -2475,20 +2512,6 @@ class LivestreamScreenController extends BaseController
     // battle score is skipped.
     final countsForPk =
         giftCountsForPk(gift.id, liveData.value.pkEligibleGiftIds);
-    // Speed Challenge (client spec, Module 5.4): 3x PK points only, for an
-    // eligible gift landing in minute 2-3 of the match -- never the real
-    // coinPrice above. topGiftersForTeam applies this same multiplier when
-    // recomputing from comment history, so the live score and the gifter-
-    // rank list stay consistent with each other.
-    final speedMultiplier = type == GiftType.battle && countsForPk
-        ? speedChallengeMultiplierFor(
-            giftId: gift.id,
-            atMillisecondsSinceEpoch: DateTime.now().millisecondsSinceEpoch,
-            battleCreatedAt: liveData.value.battleCreatedAt,
-            eligibleGiftIds: liveData.value.speedChallengeEligibleGiftIds,
-          )
-        : 1;
-    final finalBattlePoints = battlePoints * speedMultiplier;
 
     _sendCommentToFirestore(
       type: LivestreamCommentType.gift,
@@ -2496,7 +2519,7 @@ class LivestreamScreenController extends BaseController
       receiverId: user?.userId,
       quantity: 1,
       coinValue: coinPrice,
-      pkPoints: type == GiftType.battle ? finalBattlePoints : null,
+      pkPoints: type == GiftType.battle ? battlePoints : null,
       isGuestGift: giftManager.isGuestGift,
       transactionId: giftManager.transactionId,
       transactionNumber: giftManager.transactionNumber,
@@ -2506,16 +2529,13 @@ class LivestreamScreenController extends BaseController
       // Real coin value, NOT battlePoints -- totalBattleCoin feeds
       // totalCoin, which the end-of-LIVE summary ("Total Coins Collected")
       // and the in-battle running gift-total counter both read as if it
-      // were real coins. It previously stored battlePoints instead (a
-      // config-tiered score value, e.g. a 300-coin gift configured to
-      // score 1000 PK points), so a host's summary could show earnings
-      // that were never actually received. Unlike currentBattleCoin below,
-      // this isn't gated on countsForPk -- the coins were genuinely
-      // received regardless of whether this particular gift was eligible
-      // to count toward the match's PK score.
+      // were real coins. Unlike currentBattleCoin below, this isn't gated
+      // on countsForPk -- the coins were genuinely received regardless of
+      // whether this particular gift was eligible to count toward the
+      // match's PK score.
       battleCoin: type == GiftType.battle ? coinPrice : null,
       currentBattleCoin:
-          type == GiftType.battle && countsForPk ? finalBattlePoints : null,
+          type == GiftType.battle && countsForPk ? battlePoints : null,
       liveCoin: type == GiftType.livestream ? coinPrice : null,
     );
     // Daily/hourly/League ranking: moved server-side (2026-10-25, see
@@ -4889,14 +4909,12 @@ class LivestreamScreenController extends BaseController
         // (party_battle_view.dart's red/blue) -- mySideBattleCoins/
         // opponentSideBattleCoins alone omit tap-tap/like points entirely,
         // which could let the permanently-recorded winner disagree with
-        // what was on screen during the match. Capped the same way
-        // pkTeamScore/party_battle_view already cap it (client spec,
-        // Module 8.1) -- crossRoomLikePoints itself is uncapped, only this
-        // score contribution is. Each room's taps count only toward its OWN
-        // individual score, since crossRoomLikePoints is a per-room field.
-        final pointsPerLike = setting?.pkLikePoints ?? 1;
-        int likePointsFor(int? rawLikes) => ((rawLikes ?? 0) * pointsPerLike)
-            .clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
+        // what was on screen during the match. crossRoomLikePoints already
+        // IS the side's final PK Tap Points total (each unique viewer's
+        // one-time contribution credited at write time, see
+        // onLikeButtonTap) -- no further multiplier or cap applies, same
+        // as pkTeamScore/party_battle_view.
+        int likePointsFor(int? rawLikes) => rawLikes ?? 0;
         finalScores = {
           '$myHostId':
               mySideBattleCoins + likePointsFor(stream.crossRoomLikePoints),

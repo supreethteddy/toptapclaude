@@ -21,14 +21,18 @@ class PkTeamScore {
 /// [battleCoinByUser] is each participant's `current_battle_coin`;
 /// [baselineByUser] is what it was when the current round started (so a
 /// round starts from zero without resetting Firestore counters);
-/// [likeEvents] is this side's raw like tap count, worth [pointsPerLike]
-/// each (admin "PK points per like").
+/// [likePoints] is this side's already-accumulated PK Tap Points
+/// (pkLikePointsA/B or crossRoomLikePoints) -- the Final Tap-Tap & PK
+/// Match Scoring Algorithm (client spec, 2026-10-30) credits each unique
+/// viewer's first qualifying tap AppRes.pkTapPointsPerContribution points
+/// exactly once (see onLikeButtonTap), so this field already IS the
+/// side's points total: no further multiplier or per-side cap applies
+/// here, unlike the old flat-3-cap model this replaced.
 PkTeamScore pkTeamScore({
   required List<int> memberIds,
   required Map<int, int> battleCoinByUser,
   Map<int, int> baselineByUser = const {},
-  int likeEvents = 0,
-  int pointsPerLike = 1,
+  int likePoints = 0,
 }) {
   var gift = 0;
   for (final id in memberIds) {
@@ -36,15 +40,10 @@ PkTeamScore pkTeamScore({
     final base = baselineByUser[id] ?? 0;
     gift += (raw - base).clamp(0, 1 << 31);
   }
-  // Client spec (Module 8.1): no matter how many taps land, tap-tap can
-  // only ever contribute up to tapTapMaxPkPointsPerMatch to this side's PK
-  // score for the whole match -- likeEvents itself (pkLikePointsA/B,
-  // crossRoomLikePoints) is still incremented without limit on every tap
-  // (see onLikeButtonTap), only the score contribution computed here caps.
-  final rawLikes =
-      (likeEvents.clamp(0, 1 << 31)) * pointsPerLike.clamp(0, 1 << 20);
-  final likes = rawLikes.clamp(0, AppRes.tapTapMaxPkPointsPerMatch);
-  return PkTeamScore(memberIds: memberIds, giftPoints: gift, likePoints: likes);
+  return PkTeamScore(
+      memberIds: memberIds,
+      giftPoints: gift,
+      likePoints: likePoints.clamp(0, 1 << 31));
 }
 
 /// Shared outcome rule (ties are a draw, never a win for either side).

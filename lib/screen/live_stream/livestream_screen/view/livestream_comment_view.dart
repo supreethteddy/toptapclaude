@@ -6,7 +6,6 @@ import 'package:shortzz/common/extensions/string_extension.dart';
 import 'package:shortzz/common/manager/haptic_manager.dart';
 import 'package:shortzz/common/widget/custom_image.dart';
 import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
-import 'package:shortzz/config/gifts/battle_gift_tiers.dart';
 import 'package:shortzz/languages/languages_keys.dart';
 import 'package:shortzz/model/livestream/livestream.dart';
 import 'package:shortzz/model/livestream/livestream_comment.dart';
@@ -200,8 +199,9 @@ class LiveStreamCommentView extends StatelessWidget {
           // read as a bug, not as "this one didn't count".
           final countsForPk =
               giftCountsForPk(comment.gift?.id, stream.pkEligibleGiftIds);
-          final battlePoints = battlePointsForGift(comment.gift?.id,
-              fallbackCoins: comment.gift?.coinPrice ?? 0);
+          // Final Tap-Tap & PK Match Scoring Algorithm (client spec,
+          // 2026-10-30): strict 1:1 of the gift's real coin value.
+          final battlePoints = comment.gift?.coinPrice ?? 0;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 3,
