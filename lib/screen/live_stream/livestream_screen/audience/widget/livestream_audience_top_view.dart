@@ -202,18 +202,6 @@ class _BuildCenterView extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        stream.description ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyleCustom.outFitRegular400(
-                          color: Colors.white70,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -311,14 +299,8 @@ class _BuildCenterView extends StatelessWidget {
 
 /// Every dark-pill chip below the host info row (Figma "Live1"), all on one
 /// horizontally-scrollable row -- same shape as [LiveStreamHostTopView]'s
-/// own row 2. Reuses the same [LiveRankChip]/[HourlyRankChip]/[LeagueBadge]/
-/// [MyEarningsBadge] widgets the host toolbar already uses, so tapping any
-/// of them opens the matching sheet. The goal/gift-goal/poll/fan-club pills
-/// used to be their own separate rows stacked above everything else (and
-/// the live-goal one used its own large non-compact banner style instead of
-/// this row's pill shape) -- folded in here now so the whole header reads
-/// as the reference's compact two-row shape instead of up to seven stacked
-/// rows.
+/// own row 2. Daily/hourly rank, league and earnings chips were removed per
+/// client request (2026-10-30), matching the host toolbar.
 class _BuildChipsRow extends StatelessWidget {
   final LivestreamScreenController controller;
 
@@ -331,14 +313,6 @@ class _BuildChipsRow extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          LiveRankChip(controller: controller),
-          const SizedBox(width: 6),
-          HourlyRankChip(controller: controller),
-          const SizedBox(width: 6),
-          LeagueBadge(controller: controller),
-          const SizedBox(width: 6),
-          const MyEarningsBadge(),
-          const SizedBox(width: 6),
           LiveGoalProgressWidget(controller: controller, compact: true),
           const SizedBox(width: 6),
           PinnedGiftGoalChip(controller: controller),
