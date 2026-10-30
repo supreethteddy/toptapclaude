@@ -5201,44 +5201,6 @@ class LivestreamScreenController extends BaseController
     }
   }
 
-  Future<void> showEditLiveTitleDialog() async {
-    if (!isHost) return;
-    final titleController = TextEditingController(
-      text: liveData.value.description ?? '',
-    );
-
-    await Get.dialog<void>(
-      AlertDialog(
-        title: const Text('Edit LIVE title'),
-        content: TextField(
-          controller: titleController,
-          autofocus: true,
-          maxLength: 100,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            hintText: 'What is your LIVE about?',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: Get.back, child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              final title = titleController.text.trim();
-              if (title.isEmpty) {
-                showSnackBar('LIVE title cannot be empty.');
-                return;
-              }
-              await updateLiveStreamData(description: title);
-              if (Get.isDialogOpen ?? false) Get.back();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    titleController.dispose();
-  }
-
   Future<void> showAboutMeDialog() async {
     if (!isHost) return;
 

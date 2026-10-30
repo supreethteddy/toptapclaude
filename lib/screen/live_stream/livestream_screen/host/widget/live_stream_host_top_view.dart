@@ -164,10 +164,10 @@ class _LiveStreamHostTopViewState extends State<LiveStreamHostTopView> {
                   ),
                   const SizedBox(height: 4),
 
-                  // Rank / league / goal / poll / contributor chips — all the
-                  // same features as before (Figma "Live1", client items
-                  // L-02 goal chip among them), just on their own row now so
-                  // none of them get clipped behind the username above.
+                  // Goal / poll / contributor chips — daily/hourly rank,
+                  // league and earnings chips were removed per client
+                  // request (2026-10-30), along with the LIVE title row
+                  // below.
                   Padding(
                     padding: const EdgeInsets.only(left: 48),
                     child: SingleChildScrollView(
@@ -175,14 +175,6 @@ class _LiveStreamHostTopViewState extends State<LiveStreamHostTopView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          LiveRankChip(controller: controller),
-                          const SizedBox(width: 6),
-                          HourlyRankChip(controller: controller),
-                          const SizedBox(width: 6),
-                          LeagueBadge(controller: controller),
-                          const SizedBox(width: 6),
-                          const MyEarningsBadge(),
-                          const SizedBox(width: 6),
                           LiveGoalProgressWidget(
                               controller: controller, compact: true),
                           if (stream.hasLiveGoal == true)
@@ -195,37 +187,6 @@ class _LiveStreamHostTopViewState extends State<LiveStreamHostTopView> {
                           // Top-3 contributor badges for THIS LIVE session.
                           // Tap opens the full Contributor Ranking sheet.
                           ContributorTopBadges(controller: controller),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 48),
-                    child: GestureDetector(
-                      onTap: controller.showEditLiveTitleDialog,
-                      behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              (stream.description ?? '').trim().isEmpty
-                                  ? 'Add LIVE title'
-                                  : stream.description!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyleCustom.outFitRegular400(
-                                color: Colors.white70,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          const Icon(
-                            Icons.edit,
-                            color: Colors.white70,
-                            size: 12,
-                          ),
                         ],
                       ),
                     ),

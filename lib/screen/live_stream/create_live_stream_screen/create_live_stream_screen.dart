@@ -139,56 +139,6 @@ class CreateLiveStreamScreen extends StatelessWidget {
 
                       const SizedBox(height: 20),
 
-                      // Stream title input with enhanced design (exact TopTap style)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          controller: controller.titleController,
-                          onTapOutside: (event) =>
-                              FocusManager.instance.primaryFocus?.unfocus(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: LKey.enterLiveStreamTitle.tr,
-                            hintStyle: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 17,
-                              fontWeight: FontWeight.w300,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.title,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 20,
-                            ),
-                          ),
-                          maxLines: 2,
-                          minLines: 1,
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
                       // Enhanced feature options row (exact TopTap style)
                       // NOTE: "Music" stays disabled here intentionally. Its
                       // onTap was never wired to real functionality (just an

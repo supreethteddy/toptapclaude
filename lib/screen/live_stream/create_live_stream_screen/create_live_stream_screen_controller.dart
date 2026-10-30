@@ -126,7 +126,6 @@ class CreateLiveStreamScreenController extends BaseController
   // the one originally created on this (possibly already-disposed)
   // controller's behalf.
   static RxInt localViewID = RxInt(-1);
-  TextEditingController titleController = TextEditingController();
   Future<void>? _previewInitFuture;
 
   @override
@@ -1195,7 +1194,6 @@ class CreateLiveStreamScreenController extends BaseController
         livestream = user.livestream(
             type: LivestreamType.livestream,
             time: time,
-            description: titleController.text.trim(),
             restrictToJoin: isRestricted.value ? 1 : 0,
             hostViewId: localViewID.value,
             hasLiveGoal: hasLiveGoal.value,
@@ -1215,7 +1213,6 @@ class CreateLiveStreamScreenController extends BaseController
         livestream = user.livestream(
             type: LivestreamType.livestream,
             time: time,
-            description: titleController.text.trim(),
             restrictToJoin: isRestricted.value ? 1 : 0,
             hostViewId: localViewID.value,
             broadcastMode: broadcastMode.value);
