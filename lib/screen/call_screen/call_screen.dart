@@ -47,6 +47,8 @@ class _CallScreenState extends State<CallScreen> {
   bool _isEndingCall = false;
   bool _isErrorDialogVisible = false;
   bool _isDisposed = false;
+  Timer? _callDurationTimer;
+  int _callDurationSeconds = 0;
 
   @override
   void initState() {
@@ -186,6 +188,7 @@ class _CallScreenState extends State<CallScreen> {
       setState(() {
         _isConnected = isConnected;
       });
+      _startCallTimerIfNeeded();
     });
 
     _remoteUserSubscription = _callService.remoteUserStream.listen((remoteUid) {
@@ -201,6 +204,7 @@ class _CallScreenState extends State<CallScreen> {
       } else {
         AgoraDebugHelper.debugPrint('Remote user left', emoji: '👋');
       }
+      _startCallTimerIfNeeded();
     });
 
     _callEndedSubscription = _callService.callEndedStream.listen((ended) {
@@ -602,8 +606,41 @@ class _CallScreenState extends State<CallScreen> {
     } else if (!_hasRemoteUser) {
       return 'Waiting for answer...';
     } else {
-      return 'Connected';
+      // Live-running duration once genuinely connected, not a static
+      // "Connected" label -- the whole point is so both sides can see at
+      // a glance that the call is actually still up, not just that it
+      // connected once and silently froze.
+      return _formatCallDuration(_callDurationSeconds);
     }
+  }
+
+  // Starts once, the first time both _isConnected and _hasRemoteUser are
+  // true, and keeps counting for the rest of the screen's lifetime --
+  // deliberately does NOT reset on a brief remote-user flicker (e.g. a
+  // momentary reconnect), since the displayed duration should reflect
+  // real elapsed call time, not restart every time the underlying
+  // transport hiccups. A genuine disconnect ends the call screen entirely
+  // via _callEndedSubscription, which is what actually stops this.
+  void _startCallTimerIfNeeded() {
+    if (_callDurationTimer != null || !_isConnected || !_hasRemoteUser) {
+      return;
+    }
+    _callDurationSeconds = 0;
+    _callDurationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _callDurationSeconds++);
+    });
+  }
+
+  String _formatCallDuration(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    final mm = minutes.toString().padLeft(2, '0');
+    final ss = seconds.toString().padLeft(2, '0');
+    return hours > 0
+        ? '${hours.toString().padLeft(2, '0')}:$mm:$ss'
+        : '$mm:$ss';
   }
 
   Widget _buildCallControls() {
@@ -686,6 +723,7 @@ class _CallScreenState extends State<CallScreen> {
     _remoteUserSubscription?.cancel();
     _callEndedSubscription?.cancel();
     _signalSubscription?.cancel();
+    _callDurationTimer?.cancel();
     if (_callService.isInCall) {
       unawaited(_callService.endCall());
     }
