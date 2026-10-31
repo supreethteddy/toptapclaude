@@ -12,6 +12,8 @@ import 'package:shortzz/utilities/firebase_const.dart';
 class FirebaseFirestoreController extends BaseController {
   FirebaseFirestore db = FirebaseFirestore.instance;
   StreamSubscription<QuerySnapshot<AppUser>>? usersListener;
+  Timer? _retryTimer;
+  int _retryDelaySeconds = 2;
   RxList<AppUser> users = <AppUser>[].obs;
 
   static final instance = FirebaseFirestoreController();
@@ -37,6 +39,10 @@ class FirebaseFirestoreController extends BaseController {
             toFirestore: (user, _) => user.toJson())
         .snapshots()
         .listen((snapshot) {
+      // See the matching comment in LiveStatusController._listen -- a prior
+      // permission-denied error (Firebase Auth still being established
+      // right after cold start) has now cleared; stop backing off.
+      _retryDelaySeconds = 2;
       for (var change in snapshot.docChanges) {
         final user = change.doc.data();
         if (user == null) {
@@ -59,6 +65,21 @@ class FirebaseFirestoreController extends BaseController {
             break;
         }
       }
+    }, onError: (e) {
+      // A PERMISSION_DENIED (e.g. this listener attaching before
+      // SplashScreenController's Firebase custom-token sign-in completes)
+      // terminates the subscription for good -- it never resubscribes on
+      // its own even once auth resolves moments later. Without a retry,
+      // `users` stays empty for the rest of the app's lifetime and every
+      // LIVE screen reads "No users in livestream" even though the host
+      // really is live. Backs off up to 30s so a persistent error doesn't
+      // spin.
+      Loggers.error(
+          'FirebaseFirestoreController listen error: $e, retrying in ${_retryDelaySeconds}s');
+      _retryTimer?.cancel();
+      _retryTimer =
+          Timer(Duration(seconds: _retryDelaySeconds), fetchLivestreamUsers);
+      _retryDelaySeconds = (_retryDelaySeconds * 2).clamp(2, 30);
     });
   }
 
@@ -121,6 +142,7 @@ class FirebaseFirestoreController extends BaseController {
 
   void close() {
     usersListener?.cancel();
+    _retryTimer?.cancel();
   }
 
   @override
