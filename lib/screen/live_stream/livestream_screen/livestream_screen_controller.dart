@@ -137,6 +137,14 @@ class LivestreamScreenController extends BaseController
   /// that same increment comes back, instead of firing a second burst.
   int _lastAnimatedLikeCount = 0;
 
+  // Local fast path for onLikeButtonTap's PK Tap Points contribution: once
+  // this device has attempted (successfully or not) a contribution for a
+  // given battleCreatedAt, every further tap that match skips the
+  // Firestore round-trip entirely rather than re-attempting a write that
+  // can only ever fail the same way again. See onLikeButtonTap's own
+  // comment for why this matters (a real OOM crash traced to this).
+  final Set<int> _claimedPkTapBattles = {};
+
   StreamSubscription<DocumentSnapshot<Livestream>>? liveStreamDocListener;
   StreamSubscription<QuerySnapshot<LivestreamUserState?>>?
       liveStreamUserStatesListener;
@@ -2345,8 +2353,6 @@ class LivestreamScreenController extends BaseController
     // tapPosition anchors the burst at wherever the viewer actually tapped.
     onLikeTap?.call(tapPosition);
     _lastAnimatedLikeCount++;
-    bool isExist = (await liveStreamDocRef.get()).exists;
-    if (!isExist) return;
 
     final stream = liveData.value;
     // Total Tap Counter (Final Tap-Tap & PK Match Scoring Algorithm, client
@@ -2354,7 +2360,25 @@ class LivestreamScreenController extends BaseController
     // every LIVE session type -- Solo, Guest, or an active PK Match --
     // completely separate from the PK Tap Points gated below. No maximum,
     // ever, and never delayed behind the PK-points round-trip below.
-    liveStreamDocRef.update({FirebaseConst.likeCount: FieldValue.increment(1)});
+    //
+    // No pre-flight .get() existence check -- a rapid tapper (the client's
+    // own spec example is 500 taps in one PK Match) used to cost TWO full
+    // Firestore round-trips per tap (a .get() here plus a contributor-doc
+    // write below, on every single tap, not just the first). Across a
+    // multi-hour, multi-account test session that's enough real network
+    // calls to hit Android's own thread-creation limit for the Firestore
+    // plugin's worker pool -- confirmed from a real crash log:
+    // "OutOfMemoryError: pthread_create ... at
+    // FlutterFirebaseFirestorePlugin.documentReferenceGet". Just attempt
+    // the update and swallow a failure (room already ended, or a
+    // transient network blip) the same way this was always best-effort,
+    // fire-and-forget, same as the increment itself always was.
+    try {
+      await liveStreamDocRef
+          .update({FirebaseConst.likeCount: FieldValue.increment(1)});
+    } catch (_) {
+      return;
+    }
     // Like goals read directly from the atomically incremented like count.
 
     final isCrossRoomBattling =
@@ -2370,12 +2394,19 @@ class LivestreamScreenController extends BaseController
     // PK Tap Points: each unique viewer's FIRST qualifying tap this battle
     // credits their chosen side AppRes.pkTapPointsPerContribution points,
     // once ever for the whole match -- a later tap, even one on the other
-    // side, earns nothing further. Server-enforced: this doc can only ever
-    // be created once per (battle, viewer) -- firestore.rules allows
-    // create but never update/delete on this collection -- so a repeat
-    // tap, an app restart, a reconnect, or switching between the two
-    // battling LIVE screens all just fail to create it again here, with no
-    // way for the client to force a second credit.
+    // side, earns nothing further. _claimedPkTapBattles is a local fast
+    // path: once this device has attempted a contribution for this
+    // battleCreatedAt, every further tap this same match returns here with
+    // NO network call at all, instead of repeating a write that can only
+    // ever fail the same way -- this is what turns a 500-tap session back
+    // into 1 real Firestore call instead of 500 (see the comment above on
+    // why that mattered). The actual, server-enforced guarantee is still
+    // firestore.rules: this doc can only ever be created once per (battle,
+    // viewer) -- create-only, no update or delete -- so even if this local
+    // cache were somehow stale or reset (app restart, reconnect, switching
+    // between the two battling LIVE screens), the real write below would
+    // still just fail to create it again, never granting a second credit.
+    if (_claimedPkTapBattles.contains(battleCreatedAt)) return;
     final contributorRef = db
         .collection(FirebaseConst.pkTapContributors)
         .doc('${battleCreatedAt}_$myUserId');
@@ -2386,9 +2417,13 @@ class LivestreamScreenController extends BaseController
       });
     } catch (_) {
       // Already contributed to this battle, on whichever side claimed it
-      // first -- correctly no further PK points.
+      // first -- correctly no further PK points. Still cache the outcome
+      // so the rest of this battle's taps don't keep retrying a write
+      // that will only ever fail the same way.
+      _claimedPkTapBattles.add(battleCreatedAt);
       return;
     }
+    _claimedPkTapBattles.add(battleCreatedAt);
 
     final pkPoints = AppRes.pkTapPointsPerContribution;
     if (isSameRoomBattleActive) {
