@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/story_text_view_controller.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/story_text_view_controller.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class StoryTextFontStyle extends StatelessWidget {
   const StoryTextFontStyle({super.key});

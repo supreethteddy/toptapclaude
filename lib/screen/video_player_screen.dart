@@ -3,9 +3,9 @@
 // import 'package:flutter/services.dart';
 // import 'package:get/get.dart';
 // import 'package:video_player/video_player.dart';
-// import 'package:shortzz/screen/create_feed_screen/create_feed_screen.dart';
-// import 'package:shortzz/screen/camera_screen/camera_types.dart';
-// import 'package:shortzz/model/post_story/post_model.dart';
+// import 'package:toptap/screen/create_feed_screen/create_feed_screen.dart';
+// import 'package:toptap/screen/camera_screen/camera_types.dart';
+// import 'package:toptap/model/post_story/post_model.dart';
 
 // class VideoPlayerScreen extends StatefulWidget {
 //   final String videoPath;

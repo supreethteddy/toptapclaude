@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import 'package:detectable_text_field/detectable_text_field.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/common/widget/user_list.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen_controller.dart';
-import 'package:shortzz/screen/video_upload_screen/video_upload_controller.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/common/widget/user_list.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen_controller.dart';
+import 'package:toptap/screen/video_upload_screen/video_upload_controller.dart';
 
 /// 🎬 VideoUploadScreen - Dedicated screen for uploading processed videos with edits
 /// This screen is specifically designed for videos that have text, stickers, and drawings

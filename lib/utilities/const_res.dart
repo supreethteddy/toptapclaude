@@ -1,9 +1,9 @@
 // const String baseURL = 'https://tcgifting.com/';
-// // const String baseURL = 'https://shortzznew.retrytech.site/';
+// // const String baseURL = 'https://toptapnew.retrytech.site/';
 // const String apiURL = '${baseURL}api/';
 // const String apiKey = 'retry123';
 
-// String notificationTopic = "shortzz";
+// String notificationTopic = "toptap";
 
 // String revenueCatAndroidApiKey =
 //     "your_revenueCat_android_api_key";

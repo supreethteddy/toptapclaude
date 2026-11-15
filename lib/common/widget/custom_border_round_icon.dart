@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CustomBorderRoundIcon extends StatelessWidget {
   final String? image;

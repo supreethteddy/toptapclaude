@@ -2,21 +2,21 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/common/widget/my_refresh_indicator.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen.dart';
-import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
-import 'package:shortzz/screen/profile_screen/widget/profile_page_view.dart';
-import 'package:shortzz/screen/profile_screen/widget/profile_tab_bar_view.dart';
-import 'package:shortzz/screen/profile_screen/widget/profile_user_header.dart';
-import 'package:shortzz/screen/settings_screen/settings_screen.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/custom_back_button.dart';
+import 'package:toptap/common/widget/my_refresh_indicator.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/coin_wallet_screen/coin_wallet_screen.dart';
+import 'package:toptap/screen/profile_screen/profile_screen_controller.dart';
+import 'package:toptap/screen/profile_screen/widget/profile_page_view.dart';
+import 'package:toptap/screen/profile_screen/widget/profile_tab_bar_view.dart';
+import 'package:toptap/screen/profile_screen/widget/profile_user_header.dart';
+import 'package:toptap/screen/settings_screen/settings_screen.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ProfileScreen extends StatelessWidget {
   final User? user;

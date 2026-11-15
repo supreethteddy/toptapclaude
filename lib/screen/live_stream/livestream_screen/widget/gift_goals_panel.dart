@@ -1,19 +1,19 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/bottom_sheet_top_view.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/bottom_sheet_top_view.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// Lists every active Gift Goal for the current LIVE, with a progress bar per
 /// goal and (host-only) Pin / Remove actions, plus a way to add a new one.

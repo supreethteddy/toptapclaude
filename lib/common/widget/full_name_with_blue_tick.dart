@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class FullNameWithBlueTick extends StatelessWidget {
   final Widget? child;

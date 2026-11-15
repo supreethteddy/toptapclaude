@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/misc/activity_notification_model.dart';
-import 'package:shortzz/screen/comment_sheet/helper/comment_helper.dart';
-import 'package:shortzz/screen/notification_screen/notification_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/full_name_with_blue_tick.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/misc/activity_notification_model.dart';
+import 'package:toptap/screen/comment_sheet/helper/comment_helper.dart';
+import 'package:toptap/screen/notification_screen/notification_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ActivityNotificationPage extends StatelessWidget {
   final ActivityNotification data;

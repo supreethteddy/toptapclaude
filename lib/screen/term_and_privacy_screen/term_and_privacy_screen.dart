@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 enum TermAndPrivacyType {
   privacyPolicy,

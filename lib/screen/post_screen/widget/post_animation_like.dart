@@ -1,12 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/common/widget/gradient_icon.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/style_res.dart';
+import 'package:toptap/common/functions/debounce_action.dart';
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/common/widget/gradient_icon.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/style_res.dart';
 
 class PostAnimationLike extends StatefulWidget {
   const PostAnimationLike(

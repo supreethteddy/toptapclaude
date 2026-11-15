@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/app_user.dart';
 
 class LivestreamUserState {
   bool isMuted;

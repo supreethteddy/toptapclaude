@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/screen/profile_screen/profile_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ProfileTabs extends StatelessWidget {
   final ProfileScreenController controller;

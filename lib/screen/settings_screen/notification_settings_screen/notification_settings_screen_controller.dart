@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/utils/settings_error_handler.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/utils/settings_error_handler.dart';
 
 class NotificationSettingsScreenController extends GetxController {
   // General Notifications

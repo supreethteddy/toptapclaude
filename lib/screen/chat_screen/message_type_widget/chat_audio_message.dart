@@ -4,13 +4,13 @@ import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/gradient_icon.dart';
-import 'package:shortzz/model/chat/message_data.dart';
-import 'package:shortzz/screen/chat_screen/chat_screen_controller.dart';
-import 'package:shortzz/screen/chat_screen/widget/chat_center_message_view.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/style_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/gradient_icon.dart';
+import 'package:toptap/model/chat/message_data.dart';
+import 'package:toptap/screen/chat_screen/chat_screen_controller.dart';
+import 'package:toptap/screen/chat_screen/widget/chat_center_message_view.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/style_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ChatAudioMessage extends StatelessWidget {
   final MessageData message;

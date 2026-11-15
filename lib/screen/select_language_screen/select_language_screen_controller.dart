@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/eula_sheet.dart';
-import 'package:shortzz/common/widget/restart_widget.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/screen/select_language_screen/select_language_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/eula_sheet.dart';
+import 'package:toptap/common/widget/restart_widget.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/screen/select_language_screen/select_language_screen.dart';
 
 class SelectLanguageScreenController
     extends BaseController {

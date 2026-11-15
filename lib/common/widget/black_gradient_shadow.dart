@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/color_res.dart';
+import 'package:toptap/utilities/color_res.dart';
 
 class BlackGradientShadow extends StatelessWidget {
   final double? height;

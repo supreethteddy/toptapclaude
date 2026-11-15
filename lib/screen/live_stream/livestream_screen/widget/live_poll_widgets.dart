@@ -1,13 +1,13 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/bottom_sheet_top_view.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/bottom_sheet_top_view.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// Compact, always-visible indicator for the currently running poll (mirrors
 /// [PinnedGiftGoalChip]). Tapping it (host or audience) opens [LivePollSheet]

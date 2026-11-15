@@ -1,5 +1,5 @@
 import 'package:html/dom.dart';
-import 'package:shortzz/common/service/url_extractor/utils/util.dart';
+import 'package:toptap/common/service/url_extractor/utils/util.dart';
 
 import 'base_parser.dart';
 

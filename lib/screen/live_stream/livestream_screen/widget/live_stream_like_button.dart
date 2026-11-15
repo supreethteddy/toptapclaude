@@ -1,9 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class LiveStreamLikeButton extends StatefulWidget {
   final Function(void Function(Offset?))? onLikeTap;

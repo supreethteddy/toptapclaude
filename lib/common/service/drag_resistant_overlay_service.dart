@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:shortzz/common/manager/logger.dart';
+import 'package:toptap/common/manager/logger.dart';
 
 /// Service to handle drag-resistant video overlay rendering
 class DragResistantOverlayService {

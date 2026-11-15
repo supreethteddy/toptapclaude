@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/support_chat_service.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/support_chat_service.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HelpCenterController extends BaseController {

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/screen/help_center_screen/help_center_controller.dart';
-import 'package:shortzz/screen/settings_screen/widget/setting_icon_text_with_arrow.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/screen/help_center_screen/help_center_controller.dart';
+import 'package:toptap/screen/settings_screen/widget/setting_icon_text_with_arrow.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class HelpCenterScreen extends StatelessWidget {
   const HelpCenterScreen({super.key});

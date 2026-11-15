@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/gift_wallet/withdraw_model.dart';
-import 'package:shortzz/screen/withdrawals_screen/withdrawals_screen_controller.dart';
-import 'package:shortzz/utilities/app_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/gift_wallet/withdraw_model.dart';
+import 'package:toptap/screen/withdrawals_screen/withdrawals_screen_controller.dart';
+import 'package:toptap/utilities/app_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class WithdrawalsScreen extends StatelessWidget {
   const WithdrawalsScreen({super.key});

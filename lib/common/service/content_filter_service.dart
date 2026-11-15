@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
 
 /// Service for filtering content based on user preferences
 /// 🔇 COMPLETELY DISABLED TO FIX AUDIO ISSUES - ALL FILTERING LOGIC COMMENTED OUT

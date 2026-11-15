@@ -5,20 +5,20 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/widget/confirmation_dialog.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/user_model/links_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/edit_profile_screen/widget/add_edit_link_sheet.dart';
-import 'package:shortzz/screen/edit_profile_screen/widget/phone_codes_screen_controller.dart';
-import 'package:shortzz/screen/edit_profile_screen/widget/profile_image_picker_sheet.dart';
-import 'package:shortzz/screen/feed_screen/feed_screen_controller.dart';
-import 'package:shortzz/screen/edit_profile_screen/widget/profile_image_viewer.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/common/widget/confirmation_dialog.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/user_model/links_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/edit_profile_screen/widget/add_edit_link_sheet.dart';
+import 'package:toptap/screen/edit_profile_screen/widget/phone_codes_screen_controller.dart';
+import 'package:toptap/screen/edit_profile_screen/widget/profile_image_picker_sheet.dart';
+import 'package:toptap/screen/feed_screen/feed_screen_controller.dart';
+import 'package:toptap/screen/edit_profile_screen/widget/profile_image_viewer.dart';
 
 class EditProfileScreenController extends BaseController {
   final phoneController =

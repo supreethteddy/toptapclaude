@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shortzz/common/manager/call_notification_manager.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/service/call_signaling_service.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/manager/call_notification_manager.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/common/service/call_signaling_service.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 /// Watches Firestore for incoming 1:1 calls addressed to the current user and
 /// rings them in-app.

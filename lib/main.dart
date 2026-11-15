@@ -8,22 +8,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:shortzz/common/controller/theme_controller.dart';
-import 'package:shortzz/common/manager/firebase_notification_manager.dart';
-import 'package:shortzz/common/manager/call_notification_manager.dart';
-import 'package:shortzz/common/manager/internet_connection_manager.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/manager/video_memory_manager.dart';
-import 'package:shortzz/common/manager/reactive_save_manager.dart';
-import 'package:shortzz/common/manager/local_content_manager.dart';
-import 'package:shortzz/common/service/subscription/subscription_manager.dart';
-import 'package:shortzz/common/service/settings_service.dart';
-import 'package:shortzz/common/service/content_filter_service.dart';
-import 'package:shortzz/common/widget/restart_widget.dart';
-import 'package:shortzz/languages/dynamic_translations.dart';
-import 'package:shortzz/screen/splash_screen/splash_screen.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/controller/theme_controller.dart';
+import 'package:toptap/common/manager/firebase_notification_manager.dart';
+import 'package:toptap/common/manager/call_notification_manager.dart';
+import 'package:toptap/common/manager/internet_connection_manager.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/manager/video_memory_manager.dart';
+import 'package:toptap/common/manager/reactive_save_manager.dart';
+import 'package:toptap/common/manager/local_content_manager.dart';
+import 'package:toptap/common/service/subscription/subscription_manager.dart';
+import 'package:toptap/common/service/settings_service.dart';
+import 'package:toptap/common/service/content_filter_service.dart';
+import 'package:toptap/common/widget/restart_widget.dart';
+import 'package:toptap/languages/dynamic_translations.dart';
+import 'package:toptap/screen/splash_screen/splash_screen.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -67,7 +67,7 @@ Future<void> main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   print('🔄 Initializing GetStorage...');
-  await GetStorage.init('shortzz');
+  await GetStorage.init('toptap');
   print('✅ GetStorage initialized');
   Get.put(ThemeController(), permanent: true);
 
@@ -144,7 +144,7 @@ Future<void> main() async {
         _firebaseMessagingBackgroundHandler);
 
     print('🔄 Initializing GetStorage...');
-    await GetStorage.init('shortzz');
+    await GetStorage.init('toptap');
     print('✅ GetStorage initialized');
     Get.put(ThemeController(), permanent: true);
 
@@ -251,16 +251,16 @@ class MyBehavior extends ScrollBehavior {
 // import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 // import 'package:get/get.dart';
 // import 'package:get_storage/get_storage.dart';
-// // import 'package:shortzz/common/controller/theme_controller.dart';
-// import 'package:shortzz/common/manager/firebase_notification_manager.dart';
-// import 'package:shortzz/common/manager/internet_connection_manager.dart';
-// import 'package:shortzz/common/manager/logger.dart';
-// import 'package:shortzz/common/manager/session_manager.dart';
-// import 'package:shortzz/common/service/subscription/subscription_manager.dart';
-// import 'package:shortzz/common/widget/restart_widget.dart';
-// import 'package:shortzz/languages/dynamic_translations.dart';
-// import 'package:shortzz/screen/splash_screen/splash_screen.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// // import 'package:toptap/common/controller/theme_controller.dart';
+// import 'package:toptap/common/manager/firebase_notification_manager.dart';
+// import 'package:toptap/common/manager/internet_connection_manager.dart';
+// import 'package:toptap/common/manager/logger.dart';
+// import 'package:toptap/common/manager/session_manager.dart';
+// import 'package:toptap/common/service/subscription/subscription_manager.dart';
+// import 'package:toptap/common/widget/restart_widget.dart';
+// import 'package:toptap/languages/dynamic_translations.dart';
+// import 'package:toptap/screen/splash_screen/splash_screen.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // @pragma('vm:entry-point')
 // Future<void> _firebaseMessagingBackgroundHandler(
@@ -284,7 +284,7 @@ class MyBehavior extends ScrollBehavior {
 //     FirebaseMessaging.onBackgroundMessage(
 //         _firebaseMessagingBackgroundHandler);
 
-//     await GetStorage.init('shortzz');
+//     await GetStorage.init('toptap');
 
 //     // Init RevenueCat (handle errors gracefully)
 //     try {

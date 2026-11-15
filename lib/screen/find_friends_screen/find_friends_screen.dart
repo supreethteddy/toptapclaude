@@ -1,15 +1,15 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/common/widget/user_list.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/find_friends_screen/find_friends_screen_controller.dart';
-import 'package:shortzz/screen/scan_qr_code_screen/scan_qr_code_screen.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
+import 'package:toptap/common/widget/custom_back_button.dart';
+import 'package:toptap/common/widget/user_list.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/find_friends_screen/find_friends_screen_controller.dart';
+import 'package:toptap/screen/scan_qr_code_screen/scan_qr_code_screen.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
 
 class FindFriendsScreen extends StatelessWidget {
   const FindFriendsScreen({super.key});

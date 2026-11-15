@@ -1,15 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/controller/follow_controller.dart';
-import 'package:shortzz/common/enum/chat_enum.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/widget/confirmation_dialog.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/status_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/utilities/firebase_const.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/controller/follow_controller.dart';
+import 'package:toptap/common/enum/chat_enum.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/common/widget/confirmation_dialog.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/status_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/utilities/firebase_const.dart';
 
 class BlockUserController extends BaseController {
   void blockUser(User? user, Function() completion) {

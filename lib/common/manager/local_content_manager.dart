@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/model/post_story/post_model.dart';
 
 /// 🌟 LocalContentManager - Manages local storage for likes and private posts
 ///
@@ -35,7 +35,7 @@ class LocalContentManager extends GetxController {
   /// Load saved data from storage
   void _loadFromStorage() {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
 
       // Load liked posts
       final likedIds =
@@ -157,7 +157,7 @@ class LocalContentManager extends GetxController {
   /// Save list to storage
   void _saveToStorage(String key, List<int> list) {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
       storage.write(key, list);
     } catch (e) {
       Loggers.error('Error saving to storage: $e');
@@ -167,7 +167,7 @@ class LocalContentManager extends GetxController {
   /// Save timestamp for an action
   void _saveTimestamp(String key, int postId) {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
       final timestamps = storage.read<Map>(key) ?? {};
       timestamps[postId.toString()] =
           DateTime.now().millisecondsSinceEpoch;
@@ -180,7 +180,7 @@ class LocalContentManager extends GetxController {
   /// Remove timestamp for an action
   void _removeTimestamp(String key, int postId) {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
       final timestamps = storage.read<Map>(key) ?? {};
       timestamps.remove(postId.toString());
       storage.write(key, timestamps);
@@ -192,7 +192,7 @@ class LocalContentManager extends GetxController {
   /// Get timestamp for a post
   int _getTimestamp(String key, int postId) {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
       final timestamps = storage.read<Map>(key) ?? {};
       return timestamps[postId.toString()] ?? 0;
     } catch (e) {
@@ -203,7 +203,7 @@ class LocalContentManager extends GetxController {
   /// Clear all data (useful for testing or logout)
   void clearAll() {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
       storage.remove(_likedPostsKey);
       storage.remove(_likeTimestampsKey);
       storage.remove(_privatePostsKey);

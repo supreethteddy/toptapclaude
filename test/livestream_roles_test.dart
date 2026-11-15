@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/model/livestream/livestream_user_state.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/model/livestream/livestream_user_state.dart';
 
 void main() {
   group('LivestreamUserType roles', () {

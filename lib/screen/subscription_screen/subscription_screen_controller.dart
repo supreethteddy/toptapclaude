@@ -1,10 +1,10 @@
 import 'package:get/get.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/subscription/subscription_manager.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/subscription/subscription_manager.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 class SubscriptionScreenController extends BaseController {
   RxList<ProductDetails> packages = <ProductDetails>[].obs;

@@ -1,7 +1,7 @@
-import 'package:shortzz/common/service/api/api_service.dart';
-import 'package:shortzz/common/service/utils/params.dart';
-import 'package:shortzz/common/service/utils/web_service.dart';
-import 'package:shortzz/model/general/status_model.dart';
+import 'package:toptap/common/service/api/api_service.dart';
+import 'package:toptap/common/service/utils/params.dart';
+import 'package:toptap/common/service/utils/web_service.dart';
+import 'package:toptap/model/general/status_model.dart';
 
 class ModeratorService {
   ModeratorService._();

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/live_status_controller.dart';
-import 'package:shortzz/utilities/color_res.dart';
+import 'package:toptap/common/controller/live_status_controller.dart';
+import 'package:toptap/utilities/color_res.dart';
 
 /// Wraps any avatar widget and, while [userId] is LIVE, draws a blinking red
 /// ring around it plus an optional "LIVE" pill. Tapping the ring opens the

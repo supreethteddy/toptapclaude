@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/post_screen/post_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/post_screen/post_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class PostViewActionButton extends StatelessWidget {
   final Post post;

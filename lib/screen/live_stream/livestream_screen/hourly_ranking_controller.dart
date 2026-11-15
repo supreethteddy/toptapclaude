@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/model/livestream/app_user.dart';
 
 /// One host's position in this hour's LIVE ranking. Structurally identical
 /// to [LiveRankEntry] (see live_ranking_controller.dart) — kept as its own

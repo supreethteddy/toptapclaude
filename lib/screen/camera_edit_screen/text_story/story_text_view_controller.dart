@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/functions/generate_color.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/screen/camera_edit_screen/camera_edit_screen_controller.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/widget/story_text_font_widget.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/widget/text_editor_sheet.dart';
-import 'package:shortzz/utilities/app_res.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/functions/generate_color.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/screen/camera_edit_screen/camera_edit_screen_controller.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/widget/story_text_font_widget.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/widget/text_editor_sheet.dart';
+import 'package:toptap/utilities/app_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
 
 enum BgColorType { color, gradient }
 

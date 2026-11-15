@@ -1,14 +1,14 @@
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/common/manager/session_manager.dart';
-// import 'package:shortzz/common/widget/no_data_widget.dart';
-// import 'package:shortzz/common/widget/post_list.dart';
-// import 'package:shortzz/common/widget/reel_list.dart';
-// import 'package:shortzz/languages/languages_keys.dart';
-// import 'package:shortzz/model/user_model/user_model.dart';
-// import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
-// import 'package:shortzz/utilities/text_style_custom.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// import 'package:toptap/common/manager/session_manager.dart';
+// import 'package:toptap/common/widget/no_data_widget.dart';
+// import 'package:toptap/common/widget/post_list.dart';
+// import 'package:toptap/common/widget/reel_list.dart';
+// import 'package:toptap/languages/languages_keys.dart';
+// import 'package:toptap/model/user_model/user_model.dart';
+// import 'package:toptap/screen/profile_screen/profile_screen_controller.dart';
+// import 'package:toptap/utilities/text_style_custom.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // class ProfilePageView extends StatelessWidget {
 //   final ProfileScreenController controller;
@@ -103,15 +103,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/common/widget/post_list.dart';
-import 'package:shortzz/common/widget/reel_list.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/common/widget/post_list.dart';
+import 'package:toptap/common/widget/reel_list.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/profile_screen/profile_screen_controller.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ProfilePageView extends StatelessWidget {
   final ProfileScreenController controller;

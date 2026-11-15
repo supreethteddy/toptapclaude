@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shortzz/common/utils/network_checker.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/config/agora_config.dart';
+import 'package:toptap/common/utils/network_checker.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/config/agora_config.dart';
 
 /// Agora Call Diagnostic Tool
 class AgoraCallDiagnostic {

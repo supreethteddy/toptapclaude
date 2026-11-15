@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/service/url_extractor/parsers/base_parser.dart';
-import 'package:shortzz/common/widget/custom_bg_circle_button.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/service/url_extractor/parsers/base_parser.dart';
+import 'package:toptap/common/widget/custom_bg_circle_button.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class UrlMetaDataCard extends StatefulWidget {
   final CreateFeedScreenController controller;

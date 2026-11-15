@@ -1,6 +1,6 @@
 // import 'package:flutter/material.dart';
-// import 'package:shortzz/utilities/color_res.dart';
-// import 'package:shortzz/utilities/font_res.dart';
+// import 'package:toptap/utilities/color_res.dart';
+// import 'package:toptap/utilities/font_res.dart';
 
 // class ThemeRes {
 //   /// Theme light mode
@@ -193,8 +193,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/instance_manager.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/font_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/font_res.dart';
 
 class ThemeRes {
   /// Theme light mode

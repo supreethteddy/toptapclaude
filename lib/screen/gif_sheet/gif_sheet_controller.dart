@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/giphy_service.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/giphy/giphy_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/functions/debounce_action.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/giphy_service.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/giphy/giphy_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class GifSheetController extends BaseController {
   RxList<GiphyData> trendingList = <GiphyData>[].obs;

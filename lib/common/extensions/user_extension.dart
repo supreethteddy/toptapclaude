@@ -1,7 +1,7 @@
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/model/livestream/livestream_user_state.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/model/livestream/livestream_user_state.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 extension UserExtension on User {
   AppUser get appUser {

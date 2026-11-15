@@ -1,4 +1,4 @@
-import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/app_user.dart';
 
 /// One contributor's position in THIS LIVE session's "Contributor Ranking".
 ///

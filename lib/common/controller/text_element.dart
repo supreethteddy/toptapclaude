@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/utilities/safe_data_extractor.dart';
+import 'package:toptap/common/utilities/safe_data_extractor.dart';
 import 'dart:math';
 
 /// Generates a unique ID for text elements

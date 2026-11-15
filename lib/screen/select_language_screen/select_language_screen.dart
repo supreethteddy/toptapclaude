@@ -1,19 +1,19 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/utils/language_flags.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/common/widget/theme_blur_bg.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/screen/auth_screen/login_screen.dart';
-import 'package:shortzz/screen/on_boarding_screen/on_boarding_screen.dart';
-import 'package:shortzz/screen/select_language_screen/select_language_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/utils/language_flags.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/common/widget/theme_blur_bg.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/screen/auth_screen/login_screen.dart';
+import 'package:toptap/screen/on_boarding_screen/on_boarding_screen.dart';
+import 'package:toptap/screen/select_language_screen/select_language_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 enum LanguageNavigationType { fromStart, fromSetting }
 

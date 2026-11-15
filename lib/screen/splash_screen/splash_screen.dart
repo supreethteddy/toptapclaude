@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_shimmer_fill_text.dart';
-import 'package:shortzz/screen/splash_screen/splash_screen_controller.dart';
-import 'package:shortzz/utilities/app_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
+import 'package:toptap/common/widget/custom_shimmer_fill_text.dart';
+import 'package:toptap/screen/splash_screen/splash_screen_controller.dart';
+import 'package:toptap/utilities/app_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
+import 'package:toptap/utilities/color_res.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});

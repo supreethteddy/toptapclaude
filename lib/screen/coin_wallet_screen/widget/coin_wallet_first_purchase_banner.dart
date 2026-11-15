@@ -1,13 +1,13 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
-import 'package:shortzz/screen/recharge_screen/recharge_screen.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/style_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
+import 'package:toptap/screen/recharge_screen/recharge_screen.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/style_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// "First Coin purchase offer" promo banner. Only shown while
 /// [CoinWalletScreenController.isEligibleForFirstPurchaseOffer] is true -

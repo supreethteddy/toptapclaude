@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shortzz/model/livestream/pk_eligibility.dart';
+import 'package:toptap/model/livestream/pk_eligibility.dart';
 
 void main() {
   group('pkEligibilityFor', () {

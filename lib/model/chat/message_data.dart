@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:toptap/common/controller/firebase_firestore_controller.dart';
+import 'package:toptap/model/livestream/app_user.dart';
 
 class MessageData {
   int? userId;

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shortzz/model/livestream/pk_invite.dart';
+import 'package:toptap/model/livestream/pk_invite.dart';
 
 void main() {
   group('isPkInviteExpired', () {

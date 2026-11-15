@@ -5,22 +5,22 @@ import 'package:csv/csv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/common_service.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/utils/profile_completion_helper.dart';
-import 'package:shortzz/languages/dynamic_translations.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/screen/auth_screen/login_screen.dart';
-import 'package:shortzz/screen/dashboard_screen/dashboard_screen.dart';
-import 'package:shortzz/screen/edit_profile_screen/edit_profile_screen.dart';
-import 'package:shortzz/common/controller/live_status_controller.dart';
-import 'package:shortzz/screen/gif_sheet/gif_sheet_controller.dart';
-import 'package:shortzz/screen/select_language_screen/select_language_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/controller/firebase_firestore_controller.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/common_service.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/common/utils/profile_completion_helper.dart';
+import 'package:toptap/languages/dynamic_translations.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/screen/auth_screen/login_screen.dart';
+import 'package:toptap/screen/dashboard_screen/dashboard_screen.dart';
+import 'package:toptap/screen/edit_profile_screen/edit_profile_screen.dart';
+import 'package:toptap/common/controller/live_status_controller.dart';
+import 'package:toptap/screen/gif_sheet/gif_sheet_controller.dart';
+import 'package:toptap/screen/select_language_screen/select_language_screen.dart';
 
 class SplashScreenController extends BaseController {
   @override

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/model/drawing/draw_stroke.dart';
+import 'package:toptap/model/drawing/draw_stroke.dart';
 
 /// Custom painter for drawing strokes on canvas
 class DrawingPainter extends CustomPainter {

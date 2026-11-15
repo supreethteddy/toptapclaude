@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/controller/follow_controller.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/model/user_model/follower_model.dart';
-import 'package:shortzz/model/user_model/following_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/follow_following_screen/follow_following_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/controller/follow_controller.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/model/user_model/follower_model.dart';
+import 'package:toptap/model/user_model/following_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/follow_following_screen/follow_following_screen.dart';
 
 class FollowFollowingScreenController extends BaseController {
   RxInt selectedTabIndex = 0.obs;

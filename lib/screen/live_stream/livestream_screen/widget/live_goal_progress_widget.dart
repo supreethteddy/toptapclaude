@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 
 class LiveGoalProgressWidget extends StatefulWidget {
   final LivestreamScreenController controller;

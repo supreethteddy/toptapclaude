@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
 
 /// A seated participant (co-host, guest, or PK team member) whose stream
 /// has dropped — same slot, same position, not collapsed out of the

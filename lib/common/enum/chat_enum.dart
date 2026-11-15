@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 enum UserRequestAction {
   block,

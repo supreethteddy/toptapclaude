@@ -1,15 +1,15 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_border_round_icon.dart';
-import 'package:shortzz/common/widget/dashed_circle_painter.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/screen/camera_screen/camera_screen_controller.dart';
-import 'package:shortzz/screen/camera_screen/camera_types.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/widget/custom_border_round_icon.dart';
+import 'package:toptap/common/widget/dashed_circle_painter.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/screen/camera_screen/camera_screen_controller.dart';
+import 'package:toptap/screen/camera_screen/camera_types.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CameraBottomView extends StatelessWidget {
   final CameraScreenType cameraType;

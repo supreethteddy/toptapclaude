@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/custom_back_button.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CustomAppBar extends StatelessWidget {
   final String title;

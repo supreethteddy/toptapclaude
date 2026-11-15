@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/model/livestream/moderation_log_entry.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/controller/firebase_firestore_controller.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/moderation_log_entry.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 /// Per-LIVE-session Moderator list (client spec Module 14.1: "Permissions
 /// apply only to the LIVE session for which the Moderator is authorized") --

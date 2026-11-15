@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/battle_result.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/model/livestream/pk_scores.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/view/battle_view.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/battle_result.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/model/livestream/pk_scores.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/view/battle_view.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// Cross-room PK Battle: this room's side (host + any co-hosts, from
 /// [controller.streamViews]) against an independently-run opponent room

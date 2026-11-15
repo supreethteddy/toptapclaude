@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 /// Backs the Friends / Recommended lists in the Invited tab: people the host
 /// can invite who are NOT in the room (the in-room list stays on the

@@ -2,16 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shortzz/common/service/api/add_post_story_service.dart';
-import 'package:shortzz/common/service/api/common_service.dart';
-import 'package:shortzz/common/service/utils/params.dart';
-import 'package:shortzz/model/general/file_path_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/camera_screen/camera_types.dart';
-import 'package:shortzz/screen/comment_sheet/helper/comment_helper.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen.dart';
-import 'package:shortzz/screen/dashboard_screen/dashboard_screen_controller.dart';
-import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
+import 'package:toptap/common/service/api/add_post_story_service.dart';
+import 'package:toptap/common/service/api/common_service.dart';
+import 'package:toptap/common/service/utils/params.dart';
+import 'package:toptap/model/general/file_path_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/camera_screen/camera_types.dart';
+import 'package:toptap/screen/comment_sheet/helper/comment_helper.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen.dart';
+import 'package:toptap/screen/dashboard_screen/dashboard_screen_controller.dart';
+import 'package:toptap/screen/profile_screen/profile_screen_controller.dart';
 
 /// 🎬 VideoUploadController - Controller for handling video uploads with burned-in edits
 /// This controller is specifically designed for videos that have text, stickers, and drawings

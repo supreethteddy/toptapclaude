@@ -2,15 +2,15 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:math' as math;
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/live_ring_avatar.dart';
-import 'package:shortzz/model/post_story/music/music_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/reels_screen/reel/reel_page_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/live_ring_avatar.dart';
+import 'package:toptap/model/post_story/music/music_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/reels_screen/reel/reel_page_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class SideBarList extends StatelessWidget {
   final ReelController controller;

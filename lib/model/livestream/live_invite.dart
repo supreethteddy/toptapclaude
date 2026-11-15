@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shortzz/model/livestream/livestream_user_state.dart';
+import 'package:toptap/model/livestream/livestream_user_state.dart';
 
 /// Lifecycle of an out-of-room LIVE invitation (`live_invites/{id}`).
 enum LiveInviteStatus {

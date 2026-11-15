@@ -1,14 +1,14 @@
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/model/post_story/post/explore_page_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/hashtag_screen/hashtag_screen.dart';
-import 'package:shortzz/screen/post_screen/single_post_screen.dart';
-import 'package:shortzz/screen/reels_screen/reels_screen.dart';
-import 'package:shortzz/screen/scan_qr_code_screen/scan_qr_code_screen.dart';
-import 'package:shortzz/screen/video_player_screen/video_player_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/model/post_story/post/explore_page_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/hashtag_screen/hashtag_screen.dart';
+import 'package:toptap/screen/post_screen/single_post_screen.dart';
+import 'package:toptap/screen/reels_screen/reels_screen.dart';
+import 'package:toptap/screen/scan_qr_code_screen/scan_qr_code_screen.dart';
+import 'package:toptap/screen/video_player_screen/video_player_screen.dart';
 
 class ExploreScreenController extends BaseController {
   Rx<ExplorePageData?> explorePageData = Rx(null);

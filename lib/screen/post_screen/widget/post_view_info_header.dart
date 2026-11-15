@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:shortzz/common/controller/profile_controller.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
-import 'package:shortzz/common/widget/custom_popup_menu_button.dart';
-import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/location_screen/location_screen.dart';
-import 'package:shortzz/screen/post_screen/post_screen_controller.dart';
-import 'package:shortzz/utilities/app_res.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/controller/profile_controller.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/navigation/navigate_with_controller.dart';
+import 'package:toptap/common/widget/custom_popup_menu_button.dart';
+import 'package:toptap/common/widget/full_name_with_blue_tick.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/location_screen/location_screen.dart';
+import 'package:toptap/screen/post_screen/post_screen_controller.dart';
+import 'package:toptap/utilities/app_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class PostViewInfoHeader extends StatelessWidget {
   final Post post;

@@ -1,6 +1,6 @@
-import 'package:shortzz/model/livestream/battle_result.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/model/livestream/battle_result.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 /// One side's PK score. Team score = sum of its members' eligible-gift
 /// points (minus any per-round baseline) + likes credited to that side.

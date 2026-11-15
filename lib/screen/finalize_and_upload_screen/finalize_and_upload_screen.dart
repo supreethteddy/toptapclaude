@@ -1,9 +1,9 @@
 // import 'dart:io';
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/model/post_story/post_model.dart';
-// import 'package:shortzz/screen/camera_screen/camera_types.dart';
-// import 'package:shortzz/screen/create_feed_screen/create_feed_screen.dart';
+// import 'package:toptap/model/post_story/post_model.dart';
+// import 'package:toptap/screen/camera_screen/camera_types.dart';
+// import 'package:toptap/screen/create_feed_screen/create_feed_screen.dart';
 
 // /// 🎬 FinalizeAndUploadScreen - Screen for finalizing and uploading processed videos
 // /// This screen receives videos with edits already burned in and provides

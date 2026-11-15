@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/call_notification_manager.dart';
-import 'package:shortzz/common/manager/logger.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/call_notification_manager.dart';
+import 'package:toptap/common/manager/logger.dart';
 
 /// Enhanced incoming call screen with modern UI and animations
 class EnhancedIncomingCallScreen extends StatefulWidget {

@@ -1,11 +1,11 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/eula_policy_for_apple.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/eula_policy_for_apple.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class EulaSheet extends StatelessWidget {
   const EulaSheet({super.key});

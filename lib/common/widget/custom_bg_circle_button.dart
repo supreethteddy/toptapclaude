@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CustomBgCircleButton extends StatelessWidget {
   final String image;

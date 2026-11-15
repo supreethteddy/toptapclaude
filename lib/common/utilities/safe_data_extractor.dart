@@ -1,4 +1,4 @@
-import 'package:shortzz/common/exceptions/camera_exceptions.dart' as exceptions;
+import 'package:toptap/common/exceptions/camera_exceptions.dart' as exceptions;
 
 /// Safe data extraction utilities to replace dangerous type casting
 /// Provides type-safe extraction from dynamic data structures with validation

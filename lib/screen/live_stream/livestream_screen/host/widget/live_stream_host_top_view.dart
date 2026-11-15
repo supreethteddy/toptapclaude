@@ -1,21 +1,21 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/contributor_top_badges.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_goal_progress_widget.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/widget/contributor_top_badges.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/widget/gift_goals_panel.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/widget/live_goal_progress_widget.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/widget/live_poll_widgets.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// Host top toolbar, three stacked rows (matches TikTok's layout: a clean
 /// name/likes/viewer-count row, with rank/league badges on their own row

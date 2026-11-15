@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/common/widget/custom_popup_menu_button.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
-import 'package:shortzz/screen/request_withdrawal_screen/request_withdrawal_screen.dart';
-import 'package:shortzz/screen/withdrawals_screen/withdrawals_screen.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/style_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/widget/custom_back_button.dart';
+import 'package:toptap/common/widget/custom_popup_menu_button.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
+import 'package:toptap/screen/request_withdrawal_screen/request_withdrawal_screen.dart';
+import 'package:toptap/screen/withdrawals_screen/withdrawals_screen.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/style_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CoinWalletTopView extends StatelessWidget {
   const CoinWalletTopView({super.key});

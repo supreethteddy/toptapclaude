@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shortzz/model/sticker/sticker_model.dart';
-import 'package:shortzz/common/manager/logger.dart';
+import 'package:toptap/model/sticker/sticker_model.dart';
+import 'package:toptap/common/manager/logger.dart';
 
 class GiphyService {
   // Free API Key - Get yours at: https://developers.giphy.com/

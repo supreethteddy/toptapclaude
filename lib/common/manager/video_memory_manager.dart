@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:cached_video_player_plus/cached_video_player_plus.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/logger.dart';
+import 'package:toptap/common/manager/logger.dart';
 
 /// 🎬 VideoMemoryManager - Advanced video controller lifecycle management
 ///

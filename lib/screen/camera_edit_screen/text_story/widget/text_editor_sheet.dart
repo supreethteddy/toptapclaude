@@ -1,16 +1,16 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/story_text_view_controller.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/widget/story_text_font_color.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/widget/story_text_font_opacity.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/widget/story_text_font_style.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/widget/story_text_font_widget.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/story_text_view_controller.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/widget/story_text_font_color.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/widget/story_text_font_opacity.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/widget/story_text_font_style.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/widget/story_text_font_widget.dart';
+import 'package:toptap/utilities/app_res.dart';
 
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 import 'package:uuid/uuid.dart';
 
 class TextEditorSheet extends StatefulWidget {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/screen/auth_screen/login_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/screen/auth_screen/login_screen.dart';
 
 class OnBoardingScreenController extends BaseController {
   PageController pageController = PageController();

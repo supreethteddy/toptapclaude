@@ -1,13 +1,13 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/bottom_sheet_top_view.dart';
-import 'package:shortzz/common/widget/privacy_policy_text.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/common/widget/text_field_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/auth_screen/auth_screen_controller.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/bottom_sheet_top_view.dart';
+import 'package:toptap/common/widget/privacy_policy_text.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/common/widget/text_field_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/auth_screen/auth_screen_controller.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ForgetPasswordSheet extends StatelessWidget {
   const ForgetPasswordSheet({super.key});

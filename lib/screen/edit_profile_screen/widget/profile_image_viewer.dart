@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ProfileImageViewer extends StatelessWidget {
   final String? networkImageUrl;

@@ -4,9 +4,9 @@ import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/screen/selected_music_sheet/selected_music_sheet_controller.dart';
-import 'package:shortzz/utilities/style_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/screen/selected_music_sheet/selected_music_sheet_controller.dart';
+import 'package:toptap/utilities/style_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class WaveSlider extends StatelessWidget {
   final int audioDuration;

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/model/giphy/giphy_model.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/model/giphy/giphy_model.dart';
 
 // https://developers.giphy.com/docs/optional-settings/#rating
 enum GiphyRating {

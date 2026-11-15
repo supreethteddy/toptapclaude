@@ -1,14 +1,14 @@
 import 'package:get/get.dart';
-import 'package:shortzz/common/enum/chat_enum.dart';
-import 'package:shortzz/common/extensions/list_extension.dart';
-import 'package:shortzz/common/extensions/user_extension.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/model/chat/chat_thread.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/chat_screen/chat_screen.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/enum/chat_enum.dart';
+import 'package:toptap/common/extensions/list_extension.dart';
+import 'package:toptap/common/extensions/user_extension.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/model/chat/chat_thread.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/chat_screen/chat_screen.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 /// "Live Chat Support" = an in-app chat with the official support account.
 ///

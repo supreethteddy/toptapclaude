@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/call_manager.dart';
-import 'package:shortzz/common/service/zego_call_service.dart';
-import 'package:shortzz/common/service/call_signaling_service.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/common/config/agora_config.dart';
-import 'package:shortzz/common/utils/agora_diagnostic.dart';
-import 'package:shortzz/common/utils/agora_debug_helper.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/call_manager.dart';
+import 'package:toptap/common/service/zego_call_service.dart';
+import 'package:toptap/common/service/call_signaling_service.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/common/config/agora_config.dart';
+import 'package:toptap/common/utils/agora_diagnostic.dart';
+import 'package:toptap/common/utils/agora_debug_helper.dart';
 
 class CallScreen extends StatefulWidget {
   final User user;

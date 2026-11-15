@@ -1,17 +1,17 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/gradient_border.dart';
-import 'package:shortzz/common/widget/gradient_text.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/chat/message_data.dart';
-import 'package:shortzz/screen/chat_screen/widget/chat_center_message_view.dart';
-import 'package:shortzz/utilities/style_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/gradient_border.dart';
+import 'package:toptap/common/widget/gradient_text.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/chat/message_data.dart';
+import 'package:toptap/screen/chat_screen/widget/chat_center_message_view.dart';
+import 'package:toptap/utilities/style_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ChatGiftMessage extends StatelessWidget {
   final MessageData message;

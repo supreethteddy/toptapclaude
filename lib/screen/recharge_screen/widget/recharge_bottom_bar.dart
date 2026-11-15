@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
 
 /// Single bottom "Recharge" button. Purchases whichever package is
 /// currently selected in the grid above, via the existing

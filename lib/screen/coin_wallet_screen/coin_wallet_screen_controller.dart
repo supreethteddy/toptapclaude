@@ -1,13 +1,13 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/gift_wallet_service.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/service/subscription/subscription_manager.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/gift_wallet_service.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/common/service/subscription/subscription_manager.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 class CoinWalletScreenController extends BaseController {
   // Shared with every other balance-displaying screen (wallet, recharge,

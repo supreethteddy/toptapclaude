@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/utils/settings_error_handler.dart';
-import 'package:shortzz/model/general/settings_model.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/utils/settings_error_handler.dart';
+import 'package:toptap/model/general/settings_model.dart';
 
 class LocalizationScreenController extends GetxController {
   RxList<Language> languages = <Language>[].obs;

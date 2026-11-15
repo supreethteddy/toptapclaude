@@ -1,17 +1,17 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_divider.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/pk_gifters.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/gifter_profile_card_sheet.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/widget/custom_divider.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/full_name_with_blue_tick.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/pk_gifters.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/widget/gifter_profile_card_sheet.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// Ranked gifters for ONE side of the current battle round (tapped from a
 /// seat avatar in TopGiftersRow) -- distinct from ContributorRankingSheet,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/asset_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
 
 class ThemeBlurBg extends StatelessWidget {
   const ThemeBlurBg({super.key});

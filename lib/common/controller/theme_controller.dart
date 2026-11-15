@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 class ThemeController extends GetxController {
-  final _box = GetStorage('shortzz');
+  final _box = GetStorage('toptap');
   final _key = 'themeMode';
 
   Rx<ThemeMode> themeMode = ThemeMode.system.obs;

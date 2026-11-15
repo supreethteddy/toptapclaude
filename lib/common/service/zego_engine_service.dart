@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/model/general/settings_model.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/model/general/settings_model.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
 
 class ZegoEngineService {

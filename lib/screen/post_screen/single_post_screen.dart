@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/post_story/post_by_id.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/comment_sheet/comment_sheet.dart';
-import 'package:shortzz/screen/comment_sheet/comment_sheet_controller.dart';
-import 'package:shortzz/screen/comment_sheet/helper/comment_helper.dart';
-import 'package:shortzz/screen/comment_sheet/widget/comment_bottom_text_field_view.dart';
-import 'package:shortzz/screen/post_screen/post_card.dart';
-import 'package:shortzz/screen/post_screen/post_screen_controller.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/post_story/post_by_id.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/comment_sheet/comment_sheet.dart';
+import 'package:toptap/screen/comment_sheet/comment_sheet_controller.dart';
+import 'package:toptap/screen/comment_sheet/helper/comment_helper.dart';
+import 'package:toptap/screen/comment_sheet/widget/comment_bottom_text_field_view.dart';
+import 'package:toptap/screen/post_screen/post_card.dart';
+import 'package:toptap/screen/post_screen/post_screen_controller.dart';
 
 class SinglePostScreen extends StatefulWidget {
   final Post post;

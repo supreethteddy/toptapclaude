@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_page_indicator.dart';
-import 'package:shortzz/screen/color_filter_screen/color_filter_screen.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen_controller.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/widget/custom_page_indicator.dart';
+import 'package:toptap/screen/color_filter_screen/color_filter_screen.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen_controller.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class FeedImageView extends StatelessWidget {
   final RxList<ImageWithFilter> files;

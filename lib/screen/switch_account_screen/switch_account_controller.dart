@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/screen/auth_screen/auth_screen_controller.dart';
-import 'package:shortzz/screen/auth_screen/login_screen.dart';
-import 'package:shortzz/screen/auth_screen/registration_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/screen/auth_screen/auth_screen_controller.dart';
+import 'package:toptap/screen/auth_screen/login_screen.dart';
+import 'package:toptap/screen/auth_screen/registration_screen.dart';
 
 class SwitchAccountController extends BaseController {
   void addAccount() {

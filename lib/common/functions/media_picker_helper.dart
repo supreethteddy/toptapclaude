@@ -8,12 +8,12 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/extensions/common_extension.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/widget/confirmation_dialog.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/extensions/common_extension.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/widget/confirmation_dialog.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/utilities/app_res.dart';
 import 'package:video_compress/video_compress.dart';
 
 class MediaPickerHelper {

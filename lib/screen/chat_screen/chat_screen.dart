@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/model/chat/chat_thread.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/chat_screen/chat_screen_controller.dart';
-import 'package:shortzz/screen/chat_screen/widget/chat_bottom_action_view.dart';
-import 'package:shortzz/screen/chat_screen/widget/chat_center_message_view.dart';
-import 'package:shortzz/screen/chat_screen/widget/chat_top_profile_view.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/model/chat/chat_thread.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/chat_screen/chat_screen_controller.dart';
+import 'package:toptap/screen/chat_screen/widget/chat_bottom_action_view.dart';
+import 'package:toptap/screen/chat_screen/widget/chat_center_message_view.dart';
+import 'package:toptap/screen/chat_screen/widget/chat_top_profile_view.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ChatScreen extends StatelessWidget {
   final ChatThread conversationUser;

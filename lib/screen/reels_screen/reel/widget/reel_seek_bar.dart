@@ -2,11 +2,11 @@ import 'package:cached_video_player_plus/cached_video_player_plus.dart';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/duration_extension.dart';
-import 'package:shortzz/screen/dashboard_screen/dashboard_screen_controller.dart';
-import 'package:shortzz/screen/reels_screen/reel/reel_page_controller.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/duration_extension.dart';
+import 'package:toptap/screen/dashboard_screen/dashboard_screen_controller.dart';
+import 'package:toptap/screen/reels_screen/reel/reel_page_controller.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ReelSeekBar extends StatefulWidget {
   final CachedVideoPlayerPlusController? videoController;

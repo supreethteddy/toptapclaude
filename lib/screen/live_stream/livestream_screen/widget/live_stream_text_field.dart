@@ -2,16 +2,16 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/screen/gift_sheet/send_gift_sheet.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/style_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/screen/gift_sheet/send_gift_sheet.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/style_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class LiveStreamTextFieldView extends StatelessWidget {
   final bool isAudience;

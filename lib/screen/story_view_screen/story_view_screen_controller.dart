@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/manager/story_view/controller/story_controller.dart';
-import 'package:shortzz/common/service/api/moderator_service.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/common/widget/confirmation_dialog.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/status_model.dart';
-import 'package:shortzz/model/post_story/story/story_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/manager/story_view/controller/story_controller.dart';
+import 'package:toptap/common/service/api/moderator_service.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/common/widget/confirmation_dialog.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/status_model.dart';
+import 'package:toptap/model/post_story/story/story_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 import '../../common/manager/story_view/widgets/story_view.dart';
 

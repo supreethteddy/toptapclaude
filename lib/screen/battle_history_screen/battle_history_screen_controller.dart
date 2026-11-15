@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/model/livestream/battle_result.dart';
-import 'package:shortzz/utilities/firebase_const.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/controller/firebase_firestore_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/battle_result.dart';
+import 'package:toptap/utilities/firebase_const.dart';
 
 /// Reads the `battle_history` collection written by
 /// `LivestreamScreenController._recordBattleHistory` — see that method for

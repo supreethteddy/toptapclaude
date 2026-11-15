@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/service/api/notification_service.dart';
-import 'package:shortzz/model/misc/activity_notification_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/service/api/notification_service.dart';
+import 'package:toptap/model/misc/activity_notification_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 class ActivityScreenController extends BaseController {
   RxList<ActivityNotification> activities =

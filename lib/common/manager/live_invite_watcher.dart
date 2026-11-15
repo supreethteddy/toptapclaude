@@ -2,18 +2,18 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/live_invite_service.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/model/livestream/live_invite.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/model/livestream/livestream_user_state.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/audience/live_stream_audience_screen.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/audience/widget/live_stream_join_sheet.dart';
-import 'package:shortzz/utilities/firebase_const.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/live_invite_service.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/live_invite.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/model/livestream/livestream_user_state.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/audience/live_stream_audience_screen.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/audience/widget/live_stream_join_sheet.dart';
+import 'package:toptap/utilities/firebase_const.dart';
 
 /// Shows "<host> invited you to join the LIVE as a Co-host / Guest" anywhere
 /// in the app, for invites to people who are NOT in the host's room. Modelled

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
-import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_first_purchase_banner.dart';
-import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_get_coin_button.dart';
-import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_services_view.dart';
-import 'package:shortzz/screen/coin_wallet_screen/widget/coin_wallet_top_view.dart';
+import 'package:toptap/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
+import 'package:toptap/screen/coin_wallet_screen/widget/coin_wallet_first_purchase_banner.dart';
+import 'package:toptap/screen/coin_wallet_screen/widget/coin_wallet_get_coin_button.dart';
+import 'package:toptap/screen/coin_wallet_screen/widget/coin_wallet_services_view.dart';
+import 'package:toptap/screen/coin_wallet_screen/widget/coin_wallet_top_view.dart';
 
 /// "Balance" screen (per Figma): shows the coin balance, lifetime
 /// stats + withdrawal menu (all still in [CoinWalletTopView]), a "Get Coin"

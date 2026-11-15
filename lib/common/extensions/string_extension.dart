@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/dominant_color.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/status_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/dominant_color.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/status_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 extension StringExtention on String {

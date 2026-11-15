@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
-import 'package:shortzz/model/sticker/sticker_model.dart';
-import 'package:shortzz/services/giphy_service.dart';
+import 'package:toptap/model/sticker/sticker_model.dart';
+import 'package:toptap/services/giphy_service.dart';
 
 class StickerSheetController extends GetxController {
   // State

@@ -3,15 +3,15 @@ import 'dart:io';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/duration_extension.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/common/widget/custom_bg_circle_button.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/color_filter_screen/widget/color_filtered.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/duration_extension.dart';
+import 'package:toptap/common/widget/custom_back_button.dart';
+import 'package:toptap/common/widget/custom_bg_circle_button.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/color_filter_screen/widget/color_filtered.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 import 'package:video_player/video_player.dart';
 
 enum MediaType { image, video }

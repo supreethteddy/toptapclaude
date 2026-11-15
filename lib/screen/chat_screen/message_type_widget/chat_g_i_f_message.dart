@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/model/chat/message_data.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/model/chat/message_data.dart';
 
 class ChatGIFMessage extends StatelessWidget {
   final MessageData message;

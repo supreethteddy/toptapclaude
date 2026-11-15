@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/screen/settings_screen/localization_screen/localization_screen_controller.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/screen/settings_screen/localization_screen/localization_screen_controller.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class LocalizationScreen extends StatelessWidget {
   const LocalizationScreen({super.key});

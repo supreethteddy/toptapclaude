@@ -6,12 +6,12 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/utils/params.dart';
-import 'package:shortzz/screen/session_expired_screen/session_expired_screen.dart';
-import 'package:shortzz/utilities/const_res.dart';
+import 'package:toptap/common/functions/debounce_action.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/utils/params.dart';
+import 'package:toptap/screen/session_expired_screen/session_expired_screen.dart';
+import 'package:toptap/utilities/const_res.dart';
 
 class CancelToken {
   bool _isCancelled = false;

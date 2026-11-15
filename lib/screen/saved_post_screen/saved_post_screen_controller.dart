@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/post_story/post_model.dart';
 
 class SavedPostScreenController extends BaseController {
   RxInt selectedTabIndex = 0.obs;

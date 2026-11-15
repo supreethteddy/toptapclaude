@@ -1,4 +1,4 @@
-import 'package:shortzz/model/post_story/comment/fetch_comment_model.dart';
+import 'package:toptap/model/post_story/comment/fetch_comment_model.dart';
 
 class ReplyCommentModel {
   ReplyCommentModel({

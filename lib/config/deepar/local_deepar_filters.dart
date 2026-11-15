@@ -1,5 +1,5 @@
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/utilities/asset_res.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/utilities/asset_res.dart';
 
 final DeepARFilters deepArNoneEffect = DeepARFilters(
   id: -1,

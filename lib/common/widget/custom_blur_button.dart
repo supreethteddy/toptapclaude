@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CustomBlurButton extends StatelessWidget {
   final String title;

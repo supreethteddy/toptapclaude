@@ -2,18 +2,18 @@
 
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/common/extensions/string_extension.dart';
-// import 'package:shortzz/common/widget/custom_app_bar.dart';
-// import 'package:shortzz/common/widget/custom_image.dart';
-// import 'package:shortzz/common/widget/text_button_custom.dart';
-// import 'package:shortzz/common/widget/text_field_custom.dart';
-// import 'package:shortzz/languages/languages_keys.dart';
-// import 'package:shortzz/model/user_model/user_model.dart';
-// import 'package:shortzz/screen/edit_profile_screen/edit_profile_screen_controller.dart';
-// import 'package:shortzz/screen/edit_profile_screen/widget/build_link_view.dart';
-// import 'package:shortzz/utilities/asset_res.dart';
-// import 'package:shortzz/utilities/text_style_custom.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// import 'package:toptap/common/extensions/string_extension.dart';
+// import 'package:toptap/common/widget/custom_app_bar.dart';
+// import 'package:toptap/common/widget/custom_image.dart';
+// import 'package:toptap/common/widget/text_button_custom.dart';
+// import 'package:toptap/common/widget/text_field_custom.dart';
+// import 'package:toptap/languages/languages_keys.dart';
+// import 'package:toptap/model/user_model/user_model.dart';
+// import 'package:toptap/screen/edit_profile_screen/edit_profile_screen_controller.dart';
+// import 'package:toptap/screen/edit_profile_screen/widget/build_link_view.dart';
+// import 'package:toptap/utilities/asset_res.dart';
+// import 'package:toptap/utilities/text_style_custom.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // class EditProfileScreen extends StatelessWidget {
 //   final Function(User? user)? onUpdateUser;
@@ -186,20 +186,20 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/edit_profile_screen/edit_profile_screen_controller.dart';
-import 'package:shortzz/screen/edit_profile_screen/widget/build_link_view.dart';
-import 'package:shortzz/screen/edit_profile_screen/widget/phone_codes_screen.dart';
-import 'package:shortzz/screen/edit_profile_screen/widget/phone_codes_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/edit_profile_screen/edit_profile_screen_controller.dart';
+import 'package:toptap/screen/edit_profile_screen/widget/build_link_view.dart';
+import 'package:toptap/screen/edit_profile_screen/widget/phone_codes_screen.dart';
+import 'package:toptap/screen/edit_profile_screen/widget/phone_codes_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class EditProfileScreen extends StatelessWidget {
   final Function(User? user)? onUpdateUser;
@@ -622,19 +622,19 @@ class EditProfileScreen extends StatelessWidget {
 
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/common/extensions/string_extension.dart';
-// import 'package:shortzz/common/widget/custom_app_bar.dart';
-// import 'package:shortzz/common/widget/custom_image.dart';
-// import 'package:shortzz/common/widget/text_button_custom.dart';
-// import 'package:shortzz/common/widget/text_field_custom.dart';
-// import 'package:shortzz/languages/languages_keys.dart';
-// import 'package:shortzz/model/user_model/user_model.dart';
-// import 'package:shortzz/screen/edit_profile_screen/edit_profile_screen_controller.dart';
-// import 'package:shortzz/screen/edit_profile_screen/widget/build_link_view.dart';
-// import 'package:shortzz/utilities/asset_res.dart';
-// import 'package:shortzz/utilities/color_res.dart';
-// import 'package:shortzz/utilities/text_style_custom.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// import 'package:toptap/common/extensions/string_extension.dart';
+// import 'package:toptap/common/widget/custom_app_bar.dart';
+// import 'package:toptap/common/widget/custom_image.dart';
+// import 'package:toptap/common/widget/text_button_custom.dart';
+// import 'package:toptap/common/widget/text_field_custom.dart';
+// import 'package:toptap/languages/languages_keys.dart';
+// import 'package:toptap/model/user_model/user_model.dart';
+// import 'package:toptap/screen/edit_profile_screen/edit_profile_screen_controller.dart';
+// import 'package:toptap/screen/edit_profile_screen/widget/build_link_view.dart';
+// import 'package:toptap/utilities/asset_res.dart';
+// import 'package:toptap/utilities/color_res.dart';
+// import 'package:toptap/utilities/text_style_custom.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // class EditProfileScreen extends StatelessWidget {
 //   final Function(User? user)? onUpdateUser;
@@ -1064,19 +1064,19 @@ class EditProfileScreen extends StatelessWidget {
 
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/common/extensions/string_extension.dart';
-// import 'package:shortzz/common/widget/custom_app_bar.dart';
-// import 'package:shortzz/common/widget/custom_image.dart';
-// import 'package:shortzz/common/widget/text_button_custom.dart';
-// import 'package:shortzz/common/widget/text_field_custom.dart';
-// import 'package:shortzz/languages/languages_keys.dart';
-// import 'package:shortzz/model/user_model/user_model.dart';
-// import 'package:shortzz/screen/edit_profile_screen/edit_profile_screen_controller.dart';
-// import 'package:shortzz/screen/edit_profile_screen/widget/build_link_view.dart';
-// import 'package:shortzz/utilities/asset_res.dart';
-// import 'package:shortzz/utilities/color_res.dart';
-// import 'package:shortzz/utilities/text_style_custom.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// import 'package:toptap/common/extensions/string_extension.dart';
+// import 'package:toptap/common/widget/custom_app_bar.dart';
+// import 'package:toptap/common/widget/custom_image.dart';
+// import 'package:toptap/common/widget/text_button_custom.dart';
+// import 'package:toptap/common/widget/text_field_custom.dart';
+// import 'package:toptap/languages/languages_keys.dart';
+// import 'package:toptap/model/user_model/user_model.dart';
+// import 'package:toptap/screen/edit_profile_screen/edit_profile_screen_controller.dart';
+// import 'package:toptap/screen/edit_profile_screen/widget/build_link_view.dart';
+// import 'package:toptap/utilities/asset_res.dart';
+// import 'package:toptap/utilities/color_res.dart';
+// import 'package:toptap/utilities/text_style_custom.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // class EditProfileScreen extends StatelessWidget {
 //   final Function(User? user)? onUpdateUser;

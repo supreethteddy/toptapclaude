@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/common/widget/custom_toggle.dart';
-import 'package:shortzz/screen/playback_settings_screen/playback_settings_controller.dart';
-import 'package:shortzz/screen/settings_screen/widget/setting_icon_text_with_arrow.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/common/widget/custom_toggle.dart';
+import 'package:toptap/screen/playback_settings_screen/playback_settings_controller.dart';
+import 'package:toptap/screen/settings_screen/widget/setting_icon_text_with_arrow.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class PlaybackSettingsScreen extends StatelessWidget {
   const PlaybackSettingsScreen({super.key});

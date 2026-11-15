@@ -2,16 +2,16 @@ import 'package:deepar_flutter_plus/deepar_flutter_plus.dart';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/black_gradient_shadow.dart';
-import 'package:shortzz/common/widget/custom_border_round_icon.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/screen/camera_screen/camera_screen_controller.dart';
-import 'package:shortzz/screen/camera_screen/camera_types.dart';
-import 'package:shortzz/screen/camera_screen/widget/camera_bottom_view.dart';
-// import 'package:shortzz/screen/camera_screen/widget/camera_top_view.dart';
-import 'package:shortzz/screen/selected_music_sheet/selected_music_sheet_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/black_gradient_shadow.dart';
+import 'package:toptap/common/widget/custom_border_round_icon.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/screen/camera_screen/camera_screen_controller.dart';
+import 'package:toptap/screen/camera_screen/camera_types.dart';
+import 'package:toptap/screen/camera_screen/widget/camera_bottom_view.dart';
+// import 'package:toptap/screen/camera_screen/widget/camera_top_view.dart';
+import 'package:toptap/screen/selected_music_sheet/selected_music_sheet_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CameraScreen extends StatelessWidget {
   final CameraScreenType cameraType;

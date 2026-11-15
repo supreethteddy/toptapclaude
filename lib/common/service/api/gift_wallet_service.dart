@@ -1,11 +1,11 @@
-import 'package:shortzz/common/service/api/api_service.dart';
-import 'package:shortzz/common/service/utils/params.dart';
-import 'package:shortzz/common/service/utils/web_service.dart';
-import 'package:shortzz/model/general/status_model.dart';
-import 'package:shortzz/model/gift_wallet/coin_transaction_model.dart';
-import 'package:shortzz/model/gift_wallet/withdraw_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/service/api/api_service.dart';
+import 'package:toptap/common/service/utils/params.dart';
+import 'package:toptap/common/service/utils/web_service.dart';
+import 'package:toptap/model/general/status_model.dart';
+import 'package:toptap/model/gift_wallet/coin_transaction_model.dart';
+import 'package:toptap/model/gift_wallet/withdraw_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class GiftWalletService {
   GiftWalletService._();

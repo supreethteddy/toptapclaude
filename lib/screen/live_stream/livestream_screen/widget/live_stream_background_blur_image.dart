@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/utilities/asset_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
 
 class LiveStreamBlurBackgroundImage extends StatelessWidget {
   const LiveStreamBlurBackgroundImage({super.key});

@@ -1,5 +1,5 @@
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 class CoinTransactionModel {
   CoinTransactionModel({

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/model/post_story/post/hashtag_post_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/model/post_story/post/hashtag_post_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
 
 class HashtagScreenController extends BaseController {
   RxInt selectedTabIndex = 0.obs;

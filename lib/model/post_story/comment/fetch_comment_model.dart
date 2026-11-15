@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/comment_sheet/helper/comment_helper.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/comment_sheet/helper/comment_helper.dart';
 
 class FetchCommentModel {
   FetchCommentModel({

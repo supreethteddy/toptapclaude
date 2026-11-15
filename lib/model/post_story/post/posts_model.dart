@@ -1,4 +1,4 @@
-import 'package:shortzz/model/post_story/post_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
 
 class PostsModel {
   PostsModel({

@@ -1,16 +1,16 @@
 // import 'package:flutter/gestures.dart';
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/common/widget/custom_back_button.dart';
-// import 'package:shortzz/common/widget/gradient_text.dart';
-// import 'package:shortzz/common/widget/privacy_policy_text.dart';
-// import 'package:shortzz/common/widget/text_button_custom.dart';
-// import 'package:shortzz/common/widget/text_field_custom.dart';
-// import 'package:shortzz/languages/languages_keys.dart';
-// import 'package:shortzz/screen/auth_screen/auth_screen_controller.dart';
-// import 'package:shortzz/utilities/style_res.dart';
-// import 'package:shortzz/utilities/text_style_custom.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// import 'package:toptap/common/widget/custom_back_button.dart';
+// import 'package:toptap/common/widget/gradient_text.dart';
+// import 'package:toptap/common/widget/privacy_policy_text.dart';
+// import 'package:toptap/common/widget/text_button_custom.dart';
+// import 'package:toptap/common/widget/text_field_custom.dart';
+// import 'package:toptap/languages/languages_keys.dart';
+// import 'package:toptap/screen/auth_screen/auth_screen_controller.dart';
+// import 'package:toptap/utilities/style_res.dart';
+// import 'package:toptap/utilities/text_style_custom.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // class RegistrationScreen extends StatelessWidget {
 //   const RegistrationScreen({super.key});
@@ -98,17 +98,17 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/common/widget/privacy_policy_text.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/common/widget/theme_blur_bg.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/auth_screen/auth_screen_controller.dart';
-import 'package:shortzz/screen/auth_screen/forget_password_sheet.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/custom_back_button.dart';
+import 'package:toptap/common/widget/privacy_policy_text.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/common/widget/theme_blur_bg.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/auth_screen/auth_screen_controller.dart';
+import 'package:toptap/screen/auth_screen/forget_password_sheet.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class RegistrationScreen extends StatelessWidget {
   const RegistrationScreen({super.key});

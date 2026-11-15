@@ -1,13 +1,13 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class SessionManager {
   static var instance = SessionManager();
-  var storage = GetStorage('shortzz');
+  var storage = GetStorage('toptap');
   var conversationId = '';
   RxInt notifyCount = 0.obs;
   RxInt isModerator = 0.obs;

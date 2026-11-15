@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/service/location/location_service.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/post_story/story/story_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/camera_screen/camera_screen.dart';
-import 'package:shortzz/screen/camera_screen/camera_types.dart';
-import 'package:shortzz/screen/profile_screen/profile_screen_controller.dart';
-import 'package:shortzz/screen/story_view_screen/story_view_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/common/service/location/location_service.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/post_story/story/story_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/camera_screen/camera_screen.dart';
+import 'package:toptap/screen/camera_screen/camera_types.dart';
+import 'package:toptap/screen/profile_screen/profile_screen_controller.dart';
+import 'package:toptap/screen/story_view_screen/story_view_screen.dart';
 
 class FeedScreenController extends BaseController {
   RxList<Post> posts = RxList();

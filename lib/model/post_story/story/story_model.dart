@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/manager/story_view/story_view.dart';
-import 'package:shortzz/model/post_story/music/music_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/manager/story_view/story_view.dart';
+import 'package:toptap/model/post_story/music/music_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class StoryModel {
   StoryModel({

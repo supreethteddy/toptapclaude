@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/branch_io_manager.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/screenshot_manager.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/branch_io_manager.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/screenshot_manager.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 class QrCodeScreenController extends BaseController {
   final GlobalKey screenshotKey = GlobalKey();

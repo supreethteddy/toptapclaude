@@ -1,21 +1,21 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_border_round_icon.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/camera_edit_screen/camera_edit_screen_controller.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/story_text_view.dart';
-import 'package:shortzz/screen/camera_edit_screen/widget/drawing_toolbar.dart';
-import 'package:shortzz/screen/camera_screen/camera_types.dart';
-import 'package:shortzz/screen/camera_screen/widget/camera_top_view.dart';
-import 'package:shortzz/screen/color_filter_screen/color_filter_view.dart';
-import 'package:shortzz/screen/selected_music_sheet/selected_music_sheet_controller.dart';
-import 'package:shortzz/utilities/app_res.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/custom_border_round_icon.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/camera_edit_screen/camera_edit_screen_controller.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/story_text_view.dart';
+import 'package:toptap/screen/camera_edit_screen/widget/drawing_toolbar.dart';
+import 'package:toptap/screen/camera_screen/camera_types.dart';
+import 'package:toptap/screen/camera_screen/widget/camera_top_view.dart';
+import 'package:toptap/screen/color_filter_screen/color_filter_view.dart';
+import 'package:toptap/screen/selected_music_sheet/selected_music_sheet_controller.dart';
+import 'package:toptap/utilities/app_res.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 import 'package:video_player/video_player.dart';
 
 class CameraEditScreen extends StatelessWidget {

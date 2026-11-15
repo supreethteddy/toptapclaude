@@ -2,14 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/bottom_sheet_top_view.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/widget/members_sheet.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/bottom_sheet_top_view.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/widget/members_sheet.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// Compact banner shown to viewers when the host has Fan Club turned on for
 /// this LIVE. Free, one-tap join — no payment involved. Renders nothing for

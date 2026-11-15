@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/common/service/utils/params.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/share_sheet_widget/share_sheet_widget.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/common/service/utils/params.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/share_sheet_widget/share_sheet_widget.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 enum ShareBranchType { post, user, qr }
 
@@ -26,7 +26,7 @@ class BranchIoManager {
         _generateShareData(type, user: user, post: post);
 
     final branchObject = BranchUniversalObject(
-      canonicalIdentifier: 'shortzz/${type.name}',
+      canonicalIdentifier: 'toptap/${type.name}',
       title: shareData.title,
       imageUrl: shareData.imageUrl,
       keywords: ['TopTap', 'Flutter', 'Share'],

@@ -3,8 +3,8 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 /// Call State Manager
 /// Handles call history, state tracking, and persistent storage of call information

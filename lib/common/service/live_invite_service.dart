@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/model/livestream/live_invite.dart';
-import 'package:shortzz/model/livestream/livestream_user_state.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/model/livestream/live_invite.dart';
+import 'package:toptap/model/livestream/livestream_user_state.dart';
 
 /// Firestore signalling for inviting someone who is NOT in the host's room
 /// (Friends / Recommended tab). Mirrors CallSignalingService: the document

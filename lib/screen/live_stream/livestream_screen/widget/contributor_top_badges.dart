@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/contributor_rank_entry.dart';
-import 'package:shortzz/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/contributor_rank_entry.dart';
+import 'package:toptap/screen/live_stream/livestream_screen/livestream_screen_controller.dart';
 
 /// Small overlapping avatar badges for the top 3 contributors of this LIVE
 /// session (Figma "Live1"), shown in the top bar next to the viewer count.

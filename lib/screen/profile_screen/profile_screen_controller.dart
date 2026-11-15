@@ -2,33 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shortzz/common/controller/follow_controller.dart';
-import 'package:shortzz/common/controller/profile_controller.dart';
-import 'package:shortzz/common/enum/chat_enum.dart';
-import 'package:shortzz/common/extensions/list_extension.dart';
-import 'package:shortzz/common/extensions/user_extension.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/service/api/moderator_service.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/common/service/api/user_service.dart';
-import 'package:shortzz/common/widget/confirmation_dialog.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/chat/chat_thread.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/general/status_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/post_story/story/story_model.dart';
-import 'package:shortzz/model/post_story/user_post_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/blocked_user_screen/block_user_controller.dart';
-import 'package:shortzz/screen/chat_screen/chat_screen.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen.dart';
-import 'package:shortzz/screen/post_screen/post_screen_controller.dart';
-import 'package:shortzz/screen/reels_screen/reel/reel_page_controller.dart';
-import 'package:shortzz/screen/report_sheet/report_sheet.dart';
-import 'package:shortzz/screen/story_view_screen/story_view_screen.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/follow_controller.dart';
+import 'package:toptap/common/controller/profile_controller.dart';
+import 'package:toptap/common/enum/chat_enum.dart';
+import 'package:toptap/common/extensions/list_extension.dart';
+import 'package:toptap/common/extensions/user_extension.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/service/api/moderator_service.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/common/service/api/user_service.dart';
+import 'package:toptap/common/widget/confirmation_dialog.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/chat/chat_thread.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/general/status_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/post_story/story/story_model.dart';
+import 'package:toptap/model/post_story/user_post_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/blocked_user_screen/block_user_controller.dart';
+import 'package:toptap/screen/chat_screen/chat_screen.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen.dart';
+import 'package:toptap/screen/post_screen/post_screen_controller.dart';
+import 'package:toptap/screen/reels_screen/reel/reel_page_controller.dart';
+import 'package:toptap/screen/report_sheet/report_sheet.dart';
+import 'package:toptap/screen/story_view_screen/story_view_screen.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class ProfileScreenController extends BlockUserController
     with GetTickerProviderStateMixin {
@@ -358,7 +358,7 @@ class ProfileScreenController extends BlockUserController
   // 📱 Helper methods for local storage management
   List<int> _getLikedPostIds() {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
       final likedIds =
           storage.read<List>('liked_post_ids') ?? [];
       return likedIds.cast<int>();
@@ -370,7 +370,7 @@ class ProfileScreenController extends BlockUserController
 
   int _getLikeTimestamp(int postId) {
     try {
-      final storage = GetStorage('shortzz');
+      final storage = GetStorage('toptap');
       final timestamps =
           storage.read<Map>('like_timestamps') ?? {};
       return timestamps[postId.toString()] ?? 0;

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/load_more_widget.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/post_screen/post_card.dart';
+import 'package:toptap/common/widget/load_more_widget.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/post_screen/post_card.dart';
 
 class PostList extends StatelessWidget {
   final RxList<Post> posts;

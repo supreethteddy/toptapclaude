@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:shortzz/model/sticker/positioned_sticker.dart';
+import 'package:toptap/model/sticker/positioned_sticker.dart';
 
 class DraggableStickerWidget extends StatefulWidget {
   final PositionedSticker positionedSticker;

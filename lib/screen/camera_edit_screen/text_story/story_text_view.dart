@@ -3,17 +3,17 @@ import 'dart:io';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/common/widget/confirmation_dialog.dart';
-import 'package:shortzz/common/widget/draggable_sticker_widget.dart';
-import 'package:shortzz/common/widget/drawing_canvas_widget.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/camera_edit_screen/camera_edit_screen_controller.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/story_text_view_controller.dart';
-import 'package:shortzz/screen/camera_edit_screen/text_story/widget/text_editor_sheet.dart';
-import 'package:shortzz/screen/camera_screen/camera_types.dart'
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/common/widget/confirmation_dialog.dart';
+import 'package:toptap/common/widget/draggable_sticker_widget.dart';
+import 'package:toptap/common/widget/drawing_canvas_widget.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/camera_edit_screen/camera_edit_screen_controller.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/story_text_view_controller.dart';
+import 'package:toptap/screen/camera_edit_screen/text_story/widget/text_editor_sheet.dart';
+import 'package:toptap/screen/camera_screen/camera_types.dart'
     as camera_types;
-import 'package:shortzz/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
 
 class CameraEditImageView extends StatelessWidget {
   final CameraEditScreenController cameraEditController;

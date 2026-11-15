@@ -4,7 +4,7 @@
 
 import 'dart:convert';
 
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 SettingModel settingModelFromJson(String str) =>
     SettingModel.fromJson(json.decode(str));

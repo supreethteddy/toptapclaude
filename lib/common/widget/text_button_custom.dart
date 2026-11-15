@@ -1,8 +1,8 @@
 // import 'package:figma_squircle_updated/figma_squircle.dart';
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/utilities/text_style_custom.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// import 'package:toptap/utilities/text_style_custom.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // class TextButtonCustom extends StatelessWidget {
 //   final String title;
@@ -65,9 +65,9 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class TextButtonCustom extends StatelessWidget {
   final String title;

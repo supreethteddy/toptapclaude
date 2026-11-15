@@ -1,19 +1,19 @@
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:shortzz/common/extensions/string_extension.dart';
-// import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
-// import 'package:shortzz/common/widget/custom_back_button.dart';
-// import 'package:shortzz/common/widget/custom_image.dart';
-// import 'package:shortzz/common/widget/custom_popup_menu_button.dart';
-// import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
-// import 'package:shortzz/languages/languages_keys.dart';
-// import 'package:shortzz/model/chat/chat_thread.dart';
-// import 'package:shortzz/model/livestream/app_user.dart';
-// import 'package:shortzz/model/user_model/user_model.dart';
-// import 'package:shortzz/screen/chat_screen/chat_screen_controller.dart';
-// import 'package:shortzz/utilities/asset_res.dart';
-// import 'package:shortzz/utilities/text_style_custom.dart';
-// import 'package:shortzz/utilities/theme_res.dart';
+// import 'package:toptap/common/extensions/string_extension.dart';
+// import 'package:toptap/common/service/navigation/navigate_with_controller.dart';
+// import 'package:toptap/common/widget/custom_back_button.dart';
+// import 'package:toptap/common/widget/custom_image.dart';
+// import 'package:toptap/common/widget/custom_popup_menu_button.dart';
+// import 'package:toptap/common/widget/full_name_with_blue_tick.dart';
+// import 'package:toptap/languages/languages_keys.dart';
+// import 'package:toptap/model/chat/chat_thread.dart';
+// import 'package:toptap/model/livestream/app_user.dart';
+// import 'package:toptap/model/user_model/user_model.dart';
+// import 'package:toptap/screen/chat_screen/chat_screen_controller.dart';
+// import 'package:toptap/utilities/asset_res.dart';
+// import 'package:toptap/utilities/text_style_custom.dart';
+// import 'package:toptap/utilities/theme_res.dart';
 
 // class ChatTopProfileView extends StatelessWidget {
 //   final ChatScreenController controller;
@@ -113,21 +113,21 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
-import 'package:shortzz/common/controller/live_status_controller.dart';
-import 'package:shortzz/common/widget/custom_back_button.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/full_name_with_blue_tick.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/chat/chat_thread.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/chat_screen/chat_screen_controller.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/service/navigation/navigate_with_controller.dart';
+import 'package:toptap/common/controller/live_status_controller.dart';
+import 'package:toptap/common/widget/custom_back_button.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/full_name_with_blue_tick.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/chat/chat_thread.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/chat_screen/chat_screen_controller.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ChatTopProfileView extends StatelessWidget {
   final ChatScreenController controller;

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shortzz/model/livestream/battle_result.dart';
+import 'package:toptap/model/livestream/battle_result.dart';
 
 void main() {
   group('determineBattleOutcome', () {

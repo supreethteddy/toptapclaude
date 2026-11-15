@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/utilities/asset_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/functions/debounce_action.dart';
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/utilities/asset_res.dart';
 
 class LocationScreenController extends BaseController {
   Rx<LatLng> latLng;

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shortzz/common/manager/logger.dart';
+import 'package:toptap/common/manager/logger.dart';
 
 enum CallSignalStatus {
   pending,

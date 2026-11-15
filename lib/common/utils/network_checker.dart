@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:shortzz/common/manager/logger.dart';
+import 'package:toptap/common/manager/logger.dart';
 
 /// Network connectivity checker for Agora calls
 class NetworkChecker {

@@ -1,10 +1,10 @@
 import 'package:get/get.dart';
 // 🔇 COMMENTED OUT PROBLEMATIC IMPORTS TO FIX AUDIO ISSUES
-// import 'package:shortzz/screen/playback_settings_screen/playback_settings_controller.dart';
-// import 'package:shortzz/screen/content_preferences_screen/content_preferences_controller.dart';
-// import 'package:shortzz/screen/accessibility_settings_screen/accessibility_settings_controller.dart';
-import 'package:shortzz/screen/settings_screen/notification_settings_screen/notification_settings_screen_controller.dart';
-import 'package:shortzz/screen/settings_screen/localization_screen/localization_screen_controller.dart';
+// import 'package:toptap/screen/playback_settings_screen/playback_settings_controller.dart';
+// import 'package:toptap/screen/content_preferences_screen/content_preferences_controller.dart';
+// import 'package:toptap/screen/accessibility_settings_screen/accessibility_settings_controller.dart';
+import 'package:toptap/screen/settings_screen/notification_settings_screen/notification_settings_screen_controller.dart';
+import 'package:toptap/screen/settings_screen/localization_screen/localization_screen_controller.dart';
 
 /// Centralized service for accessing all app settings
 /// This service provides easy access to settings across the entire app

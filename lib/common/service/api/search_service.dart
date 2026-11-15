@@ -1,12 +1,12 @@
-import 'package:shortzz/common/service/api/api_service.dart';
-import 'package:shortzz/common/service/utils/params.dart';
-import 'package:shortzz/common/service/utils/web_service.dart';
-import 'package:shortzz/model/post_story/hashtag_model.dart';
-import 'package:shortzz/model/post_story/post/posts_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/model/user_model/users_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/service/api/api_service.dart';
+import 'package:toptap/common/service/utils/params.dart';
+import 'package:toptap/common/service/utils/web_service.dart';
+import 'package:toptap/model/post_story/hashtag_model.dart';
+import 'package:toptap/model/post_story/post/posts_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/model/user_model/users_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class SearchService {
   SearchService._();

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
-import 'package:shortzz/common/service/api/search_service.dart';
-import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/functions/debounce_action.dart';
+import 'package:toptap/common/service/api/search_service.dart';
+import 'package:toptap/common/service/navigation/navigate_with_controller.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class FindFriendsScreenController extends BaseController {
   RxList<User> users = <User>[].obs;

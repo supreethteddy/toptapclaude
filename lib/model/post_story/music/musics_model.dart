@@ -1,4 +1,4 @@
-import 'package:shortzz/model/post_story/music/music_model.dart';
+import 'package:toptap/model/post_story/music/music_model.dart';
 
 class MusicsModel {
   MusicsModel({

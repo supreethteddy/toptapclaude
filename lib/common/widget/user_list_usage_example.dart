@@ -4,7 +4,7 @@
 
 // In your screen where you want to use UserList:
 
-import 'package:shortzz/common/widget/user_list.dart';
+import 'package:toptap/common/widget/user_list.dart';
 
 class YourScreen extends StatelessWidget {
   @override

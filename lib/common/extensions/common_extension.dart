@@ -4,9 +4,9 @@ import 'dart:math';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 extension Number on num {
   String get numberFormat => NumberFormat.compact().format(this);

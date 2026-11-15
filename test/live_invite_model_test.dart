@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shortzz/model/livestream/live_invite.dart';
-import 'package:shortzz/model/livestream/livestream_user_state.dart';
+import 'package:toptap/model/livestream/live_invite.dart';
+import 'package:toptap/model/livestream/livestream_user_state.dart';
 
 void main() {
   group('LiveInvite', () {

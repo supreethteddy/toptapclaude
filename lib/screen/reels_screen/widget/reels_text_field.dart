@@ -1,12 +1,12 @@
 import 'package:detectable_text_field/widgets/detectable_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/comment_sheet/helper/comment_helper.dart';
-import 'package:shortzz/screen/reels_screen/reels_screen_controller.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/comment_sheet/helper/comment_helper.dart';
+import 'package:toptap/screen/reels_screen/reels_screen_controller.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ReelsTextField extends StatelessWidget {
   final ReelsScreenController controller;

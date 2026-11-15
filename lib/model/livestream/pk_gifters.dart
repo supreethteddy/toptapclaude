@@ -1,5 +1,5 @@
-import 'package:shortzz/model/livestream/livestream_comment.dart';
-import 'package:shortzz/model/livestream/pk_eligibility.dart';
+import 'package:toptap/model/livestream/livestream_comment.dart';
+import 'package:toptap/model/livestream/pk_eligibility.dart';
 
 /// One viewer's standing on a team's top-gifters leaderboard for the
 /// current PK match.

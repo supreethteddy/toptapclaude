@@ -1,8 +1,8 @@
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/post_story/comment/fetch_comment_model.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/notification_screen/widget/activity_notification_page.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/post_story/comment/fetch_comment_model.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/notification_screen/widget/activity_notification_page.dart';
 
 class ActivityNotificationModel {
   ActivityNotificationModel({

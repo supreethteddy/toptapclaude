@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class MyRefreshIndicator extends StatelessWidget {
   final Future<void> Function() onRefresh;

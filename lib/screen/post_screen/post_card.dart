@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
-import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
-import 'package:shortzz/common/widget/custom_divider.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/live_ring_avatar.dart';
-import 'package:shortzz/model/post_story/post_by_id.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/screen/post_screen/post_screen_controller.dart';
-import 'package:shortzz/screen/post_screen/widget/post_animation_like.dart';
-import 'package:shortzz/screen/post_screen/widget/post_view_action_button.dart';
-import 'package:shortzz/screen/post_screen/widget/post_view_center.dart';
-import 'package:shortzz/screen/post_screen/widget/post_view_info_header.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/functions/debounce_action.dart';
+import 'package:toptap/common/service/navigation/navigate_with_controller.dart';
+import 'package:toptap/common/widget/custom_divider.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/live_ring_avatar.dart';
+import 'package:toptap/model/post_story/post_by_id.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/screen/post_screen/post_screen_controller.dart';
+import 'package:toptap/screen/post_screen/widget/post_animation_like.dart';
+import 'package:toptap/screen/post_screen/widget/post_view_action_button.dart';
+import 'package:toptap/screen/post_screen/widget/post_view_center.dart';
+import 'package:toptap/screen/post_screen/widget/post_view_info_header.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;

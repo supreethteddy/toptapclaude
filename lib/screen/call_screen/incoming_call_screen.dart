@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/config/agora_config.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/manager/call_state_manager.dart';
-import 'package:shortzz/common/service/call_signaling_service.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/call_screen/call_screen.dart';
+import 'package:toptap/common/config/agora_config.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/manager/call_state_manager.dart';
+import 'package:toptap/common/service/call_signaling_service.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/call_screen/call_screen.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final String channelId;

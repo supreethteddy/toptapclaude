@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/model/livestream/app_user.dart';
 
 /// One host's position within their own division of the current season's
 /// League. Scoped to a single division (not the whole League) — see

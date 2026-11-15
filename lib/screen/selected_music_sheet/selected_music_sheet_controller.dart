@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/functions/debounce_action.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/model/post_story/music/music_model.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/functions/debounce_action.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/model/post_story/music/music_model.dart';
 
 class SelectedMusicSheetController extends BaseController {
   int videoDurationInMs;

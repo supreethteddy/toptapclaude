@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/livestream/livestream.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/live_stream/create_live_stream_screen/create_live_stream_screen_controller.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/livestream/livestream.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/live_stream/create_live_stream_screen/create_live_stream_screen_controller.dart';
 
 class CreateLiveStreamScreen extends StatelessWidget {
   const CreateLiveStreamScreen({super.key});

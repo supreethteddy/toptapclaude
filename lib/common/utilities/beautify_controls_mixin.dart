@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/languages/languages_keys.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/languages/languages_keys.dart';
 import 'package:zego_express_engine/zego_express_engine.dart';
 
 /// TikTok's Beauty tab has 8 categories; only Smooth/Brighten/Contrast/

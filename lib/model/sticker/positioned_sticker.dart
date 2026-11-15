@@ -1,4 +1,4 @@
-import 'package:shortzz/model/sticker/sticker_model.dart';
+import 'package:toptap/model/sticker/sticker_model.dart';
 
 /// Model for a positioned sticker on the canvas
 class PositionedSticker {

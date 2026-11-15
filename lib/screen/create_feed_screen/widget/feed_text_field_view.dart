@@ -2,14 +2,14 @@ import 'package:detectable_text_field/detectable_text_field.dart';
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/comment_sheet/helper/comment_helper.dart';
-import 'package:shortzz/screen/create_feed_screen/create_feed_screen_controller.dart';
-import 'package:shortzz/screen/create_feed_screen/widget/hash_tag_sheet.dart';
-import 'package:shortzz/screen/create_feed_screen/widget/location_sheet.dart';
-import 'package:shortzz/screen/create_feed_screen/widget/mention_sheet.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/comment_sheet/helper/comment_helper.dart';
+import 'package:toptap/screen/create_feed_screen/create_feed_screen_controller.dart';
+import 'package:toptap/screen/create_feed_screen/widget/hash_tag_sheet.dart';
+import 'package:toptap/screen/create_feed_screen/widget/location_sheet.dart';
+import 'package:toptap/screen/create_feed_screen/widget/mention_sheet.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class FeedTextFieldView extends StatelessWidget {
   const FeedTextFieldView({super.key});

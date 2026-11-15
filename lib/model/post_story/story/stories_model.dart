@@ -1,4 +1,4 @@
-import 'package:shortzz/model/user_model/user_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
 
 class StoriesModel {
   StoriesModel({

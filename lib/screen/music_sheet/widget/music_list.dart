@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/widget/custom_image.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/model/post_story/music/music_model.dart';
-import 'package:shortzz/screen/music_sheet/music_sheet_controller.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/widget/custom_image.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/model/post_story/music/music_model.dart';
+import 'package:toptap/screen/music_sheet/music_sheet_controller.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class MusicList extends StatelessWidget {
   final RxList<Music> musicList;

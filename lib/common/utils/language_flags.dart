@@ -1,4 +1,4 @@
-import 'package:shortzz/model/general/settings_model.dart';
+import 'package:toptap/model/general/settings_model.dart';
 
 /// Resolves a flag emoji for an app language. The admin panel stores
 /// non-standard codes (sp, ch, ge, kr ...), so we match on both the code and

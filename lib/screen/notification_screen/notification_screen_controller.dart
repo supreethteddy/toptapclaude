@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/service/api/notification_service.dart';
-import 'package:shortzz/common/service/api/post_service.dart';
-import 'package:shortzz/common/service/navigation/navigate_with_controller.dart';
-import 'package:shortzz/model/misc/activity_notification_model.dart';
-import 'package:shortzz/model/misc/admin_notification_model.dart';
-import 'package:shortzz/model/post_story/post_by_id.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/screen/notification_screen/widget/activity_notification_page.dart';
-import 'package:shortzz/screen/post_screen/single_post_screen.dart';
-import 'package:shortzz/screen/reels_screen/reels_screen.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/service/api/notification_service.dart';
+import 'package:toptap/common/service/api/post_service.dart';
+import 'package:toptap/common/service/navigation/navigate_with_controller.dart';
+import 'package:toptap/model/misc/activity_notification_model.dart';
+import 'package:toptap/model/misc/admin_notification_model.dart';
+import 'package:toptap/model/post_story/post_by_id.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/screen/notification_screen/widget/activity_notification_page.dart';
+import 'package:toptap/screen/post_screen/single_post_screen.dart';
+import 'package:toptap/screen/reels_screen/reels_screen.dart';
 
 class NotificationScreenController extends BaseController {
   RxInt selectedTabIndex = RxInt(0);

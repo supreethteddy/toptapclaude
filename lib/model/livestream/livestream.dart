@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
-import 'package:shortzz/common/controller/firebase_firestore_controller.dart';
-import 'package:shortzz/model/livestream/app_user.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/firebase_firestore_controller.dart';
+import 'package:toptap/model/livestream/app_user.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class Livestream {
   int? watchingCount;

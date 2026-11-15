@@ -5,18 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Shortzz",
+            "name": "TopTap",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "Shortzz (profile mode)",
+            "name": "TopTap (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "Shortzz (release mode)",
+            "name": "TopTap (release mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

@@ -1,25 +1,25 @@
 import 'package:image_picker/image_picker.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/service/api/api_service.dart';
-import 'package:shortzz/common/service/utils/params.dart';
-import 'package:shortzz/common/service/utils/web_service.dart';
-import 'package:shortzz/model/general/status_model.dart';
-import 'package:shortzz/model/post_story/comment/add_comment_model.dart';
-import 'package:shortzz/model/post_story/comment/fetch_comment_model.dart';
-import 'package:shortzz/model/post_story/comment/reply_comment_model.dart';
-import 'package:shortzz/model/post_story/music/music_model.dart';
-import 'package:shortzz/model/post_story/music/musics_model.dart';
-import 'package:shortzz/model/post_story/post/explore_page_model.dart';
-import 'package:shortzz/model/post_story/post/hashtag_post_model.dart';
-import 'package:shortzz/model/post_story/post/posts_model.dart';
-import 'package:shortzz/model/post_story/post_by_id.dart';
-import 'package:shortzz/model/post_story/post_model.dart';
-import 'package:shortzz/model/post_story/story/stories_model.dart';
-import 'package:shortzz/model/post_story/story/story_model.dart';
-import 'package:shortzz/model/post_story/user_post_model.dart';
-import 'package:shortzz/model/user_model/user_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/service/api/api_service.dart';
+import 'package:toptap/common/service/utils/params.dart';
+import 'package:toptap/common/service/utils/web_service.dart';
+import 'package:toptap/model/general/status_model.dart';
+import 'package:toptap/model/post_story/comment/add_comment_model.dart';
+import 'package:toptap/model/post_story/comment/fetch_comment_model.dart';
+import 'package:toptap/model/post_story/comment/reply_comment_model.dart';
+import 'package:toptap/model/post_story/music/music_model.dart';
+import 'package:toptap/model/post_story/music/musics_model.dart';
+import 'package:toptap/model/post_story/post/explore_page_model.dart';
+import 'package:toptap/model/post_story/post/hashtag_post_model.dart';
+import 'package:toptap/model/post_story/post/posts_model.dart';
+import 'package:toptap/model/post_story/post_by_id.dart';
+import 'package:toptap/model/post_story/post_model.dart';
+import 'package:toptap/model/post_story/story/stories_model.dart';
+import 'package:toptap/model/post_story/story/story_model.dart';
+import 'package:toptap/model/post_story/user_post_model.dart';
+import 'package:toptap/model/user_model/user_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 enum PostType {
   reel,

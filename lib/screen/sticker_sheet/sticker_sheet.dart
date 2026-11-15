@@ -1,11 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/model/sticker/sticker_model.dart';
-import 'package:shortzz/screen/sticker_sheet/sticker_sheet_controller.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/model/sticker/sticker_model.dart';
+import 'package:toptap/screen/sticker_sheet/sticker_sheet_controller.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class StickerSheet extends StatelessWidget {
   StickerSheet({super.key});

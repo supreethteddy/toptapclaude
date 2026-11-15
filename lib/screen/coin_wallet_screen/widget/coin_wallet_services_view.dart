@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/coin_transaction_history_screen/coin_transaction_history_screen.dart';
-import 'package:shortzz/screen/help_center_screen/help_center_screen.dart';
-import 'package:shortzz/screen/settings_screen/widget/setting_icon_text_with_arrow.dart';
-import 'package:shortzz/utilities/asset_res.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/coin_transaction_history_screen/coin_transaction_history_screen.dart';
+import 'package:toptap/screen/help_center_screen/help_center_screen.dart';
+import 'package:toptap/screen/settings_screen/widget/setting_icon_text_with_arrow.dart';
+import 'package:toptap/utilities/asset_res.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 /// "Services" section on the Balance screen.
 class CoinWalletServicesView extends StatelessWidget {

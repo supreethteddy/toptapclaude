@@ -8,21 +8,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/extensions/string_extension.dart';
-import 'package:shortzz/common/functions/media_picker_helper.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/common/widget/confirmation_dialog.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/config/deepar/local_deepar_filters.dart';
-import 'package:shortzz/screen/camera_edit_screen/camera_edit_screen.dart';
-import 'package:shortzz/screen/camera_screen/camera_types.dart';
-import 'package:shortzz/screen/music_sheet/music_sheet.dart';
-import 'package:shortzz/screen/selected_music_sheet/selected_music_sheet.dart';
-import 'package:shortzz/screen/selected_music_sheet/selected_music_sheet_controller.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/extensions/string_extension.dart';
+import 'package:toptap/common/functions/media_picker_helper.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/common/widget/confirmation_dialog.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/config/deepar/local_deepar_filters.dart';
+import 'package:toptap/screen/camera_edit_screen/camera_edit_screen.dart';
+import 'package:toptap/screen/camera_screen/camera_types.dart';
+import 'package:toptap/screen/music_sheet/music_sheet.dart';
+import 'package:toptap/screen/selected_music_sheet/selected_music_sheet.dart';
+import 'package:toptap/screen/selected_music_sheet/selected_music_sheet_controller.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class CameraScreenController extends BaseController
     with GetSingleTickerProviderStateMixin {

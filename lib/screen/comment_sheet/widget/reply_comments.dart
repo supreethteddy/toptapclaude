@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:shortzz/common/widget/highlight_wrapper.dart';
-import 'package:shortzz/model/post_story/comment/fetch_comment_model.dart';
-import 'package:shortzz/screen/comment_sheet/comment_sheet_controller.dart';
-import 'package:shortzz/screen/comment_sheet/widget/comment_card.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/highlight_wrapper.dart';
+import 'package:toptap/model/post_story/comment/fetch_comment_model.dart';
+import 'package:toptap/screen/comment_sheet/comment_sheet_controller.dart';
+import 'package:toptap/screen/comment_sheet/widget/comment_card.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class ReplyCommentsView extends StatelessWidget {
   final List<Comment> replyComments;

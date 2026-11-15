@@ -6,13 +6,13 @@ import 'package:flutter_native_video_trimmer/flutter_native_video_trimmer.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:shortzz/common/controller/base_controller.dart';
-import 'package:shortzz/common/manager/logger.dart';
-import 'package:shortzz/common/manager/session_manager.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/sight_engine/sight_engine_media_model.dart';
-import 'package:shortzz/model/sight_engine/text_moderation_model.dart';
-import 'package:shortzz/utilities/app_res.dart';
+import 'package:toptap/common/controller/base_controller.dart';
+import 'package:toptap/common/manager/logger.dart';
+import 'package:toptap/common/manager/session_manager.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/sight_engine/sight_engine_media_model.dart';
+import 'package:toptap/model/sight_engine/text_moderation_model.dart';
+import 'package:toptap/utilities/app_res.dart';
 
 class SightEngineService {
   static var shared = SightEngineService();

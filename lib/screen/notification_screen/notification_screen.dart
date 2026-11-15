@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/custom_app_bar.dart';
-import 'package:shortzz/common/widget/custom_tab_switcher.dart';
-import 'package:shortzz/common/widget/load_more_widget.dart';
-import 'package:shortzz/common/widget/loader_widget.dart';
-import 'package:shortzz/common/widget/no_data_widget.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/model/misc/activity_notification_model.dart';
-import 'package:shortzz/model/misc/admin_notification_model.dart';
-import 'package:shortzz/screen/notification_screen/notification_screen_controller.dart';
-import 'package:shortzz/screen/notification_screen/widget/activity_notification_page.dart';
-import 'package:shortzz/screen/notification_screen/widget/system_notification_page.dart';
-import 'package:shortzz/utilities/text_style_custom.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/widget/custom_app_bar.dart';
+import 'package:toptap/common/widget/custom_tab_switcher.dart';
+import 'package:toptap/common/widget/load_more_widget.dart';
+import 'package:toptap/common/widget/loader_widget.dart';
+import 'package:toptap/common/widget/no_data_widget.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/model/misc/activity_notification_model.dart';
+import 'package:toptap/model/misc/admin_notification_model.dart';
+import 'package:toptap/screen/notification_screen/notification_screen_controller.dart';
+import 'package:toptap/screen/notification_screen/widget/activity_notification_page.dart';
+import 'package:toptap/screen/notification_screen/widget/system_notification_page.dart';
+import 'package:toptap/utilities/text_style_custom.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class NotificationScreen extends StatelessWidget {
   final bool showBackButton;

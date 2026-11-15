@@ -144,7 +144,7 @@
             android:value="your_google_map_api" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="shortzz" />
+            android:value="toptap" />
         <!-- Branch init -->
         <!-- REPLACE `BranchKey` with the value from your Branch Dashboard -->
         <meta-data

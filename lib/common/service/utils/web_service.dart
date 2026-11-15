@@ -1,4 +1,4 @@
-import 'package:shortzz/utilities/const_res.dart';
+import 'package:toptap/utilities/const_res.dart';
 
 class WebService {
   static var user = _User();

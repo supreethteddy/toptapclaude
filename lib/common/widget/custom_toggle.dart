@@ -1,9 +1,9 @@
 import 'package:figma_squircle_updated/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/manager/haptic_manager.dart';
-import 'package:shortzz/utilities/style_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/common/manager/haptic_manager.dart';
+import 'package:toptap/utilities/style_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class CustomToggle extends StatelessWidget {
   final RxBool isOn;

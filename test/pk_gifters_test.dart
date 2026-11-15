@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shortzz/model/general/settings_model.dart';
-import 'package:shortzz/model/livestream/livestream_comment.dart';
-import 'package:shortzz/model/livestream/pk_gifters.dart';
+import 'package:toptap/model/general/settings_model.dart';
+import 'package:toptap/model/livestream/livestream_comment.dart';
+import 'package:toptap/model/livestream/pk_gifters.dart';
 
 LivestreamComment _giftComment({
   required int id,

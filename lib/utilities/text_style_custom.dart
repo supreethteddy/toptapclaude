@@ -1,5 +1,5 @@
 // import 'package:flutter/cupertino.dart';
-// import 'package:shortzz/utilities/font_res.dart';
+// import 'package:toptap/utilities/font_res.dart';
 
 // class TextStyleCustom {
 //   static TextStyle outFitBlack900(
@@ -158,7 +158,7 @@
 // }
 
 import 'package:flutter/cupertino.dart';
-import 'package:shortzz/utilities/font_res.dart';
+import 'package:toptap/utilities/font_res.dart';
 
 class TextStyleCustom {
   static TextStyle outFitBlack900(

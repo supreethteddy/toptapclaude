@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/common/widget/text_button_custom.dart';
-import 'package:shortzz/languages/languages_keys.dart';
-import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
-import 'package:shortzz/screen/recharge_screen/recharge_screen.dart';
+import 'package:toptap/common/widget/text_button_custom.dart';
+import 'package:toptap/languages/languages_keys.dart';
+import 'package:toptap/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
+import 'package:toptap/screen/recharge_screen/recharge_screen.dart';
 
 /// "Get coin" CTA on the Balance screen. Navigates to the Recharge screen
 /// where the actual package grid + purchase flow lives.

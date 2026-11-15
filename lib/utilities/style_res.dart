@@ -2,8 +2,8 @@ import 'dart:ui' as ui show Gradient;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/utilities/color_res.dart';
-import 'package:shortzz/utilities/theme_res.dart';
+import 'package:toptap/utilities/color_res.dart';
+import 'package:toptap/utilities/theme_res.dart';
 
 class StyleRes {
   static Gradient themeGradient = const LinearGradient(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shortzz/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
-import 'package:shortzz/screen/recharge_screen/widget/recharge_bottom_bar.dart';
-import 'package:shortzz/screen/recharge_screen/widget/recharge_package_grid.dart';
-import 'package:shortzz/screen/recharge_screen/widget/recharge_top_view.dart';
+import 'package:toptap/screen/coin_wallet_screen/coin_wallet_screen_controller.dart';
+import 'package:toptap/screen/recharge_screen/widget/recharge_bottom_bar.dart';
+import 'package:toptap/screen/recharge_screen/widget/recharge_package_grid.dart';
+import 'package:toptap/screen/recharge_screen/widget/recharge_top_view.dart';
 
 /// "Recharge" screen (per Figma): balance at top, a GRID of coin packages
 /// (tap to select/highlight), and a single bottom "Recharge" button that
