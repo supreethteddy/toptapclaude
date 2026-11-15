@@ -5695,7 +5695,21 @@ class WatchedRoom {
     final ref = _db.collection(FirebaseConst.liveStreams).doc(newRoomId);
     _liveDocListener = ref.snapshots().listen((snapshot) {
       final data = snapshot.data();
-      if (data == null) return;
+      if (data == null) {
+        // The room we're mirroring is gone -- either its host ended/crashed
+        // and LiveStatusController's stale-room cleanup deleted the doc, or
+        // it was never created. The old `if (data == null) return;` here
+        // silently did nothing, so liveData/streamViews kept whatever they
+        // last held forever: a 2v2 Team PK viewer watching this teammate/
+        // opponent-teammate room would freeze on the last good snapshot --
+        // frozen score bars, frozen timer, frozen video frame -- with no way
+        // out, since nothing ever told the UI the room was gone. stop() also
+        // clears roomId, so a later watch(newRoomId) call for this exact id
+        // (e.g. the room gets recreated) isn't short-circuited by the
+        // `roomId == newRoomId` guard above.
+        stop();
+        return;
+      }
       final stream = Livestream.fromJson(data);
       liveData.value = stream;
       if (streamViews.isEmpty && stream.hostId != null) {

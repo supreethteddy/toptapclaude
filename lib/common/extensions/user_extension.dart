@@ -5,8 +5,17 @@ import 'package:shortzz/model/user_model/user_model.dart';
 
 extension UserExtension on User {
   AppUser get appUser {
+    // Registration only requires Full Name now (username is optional,
+    // completable later from Edit Profile -- see ProfileCompletionHelper).
+    // Every LIVE/chat screen that shows AppUser.username as the person's
+    // display name (host top bar, comments, participant sheets, etc.)
+    // assumed it was always set and had no fallback, so an account that
+    // skipped picking a username rendered a blank name there. Falling back
+    // here, at the one place that writes app_users/{id} docs, fixes every
+    // one of those display sites at once instead of auditing each.
+    final hasUsername = username != null && username!.trim().isNotEmpty;
     return AppUser(
-        username: username,
+        username: hasUsername ? username : fullname,
         userId: id,
         profile: profilePhoto,
         fullname: fullname,
